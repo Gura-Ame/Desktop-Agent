@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ChatInput from './components/ChatInput';
 import ChatMessage from './components/ChatMessage';
 import LogPanel from './components/LogPanel';
@@ -7,16 +7,28 @@ import { useAgentChat } from './hooks/useAgentChat';
 import { usePywebview } from './hooks/usePywebview';
 import { useTheme } from './hooks/useTheme';
 
+/** 視窗寬度低於此值時自動收合側欄 */
+const SIDEBAR_AUTO_COLLAPSE_PX = 900;
+
 export default function App() {
   const [input, setInput] = useState('');
   const [showLog, setShowLog] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < SIDEBAR_AUTO_COLLAPSE_PX,
+  );
   const [executionMode, setExecutionMode] = useState('STEP_BY_STEP');
   const [baseUrl, setBaseUrl] = useState('http://localhost:12356/v1');
   const [modelName, setModelName] = useState('local-model');
 
   const executionModeRef = useRef(executionMode);
   executionModeRef.current = executionMode;
+
+  // 使用者手動收合時記住，放大視窗後不要擅自展開
+  const userPreferCollapsedRef = useRef(false);
+  // 是否因視窗過窄而自動收合（放大後可自動展開，除非使用者偏好收合）
+  const autoCollapsedRef = useRef(
+    typeof window !== 'undefined' && window.innerWidth < SIDEBAR_AUTO_COLLAPSE_PX,
+  );
 
   const { theme, toggleTheme } = useTheme();
 
@@ -35,6 +47,7 @@ export default function App() {
     handleScroll,
     pinToBottom,
     isStreamingRef,
+    isBusyRef,
     handleAgentEvent,
     clearMessages,
   } = useAgentChat();
@@ -44,15 +57,83 @@ export default function App() {
     executionModeRef,
   });
 
+  // 小視窗自動收合側欄
   useEffect(() => {
-    const check = () => {
-      if (isStreamingRef.current) return;
-      setServerStatus({ running: true, msg: '在線' });
+    const onResize = () => {
+      const narrow = window.innerWidth < SIDEBAR_AUTO_COLLAPSE_PX;
+      if (narrow) {
+        autoCollapsedRef.current = true;
+        setSidebarCollapsed(true);
+      } else if (autoCollapsedRef.current && !userPreferCollapsedRef.current) {
+        autoCollapsedRef.current = false;
+        setSidebarCollapsed(false);
+      }
     };
-    check();
-    const id = setInterval(check, 10000);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const handleSidebarCollapse = useCallback((collapsed) => {
+    userPreferCollapsedRef.current = collapsed;
+    autoCollapsedRef.current = false;
+    setSidebarCollapsed(collapsed);
+  }, []);
+
+  /**
+   * 檢查 LLM 伺服器狀態。
+   * 嚴禁在 agent / 串流工作中對 server 發請求，否則可能把本地 llama 打掛。
+   */
+  const checkServerHealth = useCallback(async () => {
+    if (isBusyRef.current || isStreamingRef.current) {
+      return;
+    }
+    try {
+      // 僅做極輕量探測；timeout 短，避免卡住 UI
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 1500);
+      const res = await fetch(`${baseUrl.replace(/\/$/, '')}/models`, {
+        method: 'GET',
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      if (res.ok) {
+        setServerStatus({ running: true, msg: '在線' });
+      } else {
+        setServerStatus({ running: false, msg: `異常 (${res.status})` });
+      }
+    } catch {
+      // 工作中被略過、或離線
+      if (!isBusyRef.current && !isStreamingRef.current) {
+        setServerStatus({ running: false, msg: '離線' });
+      }
+    }
+  }, [baseUrl, isBusyRef, isStreamingRef, setServerStatus]);
+
+  useEffect(() => {
+    checkServerHealth();
+    const id = setInterval(checkServerHealth, 15000);
     return () => clearInterval(id);
-  }, [baseUrl, isStreamingRef, setServerStatus]);
+  }, [checkServerHealth]);
+
+  const handleCopy = useCallback(
+    async (text) => {
+      if (!text) return;
+      try {
+        if (window.pywebview?.api?.copy_to_clipboard) {
+          await window.pywebview.api.copy_to_clipboard(text);
+          return;
+        }
+      } catch (_) {
+        /* fallback */
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (_) {
+        /* ignore */
+      }
+    },
+    [],
+  );
 
   const handleSend = () => {
     const text = input.trim();
@@ -68,6 +149,10 @@ export default function App() {
       return;
     }
 
+    // 標記忙碌，期間禁止 health check 打到 LLM server
+    isBusyRef.current = true;
+    isStreamingRef.current = true;
+
     setMessages((prev) => [
       ...prev,
       { role: 'user', content: text },
@@ -81,7 +166,7 @@ export default function App() {
     <div className="flex h-screen w-screen overflow-hidden bg-zinc-50 font-sans text-sm text-zinc-900 antialiased selection:bg-zinc-200 dark:bg-zinc-950 dark:text-zinc-100 dark:selection:bg-zinc-700">
       <SideBar
         isCollapsed={sidebarCollapsed}
-        setIsCollapsed={setSidebarCollapsed}
+        setIsCollapsed={handleSidebarCollapse}
         baseUrl={baseUrl}
         setBaseUrl={setBaseUrl}
         modelName={modelName}
@@ -90,7 +175,7 @@ export default function App() {
           callApi('update_api_config', baseUrl, 'lm-studio', modelName);
         }}
         serverStatus={serverStatus}
-        checkServerHealth={() => setServerStatus({ running: true, msg: '在線' })}
+        checkServerHealth={checkServerHealth}
         executionMode={executionMode}
         handleModeChange={(mode) => {
           setExecutionMode(mode);
@@ -123,6 +208,7 @@ export default function App() {
                 setWaitingConfirm(false);
                 callApi('confirm_step');
               }}
+              onCopy={handleCopy}
             />
           ))}
           <div ref={chatEndRef} />

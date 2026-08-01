@@ -24,6 +24,8 @@ export function useAgentChat() {
   const chatEndRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const isStreamingRef = useRef(false);
+  /** agent 執行緒忙碌中（含 routing / planning / tool，不只串流） */
+  const isBusyRef = useRef(false);
   const stickToBottomRef = useRef(true);
 
   const handleScroll = useCallback(() => {
@@ -50,8 +52,13 @@ export function useAgentChat() {
     const { type, data } = event;
 
     switch (type) {
+      case 'started':
+        isBusyRef.current = true;
+        break;
+
       case 'chunk':
         isStreamingRef.current = true;
+        isBusyRef.current = true;
         setMessages((prev) => {
           const last = prev[prev.length - 1];
           if (last?.role === 'agent' && last.isStreaming) {
@@ -66,6 +73,7 @@ export function useAgentChat() {
 
       case 'finished':
         isStreamingRef.current = false;
+        isBusyRef.current = false;
         setMessages((prev) => {
           const last = prev[prev.length - 1];
           if (last?.role === 'agent') {
@@ -84,6 +92,9 @@ export function useAgentChat() {
         break;
 
       case 'ask_confirm':
+        // 暫停等確認：仍算忙碌，不要打 health check
+        isBusyRef.current = true;
+        isStreamingRef.current = false;
         setWaitingConfirm(true);
         setMessages((prev) => [
           ...prev,
@@ -96,6 +107,7 @@ export function useAgentChat() {
         break;
 
       case 'waiting_input':
+        isBusyRef.current = true;
         setWaitingUserInput(data);
         break;
 
@@ -117,6 +129,8 @@ export function useAgentChat() {
     setMessages([]);
     setWaitingConfirm(false);
     setWaitingUserInput(null);
+    isBusyRef.current = false;
+    isStreamingRef.current = false;
     stickToBottomRef.current = true;
   }, []);
 
@@ -140,6 +154,7 @@ export function useAgentChat() {
     handleScroll,
     pinToBottom,
     isStreamingRef,
+    isBusyRef,
     handleAgentEvent,
     clearMessages,
   };
