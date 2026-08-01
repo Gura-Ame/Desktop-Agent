@@ -2,10 +2,11 @@ import sys
 import os
 import json
 import warnings
+import threading
 import pyautogui
 import ctypes
 
-# 1. 必須在 QApplication 初始化前導入 QtWebEngineWidgets
+# 必須在 QApplication 初始化前導入
 import PyQt6.QtWebEngineWidgets
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
@@ -30,6 +31,11 @@ class JsApi:
         self.overlay = overlay
         self.overlay_manager = OverlayManager(self.overlay)
 
+        # 執行緒安全：背景只 append，前端用 poll_events 拉取
+        # 完全不呼叫 evaluate_js，也不依賴 QTimer（避免 PyQt5/PyQt6 混用）
+        self._events = []
+        self._events_lock = threading.Lock()
+
         self.available_functions = {
             "move_mouse": tools.move_mouse,
             "click_mouse": tools.click_mouse,
@@ -43,20 +49,58 @@ class JsApi:
             "draw_box": self.overlay_manager.draw_box,
             "draw_line": self.overlay_manager.draw_line,
             "clear_drawings": self.overlay_manager.clear_drawings,
-            "execute_python": tools.execute_python
+            "execute_python": tools.execute_python,
         }
 
-        self.agent = AgentWorker(self.available_functions, event_callback=self.dispatch_event)
+        self.agent = AgentWorker(
+            self.available_functions,
+            event_callback=self.dispatch_event,
+        )
         self.server_mgr = LlamaServerManager(event_callback=self.dispatch_event)
 
     def set_window(self, window):
         self._window = window
 
-    def dispatch_event(self, event_type: str, data: any):
-        if self._window:
-            payload = json.dumps({"type": event_type, "data": data})
-            self._window.evaluate_js(f"window.onAgentEvent && window.onAgentEvent({payload});")
+    def dispatch_event(self, event_type: str, data):
+        """可從任意執行緒安全呼叫。"""
+        # 確保 data 可被 JSON 序列化（poll 時回傳給 JS）
+        try:
+            json.dumps(data, ensure_ascii=False, default=str)
+            safe_data = data
+        except Exception:
+            safe_data = str(data)
 
+        with self._events_lock:
+            self._events.append({"type": event_type, "data": safe_data})
+
+    def poll_events(self):
+        """前端定時呼叫。在 pywebview 的 JS bridge 執行緒執行，安全。
+        回傳事件列表；chunk 會在同一次 poll 內合併成一筆，減少前端 setState 次數。
+        """
+        with self._events_lock:
+            if not self._events:
+                return []
+            batch = self._events[:]
+            self._events.clear()
+
+        # 合併連續的 chunk
+        merged = []
+        chunk_buf = []
+        for ev in batch:
+            if ev["type"] == "chunk":
+                chunk_buf.append(ev["data"] if ev["data"] is not None else "")
+            else:
+                if chunk_buf:
+                    merged.append({"type": "chunk", "data": "".join(chunk_buf)})
+                    chunk_buf = []
+                merged.append(ev)
+        if chunk_buf:
+            merged.append({"type": "chunk", "data": "".join(chunk_buf)})
+        return merged
+
+    # ------------------------------------------------------------------
+    # 前端可呼叫的 API
+    # ------------------------------------------------------------------
     def send_prompt(self, prompt: str):
         if self.agent.is_running():
             return {"status": "busy", "msg": "Agent 正忙碌中"}
@@ -72,11 +116,16 @@ class JsApi:
         self.agent.resume_with_user_input(text)
 
     def set_execution_mode(self, mode_str: str):
-        mode = ExecutionMode[mode_str.upper()]
-        self.agent.set_execution_mode(mode)
+        try:
+            mode = ExecutionMode[mode_str.upper()]
+            self.agent.set_execution_mode(mode)
+            return {"status": "ok", "mode": mode.value}
+        except KeyError:
+            return {"status": "error", "msg": f"未知模式: {mode_str}"}
 
     def update_api_config(self, base_url: str, api_key: str, model_name: str):
         self.agent.update_api_config(base_url, api_key, model_name)
+        return {"status": "ok"}
 
     def toggle_local_server(self, model_path: str):
         if self.server_mgr.is_running():
@@ -84,17 +133,62 @@ class JsApi:
             self.dispatch_event("server_status", {"running": False, "msg": "已停止"})
         else:
             self.server_mgr.start_server(model_path)
-            self.dispatch_event("server_status", {"running": True, "msg": "本地伺服器運行中"})
+            self.dispatch_event(
+                "server_status", {"running": True, "msg": "本地伺服器運行中"}
+            )
+        return {"status": "ok"}
 
     def clear_drawings(self):
         self.overlay_manager.clear_drawings()
+        return {"status": "ok"}
 
     def clear_history(self):
         self.agent.history = []
+        return {"status": "ok"}
+
+    def copy_to_clipboard(self, text: str):
+        """用 Win32 API 寫入剪貼簿，避開 Qt WebEngine 的 OleSetClipboard / COM 問題。"""
+        if not text:
+            return {"status": "error", "msg": "empty"}
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            user32 = ctypes.windll.user32
+            kernel32 = ctypes.windll.kernel32
+
+            CF_UNICODETEXT = 13
+            GMEM_MOVEABLE = 0x0002
+
+            # 確保本執行緒有 COM（js bridge 執行緒）
+            try:
+                ctypes.windll.ole32.CoInitializeEx(None, 0x2)
+            except Exception:
+                pass
+
+            if not user32.OpenClipboard(None):
+                return {"status": "error", "msg": "OpenClipboard failed"}
+
+            try:
+                user32.EmptyClipboard()
+                data = text.encode("utf-16-le") + b"\x00\x00"
+                h_mem = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(data))
+                if not h_mem:
+                    return {"status": "error", "msg": "GlobalAlloc failed"}
+                ptr = kernel32.GlobalLock(h_mem)
+                ctypes.memmove(ptr, data, len(data))
+                kernel32.GlobalUnlock(h_mem)
+                if not user32.SetClipboardData(CF_UNICODETEXT, h_mem):
+                    return {"status": "error", "msg": "SetClipboardData failed"}
+            finally:
+                user32.CloseClipboard()
+
+            return {"status": "ok"}
+        except Exception as e:
+            return {"status": "error", "msg": str(e)}
 
 
 def main():
-    # 強制開啟 Windows DPI 高感知，確保繪製座標與螢幕實體像素 1:1 對齊
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(2)
     except Exception:
@@ -103,9 +197,17 @@ def main():
         except Exception:
             pass
 
-    # 2. 在建立 QApplication 前設定 OpenGL 共享上下文
-    QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
+    # COM 必須用 STA（Apartment-threaded），否則 WebEngine 剪貼簿會 0x800401f0
+    COINIT_APARTMENTTHREADED = 0x2
+    try:
+        ctypes.windll.ole32.CoInitializeEx(None, COINIT_APARTMENTTHREADED)
+    except Exception:
+        try:
+            ctypes.windll.ole32.CoInitialize(None)
+        except Exception:
+            pass
 
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
     app = QApplication(sys.argv)
 
     overlay = ScreenOverlay()
@@ -118,11 +220,11 @@ def main():
         js_api=api,
         width=1280,
         height=600,
-        resizable=True
+        resizable=True,
     )
     api.set_window(window)
 
-    webview.start(gui='qt', debug=True)
+    webview.start(gui="qt", debug=True)
 
 
 if __name__ == "__main__":
