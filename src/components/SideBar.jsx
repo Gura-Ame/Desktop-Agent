@@ -57,7 +57,7 @@ export default function SideBar({
   return (
     <aside
       className={cn(
-        'flex shrink-0 flex-col border-r border-zinc-200 bg-zinc-50 transition-[width] duration-200 dark:border-zinc-800 dark:bg-zinc-950',
+        'flex shrink-0 flex-col border-r border-zinc-300 bg-[#e0e0e2] transition-[width] duration-200 dark:border-[#3a3a3c] dark:bg-[#242426]',
         isCollapsed ? 'w-14 items-center px-2 py-3' : 'w-72 px-3 py-3',
       )}
     >
@@ -170,7 +170,7 @@ export default function SideBar({
                       'rounded-md border py-1.5 text-[11px] font-medium transition-colors',
                       executionMode === opt.value
                         ? 'border-zinc-900 bg-zinc-900 text-zinc-50 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950'
-                        : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200',
+                        : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800 dark:border-[#3a3a3c] dark:bg-[#242426] dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200',
                     )}
                   >
                     {opt.label}

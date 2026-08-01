@@ -14,6 +14,19 @@ def parse_hex_color(hex_str: str, alpha: int = 220) -> QColor:
         pass
     return QColor(255, 0, 0, alpha)
 
+def _point_segment_dist_sq(px, py, ax, ay, bx, by):
+    """點 (px, py) 到線段 (ax, ay)-(bx, by) 的最短距離平方。
+    erase_near 對 stroke 要判斷的是「使用者點的位置有沒有碰到這條畫出來的曲線」，
+    曲線是點與點之間連起來的線段，不是只有存下來的那幾個頂點本身。
+    """
+    dx, dy = bx - ax, by - ay
+    if dx == 0 and dy == 0:
+        return (px - ax) ** 2 + (py - ay) ** 2
+    t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)
+    t = max(0.0, min(1.0, t))
+    cx, cy = ax + t * dx, ay + t * dy
+    return (px - cx) ** 2 + (py - cy) ** 2
+
 class ScreenOverlay(QWidget):
     def __init__(self):
         super().__init__()
@@ -58,10 +71,18 @@ class ScreenOverlay(QWidget):
                 if (cx - x) ** 2 + (cy - y) ** 2 <= r_sq:
                     keep = False
             elif stype == 'stroke':
-                for px, py in data.get('points', []):
+                pts = data.get('points', [])
+                if len(pts) == 1:
+                    px, py = pts[0]
                     if (px - x) ** 2 + (py - y) ** 2 <= r_sq:
                         keep = False
-                        break
+                else:
+                    for i in range(len(pts) - 1):
+                        ax, ay = pts[i]
+                        bx, by = pts[i + 1]
+                        if _point_segment_dist_sq(x, y, ax, ay, bx, by) <= r_sq:
+                            keep = False
+                            break
 
             if keep:
                 new_shapes.append(item)
@@ -118,10 +139,19 @@ class ScreenOverlay(QWidget):
             elif stype == 'stroke':
                 pen_width = data.get('width', 3)
                 pen = QPen(main_color, pen_width)
+                pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+                pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
                 painter.setPen(pen)
 
                 points = data.get('points', [])
-                if len(points) > 1:
+                if len(points) == 1:
+                    # 只有一個點：畫一個實心圓點當標記，而不是靜默地什麼都不畫
+                    cx = int(points[0][0] / dpr)
+                    cy = int(points[0][1] / dpr)
+                    r = max(pen_width, 3)
+                    painter.setBrush(QBrush(main_color))
+                    painter.drawEllipse(cx - r, cy - r, r * 2, r * 2)
+                elif len(points) > 1:
                     path = QPainterPath()
                     path.moveTo(int(points[0][0] / dpr), int(points[0][1] / dpr))
                     for pt in points[1:]:

@@ -1,6 +1,7 @@
 import re
 import ast
 import time
+import json
 import threading
 from enum import Enum
 from openai import OpenAI
@@ -11,6 +12,8 @@ from config import (
     THINKING_SYSTEM_PROMPT, VERIFY_SYSTEM_PROMPT, DECOMPOSE_SYSTEM_PROMPT
 )
 from task_system import TaskEngine, ExecutionMode, TaskStatus, TaskNode
+from memory_store import MemoryStore
+from working_memory import WorkingMemory
 
 # 單一任務連續驗證失敗超過這個次數，就不再自己悶著頭重試，改為向使用者提問
 MAX_RETRY_PER_TASK = 3
@@ -23,9 +26,20 @@ class AgentState(Enum):
 
 
 class AgentWorker:
-    def __init__(self, available_functions: dict, event_callback, default_mode=ExecutionMode.STEP_BY_STEP):
+    def __init__(self, available_functions: dict, event_callback, default_mode=ExecutionMode.STEP_BY_STEP,
+                 memory_path: str = "agent_memory.json", memory_max_nodes: int = 20):
         self.available_functions = available_functions
         self.available_functions["ask_user"] = self.ask_user
+
+        # 長期記憶：Disk (MemoryStore，落地成 JSON) + Working Memory (in-memory，有上限)
+        # 這四個工具是給 LLM 自己在對話/任務執行過程中主動呼叫的，不是背景自動做的事。
+        self.memory_store = MemoryStore(memory_path)
+        self.working_memory = WorkingMemory(self.memory_store, max_nodes=memory_max_nodes)
+        self.available_functions["remember"] = self.remember
+        self.available_functions["recall"] = self.recall
+        self.available_functions["relate"] = self.relate
+        self.available_functions["recall_related"] = self.recall_related
+
         self.event_callback = event_callback
 
         self.base_url = API_BASE_URL
@@ -36,11 +50,15 @@ class AgentWorker:
         self.state = AgentState.IDLE
 
         self.current_user_prompt = ""
+        # 使用者本輪附上的圖片 data URL 列表（OpenAI vision 格式）
+        self.current_images = []
         self.history = []
         self.is_paused_for_input = False
         self.user_reply_content = ""
         self.max_think_limit = 3
         self._thread = None
+        self._stop_event = threading.Event()
+        self._active_stream = None
 
     # ------------------------------------------------------------------
     # 基礎設施：事件、使用者輸入、狀態控制
@@ -54,8 +72,71 @@ class AgentWorker:
         self.emit("waiting_input", question)
         self.emit("log", f"❓ Agent 提問等待中: {question}")
         while self.is_paused_for_input:
+            if self._stop_event.is_set():
+                raise InterruptedError("Agent 已由使用者停止")
             time.sleep(0.1)
         return f"User replied: {self.user_reply_content}"
+
+    def request_stop(self):
+        """前端呼叫：要求盡快停止目前執行，並強制關閉正在進行的 LLM stream。"""
+        self._stop_event.set()
+        # 若卡在 ask_user，一併解除等待
+        self.is_paused_for_input = False
+        self.user_reply_content = "[系統] 使用者已停止 Agent"
+        # 強制關掉 OpenAI stream，中斷 HTTP 讀取
+        stream = self._active_stream
+        if stream is not None:
+            try:
+                stream.close()
+            except Exception:
+                pass
+            try:
+                # httpx / openai 有些版本把 response 掛在 .response
+                resp = getattr(stream, "response", None)
+                if resp is not None:
+                    resp.close()
+            except Exception:
+                pass
+        self.emit("log", "[系統] 收到停止請求，正在中止 LLM stream…")
+
+    def _should_stop(self) -> bool:
+        return self._stop_event.is_set()
+
+    # ------------------------------------------------------------------
+    # 長期記憶工具：給 LLM 自己在對話/任務執行過程中呼叫
+    # ------------------------------------------------------------------
+    def remember(self, id: str, type: str, summary: str = "", properties: dict = None) -> str:
+        node = self.memory_store.upsert_node(id, type, properties=properties or {}, summary=summary)
+        self.working_memory.activate(id)
+        self.emit("log", f"🧠 記住了 [{node.type}] {id}: {summary}")
+        return f"已記住 {id}（{type}）: {summary or '(無摘要)'}"
+
+    def recall(self, id: str) -> str:
+        node = self.working_memory.activate(id)
+        if not node:
+            return f"沒有找到 {id} 這個記憶，可能還沒被 remember 過。"
+        props = self.memory_store.get_effective_properties(id)
+        rel_text = ", ".join(f"{r['rel']}->{r['target']}" for r in node.relations) or "(無)"
+        return (
+            f"[{node.type}] {id}\n"
+            f"摘要: {node.summary or '(無)'}\n"
+            f"屬性: {json.dumps(props, ensure_ascii=False)}\n"
+            f"關聯: {rel_text}"
+        )
+
+    def relate(self, source_id: str, rel: str, target_id: str) -> str:
+        self.memory_store.add_relation(source_id, rel, target_id)
+        return f"已建立關聯: {source_id} -{rel}-> {target_id}"
+
+    def recall_related(self, id: str, rel: str = None) -> str:
+        outgoing = self.memory_store.get_outgoing(id, rel)
+        incoming = self.memory_store.get_incoming(id, rel)
+        for nid in outgoing + incoming:
+            self.working_memory.activate(nid)
+        return (
+            f"由 {id} 指出去: {outgoing if outgoing else '(無)'}\n"
+            f"指向 {id} 的: {incoming if incoming else '(無)'}"
+        )
 
     def resume_with_user_input(self, text: str):
         self.user_reply_content = text
@@ -64,8 +145,34 @@ class AgentWorker:
     def is_running(self) -> bool:
         return self._thread is not None and self._thread.is_alive()
 
-    def set_user_prompt(self, user_prompt: str):
+    def set_user_prompt(self, user_prompt: str, images=None):
         self.current_user_prompt = user_prompt
+        self.current_images = list(images or [])
+
+    def _build_user_content(self, text: str, images=None):
+        """組成 OpenAI / llama.cpp 相容的 user content；有圖時用 multimodal parts。
+
+        Qwen2-VL / llama.cpp 對 data URL 較穩；若只有 raw base64 會自動補前綴。
+        """
+        imgs = images if images is not None else []
+        if not imgs:
+            return text
+        parts = [{
+            "type": "text",
+            "text": text or "Please describe what you see in the image in detail.",
+        }]
+        for url in imgs:
+            if not url:
+                continue
+            # 確保是 data URL
+            if not str(url).startswith("data:"):
+                url = f"data:image/jpeg;base64,{url}"
+            parts.append({
+                "type": "image_url",
+                "image_url": {"url": url},
+            })
+        self.emit("log", f"[系統] 本輪附圖 {len(imgs)} 張（multimodal）")
+        return parts
 
     def set_execution_mode(self, mode: ExecutionMode):
         self.engine.mode = mode
@@ -82,6 +189,7 @@ class AgentWorker:
         self.start()
 
     def start(self):
+        self._stop_event.clear()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
@@ -90,9 +198,27 @@ class AgentWorker:
     # ------------------------------------------------------------------
     def _run(self):
         self.emit("started", None)
+        try:
+            self._run_inner()
+        except InterruptedError:
+            self.emit("log", "[系統] Agent 已停止")
+            self.emit("chunk", "\n\n*(已停止)*\n")
+            self.emit("finished", "stopped")
+        except Exception as e:
+            self.emit("log", f"[錯誤] Agent 異常結束: {e}")
+            self.emit("finished", f"error: {e}")
+        finally:
+            self.state = AgentState.IDLE
 
+    def _run_inner(self):
         # 1. 第一階段：路由判斷 (Router) —— 模型自己決定要不要 Planning
         if self.state == AgentState.IDLE:
+            # 有附圖時直接走對話模式（vision），避免 planner 丟圖
+            if self.current_images:
+                self.emit("log", "[系統] 偵測到附圖，進入直接對話（Vision）模式。")
+                self._run_direct_mode()
+                return
+
             self.emit("log", "[系統] 正在分析任務複雜度 (Router)...")
             route_decision = self._route_intent(self.current_user_prompt)
 
@@ -122,6 +248,8 @@ class AgentWorker:
         # 2. 第二階段：任務樹執行 —— 每個任務都會跑 think/decompose/execute/verify/retry 迴圈
         if self.state == AgentState.EXECUTING:
             while True:
+                if self._should_stop():
+                    raise InterruptedError("Agent 已由使用者停止")
                 task = self.engine.get_next_pending_task()
                 if not task:
                     self.emit("log", "\n[系統] 所有任務執行完畢！")
@@ -224,6 +352,7 @@ class AgentWorker:
                         f"當前任務: {task.title}\n"
                         f"目前方法: {task.method}\n"
                         f"目前注意事項: {task.note}\n"
+                        f"{self.working_memory.render_context()}\n\n"
                         f"歷史樹:\n{self.engine.render_tree_markdown()}"
                     )
                     try:
@@ -258,6 +387,7 @@ class AgentWorker:
 
             # --- 執行 ---
             step_prompt = (
+                f"{self.working_memory.render_context()}\n\n"
                 f"{self.engine.render_tree_markdown()}\n\n"
                 f"【請執行步驟 [{task.id}]】\n"
                 f"- 標題: {task.title}\n"
@@ -362,22 +492,36 @@ class AgentWorker:
     # 直接對話模式（不經過 Task Tree）
     # ------------------------------------------------------------------
     def _run_direct_mode(self):
-        self.history.append({"role": "user", "content": self.current_user_prompt})
+        user_content = self._build_user_content(self.current_user_prompt, self.current_images)
+        self.history.append({"role": "user", "content": user_content})
+        # 圖片只在本輪用一次，避免之後 history 一直帶大 base64
+        self.current_images = []
 
         while True:
-            messages = [{"role": "system", "content": SYSTEM_PROMPT}] + self.history
+            if self._should_stop():
+                raise InterruptedError("Agent 已由使用者停止")
+            messages = [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": self.working_memory.render_context()},
+            ] + self.history
             try:
                 content = self._call_llm_stream(messages)
+                if self._should_stop():
+                    raise InterruptedError("Agent 已由使用者停止")
                 self.history.append({"role": "assistant", "content": content})
                 is_tool, tool_result = self._parse_and_execute_tool(content)
 
                 if is_tool:
-                    # 乾淨輸出結構化標籤，不混入任何 UI 樣式與 Emoji
                     self.emit("chunk", f"\n<tool_result>\n{tool_result}\n</tool_result>\n")
                     self.history.append({"role": "user", "content": f"[System: Tool Execution Result]\n{tool_result}"})
                 else:
                     break
+            except InterruptedError:
+                raise
             except Exception as e:
+                # stream 被 close 時常見各種連線錯誤，視為使用者停止
+                if self._should_stop():
+                    raise InterruptedError("Agent 已由使用者停止")
                 self.emit("chunk", f"\n<tool_error>{str(e)}</tool_error>\n")
                 break
 
@@ -390,11 +534,23 @@ class AgentWorker:
     def _call_and_execute(self, prompt: str) -> str:
         """呼叫 LLM 產生回覆並執行其中的工具呼叫，回傳「拿去驗證用」的結果文字。
         會直接把底層例外往外丟，由呼叫端判斷這是系統性錯誤還是任務失敗。
+        工具結果會 emit 成 <tool_result> / <tool_error>，前端才能結束「執行中」狀態。
         """
         messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}]
         content = self._call_llm_stream(messages)
-        is_tool, tool_result = self._parse_and_execute_tool(content)
-        return tool_result if is_tool else content
+        try:
+            is_tool, tool_result = self._parse_and_execute_tool(content)
+        except Exception as e:
+            self.emit("chunk", f"\n<tool_error>\n{e}\n</tool_error>\n")
+            raise
+
+        if is_tool:
+            # 與 direct mode 一致：把結果送進同一則串流訊息，UI 才能對上 tool 區塊
+            is_err = ("錯誤" in tool_result) or ("未找到函式" in tool_result)
+            tag = "tool_error" if is_err else "tool_result"
+            self.emit("chunk", f"\n<{tag}>\n{tool_result}\n</{tag}>\n")
+            return tool_result
+        return content
 
     def _route_intent(self, user_prompt: str) -> str:
         res = self._call_llm(ROUTER_PROMPT, user_prompt, temperature=0.0).strip().upper()
@@ -408,16 +564,34 @@ class AgentWorker:
         return response.choices[0].message.content or ""
 
     def _call_llm_stream(self, messages: list) -> str:
+        if self._should_stop():
+            raise InterruptedError("Agent 已由使用者停止")
         response = self.client.chat.completions.create(
             model=self.model_name, messages=messages, temperature=0.1, stream=True
         )
+        self._active_stream = response
         full_content = ""
-        for chunk in response:
-            if chunk.choices and chunk.choices[0].delta.content:
-                text = chunk.choices[0].delta.content
-                full_content += text
-                self.emit("chunk", text)
-        return full_content
+        try:
+            for chunk in response:
+                if self._should_stop():
+                    raise InterruptedError("Agent 已由使用者停止")
+                if chunk.choices and chunk.choices[0].delta.content:
+                    text = chunk.choices[0].delta.content
+                    full_content += text
+                    self.emit("chunk", text)
+            return full_content
+        except InterruptedError:
+            raise
+        except Exception:
+            if self._should_stop():
+                raise InterruptedError("Agent 已由使用者停止")
+            raise
+        finally:
+            self._active_stream = None
+            try:
+                response.close()
+            except Exception:
+                pass
 
     def _parse_structured_fields(self, text: str, field_names: list) -> dict:
         """通用結構化欄位解析：用於 Thinking / Verify 這種要求模型輸出固定欄位的回覆。

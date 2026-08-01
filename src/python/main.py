@@ -104,13 +104,31 @@ class JsApi:
     # ------------------------------------------------------------------
     # 前端可呼叫的 API
     # ------------------------------------------------------------------
-    def send_prompt(self, prompt: str):
+    def send_prompt(self, prompt: str, images=None):
+        """
+        prompt: 文字
+        images: 可選，data URL 字串陣列（data:image/png;base64,...）
+        """
         if self.agent.is_running():
             return {"status": "busy", "msg": "Agent 正忙碌中"}
-        self.agent.set_user_prompt(prompt)
+        # pywebview 有時把 list 傳成 tuple / 單一 JSON 字串
+        if images is None:
+            img_list = []
+        elif isinstance(images, str):
+            img_list = [images] if images else []
+        else:
+            img_list = list(images)
+        self.agent.set_user_prompt(prompt, images=img_list)
         self.agent.state = AgentState.IDLE
         self.agent.start()
         return {"status": "ok"}
+
+    def stop_agent(self):
+        """前端「停止」按鈕：中止目前 Agent 執行。"""
+        if not self.agent.is_running():
+            return {"status": "ok", "msg": "Agent 未在執行"}
+        self.agent.request_stop()
+        return {"status": "ok", "msg": "已請求停止"}
 
     def confirm_step(self):
         self.agent.confirm_and_start()

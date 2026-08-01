@@ -12,6 +12,8 @@ const SIDEBAR_AUTO_COLLAPSE_PX = 900;
 
 export default function App() {
   const [input, setInput] = useState('');
+  const [pendingImages, setPendingImages] = useState([]);
+  const [agentBusy, setAgentBusy] = useState(false);
   const [showLog, setShowLog] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => typeof window !== 'undefined' && window.innerWidth < SIDEBAR_AUTO_COLLAPSE_PX,
@@ -50,10 +52,26 @@ export default function App() {
     isBusyRef,
     handleAgentEvent,
     clearMessages,
+    editUserMessage,
+    switchFork,
   } = useAgentChat();
 
+  const onAgentEvent = useCallback(
+    (event) => {
+      handleAgentEvent(event);
+      if (event?.type === 'finished' || event?.type === 'ask_confirm') {
+        // ask_confirm 仍算等待中；finished 才真正結束
+        if (event.type === 'finished') setAgentBusy(false);
+      }
+      if (event?.type === 'started' || event?.type === 'chunk') {
+        setAgentBusy(true);
+      }
+    },
+    [handleAgentEvent],
+  );
+
   const { callApi } = usePywebview({
-    onEvent: handleAgentEvent,
+    onEvent: onAgentEvent,
     executionModeRef,
   });
 
@@ -135,35 +153,86 @@ export default function App() {
     [],
   );
 
-  const handleSend = () => {
+  const handleStop = () => {
+    callApi('stop_agent');
+    isBusyRef.current = false;
+    isStreamingRef.current = false;
+    setAgentBusy(false);
+    setWaitingConfirm(false);
+    setWaitingUserInput(null);
+    setMessages((prev) => {
+      const next = [...prev];
+      const last = next[next.length - 1];
+      if (last?.role === 'agent' && last.isStreaming) {
+        next[next.length - 1] = {
+          ...last,
+          isStreaming: false,
+          content: (last.content || '') + '\n\n*(已停止)*',
+        };
+      }
+      return next;
+    });
+  };
+
+  const handleSend = async () => {
     const text = input.trim();
-    if (!text) return;
+    if (!text && pendingImages.length === 0) return;
 
     pinToBottom();
+    const ts = Date.now();
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    // 壓縮圖片，避免本地 VL GGUF 吃大圖吐 ????
+    const { compressImages } = await import('./lib/imageUtils');
+    const images = await compressImages(
+      pendingImages.map((img) => ({
+        id: img.id,
+        name: img.name,
+        dataUrl: img.dataUrl,
+      })),
+    );
+
+    const prompt =
+      text ||
+      (images.length
+        ? 'Please describe what you see in the image in detail.'
+        : '');
+    const imageUrls = images.map((img) => img.dataUrl).filter(Boolean);
 
     if (waitingUserInput) {
-      setMessages((prev) => [...prev, { role: 'user', content: text }]);
-      callApi('submit_user_input', text);
+      setMessages((prev) => [
+        ...prev,
+        { id, role: 'user', content: text, images, ts },
+      ]);
+      callApi('submit_user_input', prompt);
       setWaitingUserInput(null);
       setInput('');
+      setPendingImages([]);
       return;
     }
 
-    // 標記忙碌，期間禁止 health check 打到 LLM server
     isBusyRef.current = true;
     isStreamingRef.current = true;
+    setAgentBusy(true);
 
     setMessages((prev) => [
       ...prev,
-      { role: 'user', content: text },
-      { role: 'agent', content: '', isStreaming: true },
+      { id, role: 'user', content: text, images, ts },
+      {
+        id: `${id}-a`,
+        role: 'agent',
+        content: '',
+        isStreaming: true,
+        ts,
+      },
     ]);
-    callApi('send_prompt', text);
+    callApi('send_prompt', prompt, imageUrls);
     setInput('');
+    setPendingImages([]);
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-zinc-50 font-sans text-sm text-zinc-900 antialiased selection:bg-zinc-200 dark:bg-zinc-950 dark:text-zinc-100 dark:selection:bg-zinc-700">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#e8e8ea] font-sans text-sm text-zinc-900 antialiased selection:bg-zinc-300 dark:bg-[#1c1c1e] dark:text-zinc-100 dark:selection:bg-zinc-600">
       <SideBar
         isCollapsed={sidebarCollapsed}
         setIsCollapsed={handleSidebarCollapse}
@@ -192,7 +261,7 @@ export default function App() {
         toggleTheme={toggleTheme}
       />
 
-      <main className="relative flex min-w-0 flex-1 flex-col bg-zinc-50 dark:bg-zinc-950">
+      <main className="relative flex min-w-0 flex-1 flex-col bg-[#e8e8ea] dark:bg-[#1c1c1e]">
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
@@ -200,15 +269,36 @@ export default function App() {
         >
           {messages.map((msg, i) => (
             <ChatMessage
-              key={i}
+              key={msg.id || i}
               msg={msg}
               isLast={i === messages.length - 1}
               waitingConfirm={waitingConfirm}
               onConfirmStep={() => {
                 setWaitingConfirm(false);
+                setAgentBusy(true);
+                isBusyRef.current = true;
                 callApi('confirm_step');
               }}
               onCopy={handleCopy}
+              onSwitchFork={switchFork}
+              onEditUser={(m, nextText, resend) => {
+                if (!resend) {
+                  editUserMessage(m, nextText, false);
+                  return;
+                }
+                // 建立分枝 + 重新餵給 LLM（含原圖）
+                const payload = editUserMessage(m, nextText, true);
+                pinToBottom();
+                isBusyRef.current = true;
+                isStreamingRef.current = true;
+                setAgentBusy(true);
+                const imgs = payload?.images || [];
+                callApi(
+                  'send_prompt',
+                  payload?.text || nextText,
+                  imgs,
+                );
+              }}
             />
           ))}
           <div ref={chatEndRef} />
@@ -218,7 +308,14 @@ export default function App() {
           value={input}
           onChange={setInput}
           onSend={handleSend}
+          onStop={handleStop}
           waitingUserInput={waitingUserInput}
+          isBusy={agentBusy || waitingConfirm}
+          images={pendingImages}
+          onAddImages={(list) => setPendingImages((prev) => [...prev, ...list])}
+          onRemoveImage={(id) =>
+            setPendingImages((prev) => prev.filter((img) => img.id !== id))
+          }
         />
       </main>
 

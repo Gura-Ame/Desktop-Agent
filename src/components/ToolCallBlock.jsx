@@ -3,11 +3,17 @@ import { useState } from 'react';
 import { cn } from '../lib/utils';
 import { Badge } from './ui/Badge';
 
-export default function ToolCallBlock({ funcName, args, result }) {
+export default function ToolCallBlock({ funcName, args, result, status }) {
   const [open, setOpen] = useState(false);
-  const isError =
-    result != null && (String(result).includes('錯誤') || String(result).includes('失敗'));
-  const isDone = result !== null && result !== undefined;
+
+  // status: 'running' | 'success' | 'error'；若未傳則依 result 推斷
+  const resolved =
+    status ||
+    (result == null
+      ? 'running'
+      : /錯誤|失敗|Exception|Error|Traceback|無回傳/i.test(String(result))
+        ? 'error'
+        : 'success');
 
   return (
     <div className="my-2 overflow-hidden rounded-md border border-zinc-200 bg-zinc-50 font-mono text-xs dark:border-zinc-800 dark:bg-zinc-950/80">
@@ -25,18 +31,16 @@ export default function ToolCallBlock({ funcName, args, result }) {
         </div>
 
         <div className="flex shrink-0 items-center gap-2 font-sans">
-          {isDone ? (
-            isError ? (
-              <Badge variant="danger">
-                <XCircle size={11} /> 失敗
-              </Badge>
-            ) : (
-              <Badge variant="success">
-                <CheckCircle2 size={11} /> 成功
-              </Badge>
-            )
-          ) : (
-            <Badge variant="warning">執行中…</Badge>
+          {resolved === 'running' && <Badge variant="warning">執行中…</Badge>}
+          {resolved === 'success' && (
+            <Badge variant="success">
+              <CheckCircle2 size={11} /> 成功
+            </Badge>
+          )}
+          {resolved === 'error' && (
+            <Badge variant="danger">
+              <XCircle size={11} /> 失敗
+            </Badge>
           )}
           {open ? (
             <ChevronDown size={14} className="text-zinc-400" />
@@ -65,7 +69,7 @@ export default function ToolCallBlock({ funcName, args, result }) {
               <pre
                 className={cn(
                   'overflow-x-auto whitespace-pre-wrap break-all rounded-md border p-2',
-                  isError
+                  resolved === 'error'
                     ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-300'
                     : 'border-zinc-200 bg-white text-emerald-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-emerald-400',
                 )}

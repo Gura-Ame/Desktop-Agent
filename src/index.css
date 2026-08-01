@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-/* class 策略：在 <html> 上切換 .dark */
 @custom-variant dark (&:where(.dark, .dark *));
 
 html,
@@ -16,40 +15,41 @@ body,
   -webkit-font-smoothing: antialiased;
 }
 
-/* 預設（淺色） */
+/* 淺色：偏暖灰，不要純白刺眼 */
 :root {
   color-scheme: light;
-  --background: #fafafa;
-  --foreground: #18181b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --card: #ffffff;
-  --card-foreground: #18181b;
-  --border: #e4e4e7;
-  --input: #ffffff;
-  --ring: #a1a1aa;
-  --accent: #f4f4f5;
-  --selection: #e4e4e7;
-  --scrollbar: #d4d4d8;
-  --scrollbar-hover: #a1a1aa;
+  --background: #e8e8ea;
+  --foreground: #1a1a1c;
+  --muted: #d4d4d8;
+  --muted-foreground: #52525b;
+  --card: #f0f0f2;
+  --card-foreground: #1a1a1c;
+  --border: #c4c4c8;
+  --input: #f4f4f5;
+  --ring: #71717a;
+  --accent: #d4d4d8;
+  --selection: #c4c4c8;
+  --scrollbar: #a1a1aa;
+  --scrollbar-hover: #71717a;
   --katex: #27272a;
 }
 
+/* 深色：黑灰，不要純黑 #000 / zinc-950 */
 .dark {
   color-scheme: dark;
-  --background: #09090b;
-  --foreground: #fafafa;
-  --muted: #18181b;
+  --background: #1c1c1e;
+  --foreground: #e8e8ea;
+  --muted: #2c2c2e;
   --muted-foreground: #a1a1aa;
-  --card: #0c0c0e;
-  --card-foreground: #fafafa;
-  --border: #27272a;
-  --input: #09090b;
-  --ring: #52525b;
-  --accent: #27272a;
-  --selection: #3f3f46;
-  --scrollbar: #27272a;
-  --scrollbar-hover: #3f3f46;
+  --card: #242426;
+  --card-foreground: #e8e8ea;
+  --border: #3a3a3c;
+  --input: #2c2c2e;
+  --ring: #636366;
+  --accent: #3a3a3c;
+  --selection: #3a3a3c;
+  --scrollbar: #3a3a3c;
+  --scrollbar-hover: #636366;
   --katex: #e4e4e7;
 }
 
@@ -74,6 +74,46 @@ body,
   margin: 0.75em 0;
   overflow-x: auto;
   overflow-y: hidden;
+}
+
+.code-block .hljs-comment,
+.code-block .hl-comment {
+  color: #71717a;
+  font-style: italic;
+}
+.code-block .hljs-keyword,
+.code-block .hl-keyword {
+  color: #c084fc;
+}
+.code-block .hljs-string,
+.code-block .hl-string {
+  color: #4ade80;
+}
+.code-block .hljs-number,
+.code-block .hl-number {
+  color: #fbbf24;
+}
+.code-block .hljs-built_in,
+.code-block .hljs-title,
+.code-block .hljs-title.function_ {
+  color: #38bdf8;
+}
+:root:not(.dark) .code-block .hljs-keyword,
+:root:not(.dark) .code-block .hl-keyword {
+  color: #7c3aed;
+}
+:root:not(.dark) .code-block .hljs-string,
+:root:not(.dark) .code-block .hl-string {
+  color: #16a34a;
+}
+:root:not(.dark) .code-block .hljs-number,
+:root:not(.dark) .code-block .hl-number {
+  color: #d97706;
+}
+:root:not(.dark) .code-block .hljs-built_in,
+:root:not(.dark) .code-block .hljs-title,
+:root:not(.dark) .code-block .hljs-title.function_ {
+  color: #0284c7;
 }
 
 ::-webkit-scrollbar {

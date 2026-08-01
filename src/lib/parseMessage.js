@@ -1,10 +1,46 @@
 /**
  * 把 agent 回覆拆成 text / tool 區塊。
  * 支援 <|tool_call|>call:fn(...)<|tool_call|> 與後續 <tool_result> / <tool_error>
+ *
+ * 注意：tool_result 可能中間夾空白/換行；finished 後仍無 result 視為失敗，不要永遠「執行中」。
  */
-export function parseMessageContent(content) {
+
+function findToolResult(afterToolCall) {
+  // 允許 tool_call 結尾與 <tool_result> 之間有空白
+  const m = afterToolCall.match(/^\s*<(tool_result|tool_error)>/);
+  if (!m) return null;
+
+  const resultType = m[1];
+  const contentStart = m.index + m[0].length;
+  const closeTag = `</${resultType}>`;
+  const closeIdx = afterToolCall.indexOf(closeTag, contentStart);
+
+  if (closeIdx === -1) {
+    // 串流中：結果還沒傳完
+    return {
+      resultType,
+      result: afterToolCall.slice(contentStart).trim(),
+      end: afterToolCall.length,
+      complete: false,
+    };
+  }
+
+  return {
+    resultType,
+    result: afterToolCall.slice(contentStart, closeIdx).trim(),
+    end: closeIdx + closeTag.length,
+    complete: true,
+  };
+}
+
+/**
+ * @param {string} content
+ * @param {{ isStreaming?: boolean }} [opts]
+ */
+export function parseMessageContent(content, opts = {}) {
   if (!content) return [];
 
+  const isStreaming = !!opts.isStreaming;
   const blocks = [];
   let cursor = 0;
 
@@ -13,73 +49,90 @@ export function parseMessageContent(content) {
 
     if (toolCallStart === -1) {
       const rest = content.slice(cursor);
+      // 略過已掛到上一個 tool 的 result 標籤殘段（理論上不會走到）
       if (rest) blocks.push({ type: 'text', content: rest });
       break;
     }
 
     if (toolCallStart > cursor) {
       const textBefore = content.slice(cursor, toolCallStart);
-      if (textBefore) blocks.push({ type: 'text', content: textBefore });
+      if (textBefore.trim()) blocks.push({ type: 'text', content: textBefore });
     }
 
     const afterHeader = content.slice(toolCallStart + 13);
     const callMatch = afterHeader.match(/^\s*call:(\w+)\(/);
 
     if (!callMatch) {
-      blocks.push({ type: 'tool', funcName: '載入中...', args: '', result: null });
+      blocks.push({
+        type: 'tool',
+        funcName: '…',
+        args: '',
+        result: isStreaming ? null : '（格式無法解析）',
+        status: isStreaming ? 'running' : 'error',
+      });
       break;
     }
 
     const funcName = callMatch[1];
     const argsStartIdx = toolCallStart + 13 + callMatch[0].length;
-    const closeMatch = content.slice(argsStartIdx).match(/<\/?\|?tool_call\|?>/);
+    const closeMatch = content.slice(argsStartIdx).match(/\)\s*<\/?\|?tool_call\|?>/);
 
     if (!closeMatch) {
+      // tool_call 尚未串完
       let currentArgs = content.slice(argsStartIdx).trim();
       if (currentArgs.endsWith(')')) currentArgs = currentArgs.slice(0, -1).trim();
-      blocks.push({ type: 'tool', funcName, args: currentArgs, result: null });
+      blocks.push({
+        type: 'tool',
+        funcName,
+        args: currentArgs,
+        result: null,
+        status: 'running',
+      });
       break;
     }
 
     const argsEndRelativeIdx = closeMatch.index;
     let rawArgs = content.slice(argsStartIdx, argsStartIdx + argsEndRelativeIdx).trim();
-    if (rawArgs.endsWith(')')) rawArgs = rawArgs.slice(0, -1).trim();
+    // closeMatch 已從 ) 開始，args 不含最後的 )
+    const toolCallEndIdx =
+      argsStartIdx + argsEndRelativeIdx + closeMatch[0].length;
 
-    const toolCallEndIdx = argsStartIdx + argsEndRelativeIdx + closeMatch[0].length;
     const afterToolCall = content.slice(toolCallEndIdx);
-    const resultStartMatch = afterToolCall.match(/^\s*<(tool_result|tool_error)>/);
+    const found = findToolResult(afterToolCall);
 
-    if (!resultStartMatch) {
-      blocks.push({ type: 'tool', funcName, args: rawArgs, result: null });
-      cursor = toolCallEndIdx;
-      continue;
-    }
-
-    const resultType = resultStartMatch[1];
-    const resContentStartIdx = toolCallEndIdx + resultStartMatch[0].length;
-    const closeResultTag = `</${resultType}>`;
-    const resultEndIdx = content.indexOf(closeResultTag, resContentStartIdx);
-
-    if (resultEndIdx === -1) {
-      const currentResult = content.slice(resContentStartIdx).trim();
+    if (!found) {
+      // 已關閉的 tool_call，但還沒有 result：串流中=執行中；已結束=失敗/無結果
       blocks.push({
         type: 'tool',
         funcName,
         args: rawArgs,
-        result: resultType === 'tool_error' ? `錯誤: ${currentResult}` : currentResult,
+        result: isStreaming ? null : '（無回傳結果）',
+        status: isStreaming ? 'running' : 'error',
       });
-      break;
+      cursor = toolCallEndIdx;
+      continue;
     }
 
-    const rawResult = content.slice(resContentStartIdx, resultEndIdx).trim();
+    const isError =
+      found.resultType === 'tool_error' ||
+      /錯誤|失敗|Exception|Error|Traceback/i.test(found.result || '');
+
     blocks.push({
       type: 'tool',
       funcName,
       args: rawArgs,
-      result: resultType === 'tool_error' ? `錯誤: ${rawResult}` : rawResult,
+      result:
+        found.resultType === 'tool_error' && found.result && !found.result.startsWith('錯誤')
+          ? `錯誤: ${found.result}`
+          : found.result,
+      status: !found.complete
+        ? 'running'
+        : isError
+          ? 'error'
+          : 'success',
     });
 
-    cursor = resultEndIdx + closeResultTag.length;
+    cursor = toolCallEndIdx + found.end;
   }
 
   return blocks;
