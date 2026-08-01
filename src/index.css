@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+/* 鎖定全域視窗，禁止出現原生捲軸 */
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #09090b; /* zinc-950 */
+  color: #f4f4f5; /* zinc-100 */
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* 對話內容明確可選取、可複製 */
+.chat-selectable {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  cursor: text;
+}
+
+/* KaTeX 在暗色背景上的可讀性 */
+.katex {
+  font-size: 1.05em;
+  color: #e4e4e7;
+}
+.katex-display {
+  margin: 0.75em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Shadcn 簡約暗黑風滾動條 */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a; /* zinc-800 */
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46; /* zinc-700 */
+}
