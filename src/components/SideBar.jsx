@@ -1,183 +1,235 @@
 import {
-    Bot, Cpu,
-    Eraser,
-    ListTree,
-    PanelLeftClose, PanelLeftOpen, RefreshCw,
-    Terminal,
-    Trash2
+  Bot,
+  Cpu,
+  Eraser,
+  ListTree,
+  Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
+  RefreshCw,
+  Sun,
+  Terminal,
+  Trash2,
 } from 'lucide-react';
+import { cn } from '../lib/utils';
+import { Badge } from './ui/Badge';
+import { Button } from './ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
+import { Input } from './ui/Input';
 
-const MODE_OPTIONS = [
-    { value: 'STEP_BY_STEP', label: '逐步確認', hint: '無視任務自己的判斷，每完成一步就暫停，等待你確認才繼續' },
-    { value: 'SMART', label: '智慧確認', hint: '由模型規劃時標的「需要確認」決定：高風險步驟才暫停，其餘自動繼續' },
-    { value: 'AUTO', label: '全自動', hint: '無視任務自己的判斷，中間不再暫停，直到全部完成或需要你介入' },
+export const MODE_OPTIONS = [
+  {
+    value: 'STEP_BY_STEP',
+    label: '逐步',
+    hint: '每完成一步就暫停，等你確認才繼續',
+  },
+  {
+    value: 'SMART',
+    label: '智慧',
+    hint: '高風險步驟才暫停，其餘自動繼續',
+  },
+  {
+    value: 'AUTO',
+    label: '自動',
+    hint: '中間不暫停，直到完成或需要介入',
+  },
 ];
 
-export default function Sidebar({
-    isCollapsed,
-    setIsCollapsed,
-    baseUrl,
-    setBaseUrl,
-    modelName,
-    setModelName,
-    applyApiConfig,
-    serverStatus,
-    checkServerHealth,
-    executionMode,
-    handleModeChange,
-    clearDrawings,
-    clearHistory,
-    showLogWindow,
-    setShowLogWindow
+export default function SideBar({
+  isCollapsed,
+  setIsCollapsed,
+  baseUrl,
+  setBaseUrl,
+  modelName,
+  setModelName,
+  applyApiConfig,
+  serverStatus,
+  checkServerHealth,
+  executionMode,
+  handleModeChange,
+  clearDrawings,
+  clearHistory,
+  showLogWindow,
+  setShowLogWindow,
+  theme,
+  toggleTheme,
 }) {
-    return (
-        <aside
-            className={`bg-zinc-900/60 border-r border-zinc-800 flex flex-col shrink-0 transition-all duration-300 ease-in-out relative ${isCollapsed ? 'w-16 p-3 items-center' : 'w-80 p-4'
-                }`}
-        >
-            {/* 收合 / 展開 切換按鈕 */}
-            <div className={`flex items-center justify-between w-full pb-3 border-b border-zinc-800/80 ${isCollapsed ? 'flex-col gap-3' : ''}`}>
-                <div className="flex items-center gap-2 font-semibold text-zinc-100 tracking-tight overflow-hidden whitespace-nowrap">
-                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
-                        <Bot size={18} />
-                    </div>
-                    {!isCollapsed && <span>Desktop Agent</span>}
-                </div>
+  return (
+    <aside
+      className={cn(
+        'flex shrink-0 flex-col border-r border-zinc-200 bg-zinc-50 transition-[width] duration-200 dark:border-zinc-800 dark:bg-zinc-950',
+        isCollapsed ? 'w-14 items-center px-2 py-3' : 'w-72 px-3 py-3',
+      )}
+    >
+      {/* Header */}
+      <div
+        className={cn(
+          'flex w-full items-center border-b border-zinc-200 pb-3 dark:border-zinc-800',
+          isCollapsed ? 'flex-col gap-2' : 'justify-between',
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+            <Bot size={16} />
+          </div>
+          {!isCollapsed && (
+            <span className="truncate text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+              Desktop Agent
+            </span>
+          )}
+        </div>
+        <div className={cn('flex items-center gap-0.5', isCollapsed && 'flex-col')}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? '切換淺色' : '切換深色'}
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            title={isCollapsed ? '展開' : '收合'}
+          >
+            {isCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          </Button>
+        </div>
+      </div>
 
-                <button
-                    onClick={() => setIsCollapsed(!isCollapsed)}
-                    className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
-                    title={isCollapsed ? "展開側邊欄" : "收合側邊欄"}
-                >
-                    {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-                </button>
-            </div>
+      {!isCollapsed ? (
+        <div className="my-3 flex-1 space-y-3 overflow-y-auto pr-0.5">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Cpu size={13} />
+                LLM 連線
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={checkServerHealth}
+                title="重新檢查"
+              >
+                <RefreshCw size={12} />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1">
+                <label className="text-[11px] text-zinc-500">Base URL</label>
+                <Input
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  spellCheck={false}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-zinc-500">Model</label>
+                <Input
+                  value={modelName}
+                  onChange={(e) => setModelName(e.target.value)}
+                  spellCheck={false}
+                />
+              </div>
+              <Button className="w-full" onClick={applyApiConfig}>
+                套用設定
+              </Button>
+              <div className="flex items-center justify-between border-t border-zinc-100 pt-2 text-xs dark:border-zinc-800">
+                <span className="text-zinc-500">狀態</span>
+                <Badge variant={serverStatus.running ? 'success' : 'danger'}>
+                  <span
+                    className={cn(
+                      'h-1.5 w-1.5 rounded-full',
+                      serverStatus.running ? 'bg-emerald-500' : 'bg-rose-500',
+                    )}
+                  />
+                  {serverStatus.msg}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
 
-            {!isCollapsed ? (
-                /* 展開模式內容 */
-                <div className="flex-1 overflow-y-auto space-y-5 my-4 pr-1">
-                    {/* LLM Server 配置卡片 */}
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-3 shadow-sm">
-                        <div className="flex items-center justify-between text-xs font-medium text-zinc-400">
-                            <span className="flex items-center gap-1.5"><Cpu size={14} /> LLM Server 配置</span>
-                            <button
-                                onClick={checkServerHealth}
-                                className="hover:text-zinc-200 transition-colors"
-                                title="重置與檢查連線"
-                            >
-                                <RefreshCw size={12} />
-                            </button>
-                        </div>
-
-                        <div className="space-y-1">
-                            <label className="text-[11px] text-zinc-400">API Base URL</label>
-                            <input
-                                type="text"
-                                value={baseUrl}
-                                onChange={(e) => setBaseUrl(e.target.value)}
-                                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono"
-                            />
-                        </div>
-
-                        <div className="space-y-1">
-                            <label className="text-[11px] text-zinc-400">Model Name</label>
-                            <input
-                                type="text"
-                                value={modelName}
-                                onChange={(e) => setModelName(e.target.value)}
-                                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono"
-                            />
-                        </div>
-
-                        <button
-                            onClick={applyApiConfig}
-                            className="w-full bg-zinc-100 hover:bg-white text-zinc-950 font-medium py-1.5 rounded-lg text-xs shadow transition-all active:scale-[0.98]"
-                        >
-                            套用連線設定
-                        </button>
-
-                        <div className="flex items-center justify-between text-xs pt-2 border-t border-zinc-800/80">
-                            <span className="text-zinc-400">連線狀態</span>
-                            <span className="flex items-center gap-1.5 font-medium">
-                                <span className={`w-2 h-2 rounded-full ${serverStatus.running ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                                <span className={serverStatus.running ? 'text-zinc-200' : 'text-zinc-400'}>
-                                    {serverStatus.msg}
-                                </span>
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* 任務樹執行模式卡片 */}
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-3 shadow-sm">
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-400">
-                            <ListTree size={14} /> Task Tree 執行模式
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-1.5">
-                            {MODE_OPTIONS.map((opt) => (
-                                <button
-                                    key={opt.value}
-                                    onClick={() => handleModeChange(opt.value)}
-                                    title={opt.hint}
-                                    className={`py-2 rounded-lg text-[11px] font-medium border transition-all active:scale-[0.98] ${executionMode === opt.value
-                                        ? 'bg-emerald-500 border-emerald-400 text-zinc-950'
-                                        : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:bg-zinc-800'
-                                        }`}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
-                        <p className="text-[11px] text-zinc-500 leading-relaxed">
-                            {MODE_OPTIONS.find((o) => o.value === executionMode)?.hint || '每完成一步就暫停，等待你確認才繼續'}
-                        </p>
-                    </div>
-                </div>
-            ) : (
-                /* 收合模式圖示選單 */
-                <div className="flex-1 my-4 space-y-4 flex flex-col items-center">
-                    <div
-                        className={`w-3 h-3 rounded-full mt-2 ${serverStatus.running ? 'bg-emerald-500' : 'bg-rose-500'}`}
-                        title={`伺服器狀態: ${serverStatus.msg}`}
-                    />
-                    <div
-                        className="p-1.5 rounded-lg text-zinc-400"
-                        title={`執行模式: ${executionMode}`}
-                    >
-                        <ListTree size={16} />
-                    </div>
-                </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <ListTree size={13} />
+                執行模式
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-1">
+                {MODE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    title={opt.hint}
+                    onClick={() => handleModeChange(opt.value)}
+                    className={cn(
+                      'rounded-md border py-1.5 text-[11px] font-medium transition-colors',
+                      executionMode === opt.value
+                        ? 'border-zinc-900 bg-zinc-900 text-zinc-50 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950'
+                        : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200',
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] leading-relaxed text-zinc-500">
+                {MODE_OPTIONS.find((o) => o.value === executionMode)?.hint}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="my-4 flex flex-1 flex-col items-center gap-3">
+          <span
+            className={cn(
+              'h-2 w-2 rounded-full',
+              serverStatus.running ? 'bg-emerald-500' : 'bg-rose-500',
             )}
+            title={serverStatus.msg}
+          />
+          <ListTree size={16} className="text-zinc-400" title={executionMode} />
+        </div>
+      )}
 
-            {/* 底部功能工具按鈕 */}
-            <div className={`mt-auto space-y-2 w-full pt-2 border-t border-zinc-800/80 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
-                <button
-                    onClick={clearDrawings}
-                    className={`flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg text-xs transition-all active:scale-[0.98] ${isCollapsed ? 'p-2.5 w-10' : 'w-full py-2'
-                        }`}
-                    title="清除螢幕標記"
-                >
-                    <Eraser size={14} /> {!isCollapsed && "清除螢幕標記"}
-                </button>
-
-                <button
-                    onClick={clearHistory}
-                    className={`flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg text-xs transition-all active:scale-[0.98] ${isCollapsed ? 'p-2.5 w-10' : 'w-full py-2'
-                        }`}
-                    title="清空對話紀錄"
-                >
-                    <Trash2 size={14} /> {!isCollapsed && "清空對話紀錄"}
-                </button>
-
-                <button
-                    onClick={() => setShowLogWindow(!showLogWindow)}
-                    className={`flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg text-xs transition-all active:scale-[0.98] ${isCollapsed ? 'p-2.5 w-10' : 'w-full py-2'
-                        }`}
-                    title="切換面板 Log"
-                >
-                    <Terminal size={14} /> {!isCollapsed && (showLogWindow ? '關閉面板 Log' : '開啟面板 Log')}
-                </button>
-            </div>
-        </aside>
-    );
+      <div
+        className={cn(
+          'mt-auto space-y-1 border-t border-zinc-200 pt-2 dark:border-zinc-800',
+          isCollapsed && 'flex flex-col items-center',
+        )}
+      >
+        <Button
+          variant="secondary"
+          className={cn(isCollapsed ? 'h-9 w-9 p-0' : 'w-full')}
+          onClick={clearDrawings}
+          title="清除螢幕標記"
+        >
+          <Eraser size={14} />
+          {!isCollapsed && '清除標記'}
+        </Button>
+        <Button
+          variant="secondary"
+          className={cn(isCollapsed ? 'h-9 w-9 p-0' : 'w-full')}
+          onClick={clearHistory}
+          title="清空對話"
+        >
+          <Trash2 size={14} />
+          {!isCollapsed && '清空對話'}
+        </Button>
+        <Button
+          variant="secondary"
+          className={cn(isCollapsed ? 'h-9 w-9 p-0' : 'w-full')}
+          onClick={() => setShowLogWindow(!showLogWindow)}
+          title="系統日誌"
+        >
+          <Terminal size={14} />
+          {!isCollapsed && (showLogWindow ? '關閉日誌' : '開啟日誌')}
+        </Button>
+      </div>
+    </aside>
+  );
 }

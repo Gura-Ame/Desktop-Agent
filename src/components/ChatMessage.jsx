@@ -1,188 +1,127 @@
 import { Bot, CheckCircle2, User } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import rehypeKatex from 'rehype-katex';
 import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import { parseMessageContent } from '../lib/parseMessage';
+import { cn } from '../lib/utils';
+import { Button } from './ui/Button';
 import ToolCallBlock from './ToolCallBlock';
 
-function parseMessageContent(content) {
-    if (!content) return [];
-
-    const blocks = [];
-    let cursor = 0;
-
-    while (cursor < content.length) {
-        const toolCallStart = content.indexOf('<|tool_call|>', cursor);
-
-        if (toolCallStart === -1) {
-            const restText = content.slice(cursor);
-            if (restText) blocks.push({ type: 'text', content: restText });
-            break;
-        }
-
-        if (toolCallStart > cursor) {
-            const textBefore = content.slice(cursor, toolCallStart);
-            if (textBefore) blocks.push({ type: 'text', content: textBefore });
-        }
-
-        const afterHeader = content.slice(toolCallStart + 13);
-        const callMatch = afterHeader.match(/^\s*call:(\w+)\(/);
-
-        if (!callMatch) {
-            blocks.push({
-                type: 'tool',
-                funcName: '載入中...',
-                args: '',
-                result: null
-            });
-            break;
-        }
-
-        const funcName = callMatch[1];
-        const argsStartIdx = toolCallStart + 13 + callMatch[0].length;
-        const closeMatch = content.slice(argsStartIdx).match(/<\/?\|?tool_call\|?>/);
-
-        if (!closeMatch) {
-            // 正在 Streaming 參數，去掉末尾多餘的右括號
-            let currentArgs = content.slice(argsStartIdx).trim();
-            if (currentArgs.endsWith(')')) currentArgs = currentArgs.slice(0, -1).trim();
-
-            blocks.push({
-                type: 'tool',
-                funcName,
-                args: currentArgs,
-                result: null
-            });
-            break;
-        }
-
-        const argsEndRelativeIdx = closeMatch.index;
-        let rawArgs = content.slice(argsStartIdx, argsStartIdx + argsEndRelativeIdx).trim();
-
-        // 剔除末尾屬於 call(...) 的閉合右括號
-        if (rawArgs.endsWith(')')) {
-            rawArgs = rawArgs.slice(0, -1).trim();
-        }
-
-        const toolCallEndIdx = argsStartIdx + argsEndRelativeIdx + closeMatch[0].length;
-        const afterToolCall = content.slice(toolCallEndIdx);
-        const resultStartMatch = afterToolCall.match(/^\s*<(tool_result|tool_error)>/);
-
-        if (!resultStartMatch) {
-            blocks.push({
-                type: 'tool',
-                funcName,
-                args: rawArgs,
-                result: null
-            });
-            cursor = toolCallEndIdx;
-            continue;
-        }
-
-        const resultType = resultStartMatch[1];
-        const resContentStartIdx = toolCallEndIdx + resultStartMatch[0].length;
-        const closeResultTag = `</${resultType}>`;
-        const resultEndIdx = content.indexOf(closeResultTag, resContentStartIdx);
-
-        if (resultEndIdx === -1) {
-            const currentResult = content.slice(resContentStartIdx).trim();
-            blocks.push({
-                type: 'tool',
-                funcName,
-                args: rawArgs,
-                result: resultType === 'tool_error' ? `錯誤: ${currentResult}` : currentResult
-            });
-            break;
-        }
-
-        const rawResult = content.slice(resContentStartIdx, resultEndIdx).trim();
-        blocks.push({
-            type: 'tool',
-            funcName,
-            args: rawArgs,
-            result: resultType === 'tool_error' ? `錯誤: ${rawResult}` : rawResult
-        });
-
-        cursor = resultEndIdx + closeResultTag.length;
+const markdownComponents = {
+  code({ className, children, ...props }) {
+    if (className?.includes('language-math') || className?.includes('math')) {
+      return (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
     }
-
-    return blocks;
-}
+    return (
+      <code
+        className="break-all rounded border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 font-mono text-xs text-emerald-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-emerald-400"
+        {...props}
+      >
+        {children}
+      </code>
+    );
+  },
+  pre({ children, ...props }) {
+    return (
+      <pre
+        className="my-2 overflow-x-auto whitespace-pre-wrap break-all rounded-md border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
+        {...props}
+      >
+        {children}
+      </pre>
+    );
+  },
+  p({ children }) {
+    return <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>;
+  },
+  ul({ children }) {
+    return <ul className="mb-2 list-disc space-y-1 pl-5 last:mb-0">{children}</ul>;
+  },
+  ol({ children }) {
+    return <ol className="mb-2 list-decimal space-y-1 pl-5 last:mb-0">{children}</ol>;
+  },
+  li({ children }) {
+    return <li className="leading-relaxed">{children}</li>;
+  },
+  strong({ children }) {
+    return (
+      <strong className="font-semibold text-zinc-900 dark:text-zinc-50">{children}</strong>
+    );
+  },
+};
 
 export default function ChatMessage({ msg, isLast, waitingConfirm, onConfirmStep }) {
-    const parsedBlocks = parseMessageContent(msg.content);
+  const blocks = parseMessageContent(msg.content);
+  const isUser = msg.role === 'user';
 
-    return (
-        <div className={`flex gap-3 max-w-4xl mx-auto min-w-0 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            {msg.role === 'agent' && (
-                <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0 text-emerald-400 mt-0.5">
-                    <Bot size={16} />
-                </div>
-            )}
-
-            <div className={`chat-selectable min-w-0 max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed shadow-sm ${msg.role === 'user'
-                ? 'bg-emerald-600 text-white rounded-br-none font-medium'
-                : 'bg-zinc-900 border border-zinc-800/80 text-zinc-200 rounded-bl-none'
-                }`}>
-                <div className="chat-selectable overflow-x-auto min-w-0 break-words space-y-2">
-                    {parsedBlocks.map((block, idx) => {
-                        if (block.type === 'tool') {
-                            return (
-                                <ToolCallBlock
-                                    key={idx}
-                                    funcName={block.funcName}
-                                    args={block.args}
-                                    result={block.result}
-                                />
-                            );
-                        }
-
-                        return (
-                            <ReactMarkdown
-                                key={idx}
-                                remarkPlugins={[remarkMath]}
-                                rehypePlugins={[rehypeKatex]}
-                                components={{
-                                    code({ node, inline, className, children, ...props }) {
-                                        // KaTeX 已處理的數學不要再包一層 code 樣式
-                                        if (className?.includes('language-math') || className?.includes('math')) {
-                                            return <code className={className} {...props}>{children}</code>;
-                                        }
-                                        return (
-                                            <code className="bg-zinc-950 text-emerald-400 px-1.5 py-0.5 rounded font-mono text-xs border border-zinc-800 break-all" {...props}>
-                                                {children}
-                                            </code>
-                                        );
-                                    },
-                                    pre({ node, children, ...props }) {
-                                        return (
-                                            <pre className="bg-zinc-950 text-zinc-300 p-3 rounded-lg border border-zinc-800/80 font-mono text-xs overflow-x-auto whitespace-pre-wrap break-all my-2 shadow-inner" {...props}>
-                                                {children}
-                                            </pre>
-                                        );
-                                    }
-                                }}
-                            >
-                                {block.content}
-                            </ReactMarkdown>
-                        );
-                    })}
-                </div>
-
-                {msg.isTree && waitingConfirm && isLast && (
-                    <button
-                        onClick={onConfirmStep}
-                        className="mt-3 flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold px-4 py-2 rounded-lg text-xs shadow transition-all active:scale-[0.98]"
-                    >
-                        <CheckCircle2 size={16} /> 確認執行此步驟
-                    </button>
-                )}
-            </div>
-
-            {msg.role === 'user' && (
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-400 mt-0.5">
-                    <User size={16} />
-                </div>
-            )}
+  return (
+    <div
+      className={cn(
+        'mx-auto flex max-w-3xl min-w-0 gap-3',
+        isUser ? 'justify-end' : 'justify-start',
+      )}
+    >
+      {!isUser && (
+        <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+          <Bot size={14} />
         </div>
-    );
+      )}
+
+      <div
+        className={cn(
+          'chat-selectable min-w-0 max-w-[min(85%,42rem)] rounded-lg px-3.5 py-2.5 text-sm leading-relaxed',
+          isUser
+            ? 'rounded-br-sm bg-zinc-900 text-zinc-50 dark:bg-zinc-100 dark:text-zinc-950'
+            : 'rounded-bl-sm border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-200',
+        )}
+      >
+        <div className="chat-selectable min-w-0 space-y-1.5 overflow-x-auto break-words">
+          {blocks.map((block, idx) => {
+            if (block.type === 'tool') {
+              return (
+                <ToolCallBlock
+                  key={idx}
+                  funcName={block.funcName}
+                  args={block.args}
+                  result={block.result}
+                />
+              );
+            }
+
+            return (
+              <ReactMarkdown
+                key={idx}
+                remarkPlugins={[remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+                components={markdownComponents}
+              >
+                {block.content}
+              </ReactMarkdown>
+            );
+          })}
+
+          {msg.isStreaming && (
+            <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-zinc-400 align-middle dark:bg-zinc-500" />
+          )}
+        </div>
+
+        {msg.isTree && waitingConfirm && isLast && (
+          <Button variant="primary" size="sm" className="mt-3" onClick={onConfirmStep}>
+            <CheckCircle2 size={14} />
+            確認執行此步驟
+          </Button>
+        )}
+      </div>
+
+      {isUser && (
+        <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-zinc-300 bg-zinc-100 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+          <User size={14} />
+        </div>
+      )}
+    </div>
+  );
 }

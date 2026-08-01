@@ -48,8 +48,11 @@ class JsApi:
             "launch_app": tools.launch_app,
             "draw_box": self.overlay_manager.draw_box,
             "draw_line": self.overlay_manager.draw_line,
+            "draw_stroke": self.overlay_manager.draw_stroke,
             "clear_drawings": self.overlay_manager.clear_drawings,
             "execute_python": tools.execute_python,
+            "read_screen_api": tools.read_screen_api,
+            "query_screen_element": tools.query_screen_element,
         }
 
         self.agent = AgentWorker(
@@ -146,48 +149,6 @@ class JsApi:
         self.agent.history = []
         return {"status": "ok"}
 
-    def copy_to_clipboard(self, text: str):
-        """用 Win32 API 寫入剪貼簿，避開 Qt WebEngine 的 OleSetClipboard / COM 問題。"""
-        if not text:
-            return {"status": "error", "msg": "empty"}
-        try:
-            import ctypes
-            from ctypes import wintypes
-
-            user32 = ctypes.windll.user32
-            kernel32 = ctypes.windll.kernel32
-
-            CF_UNICODETEXT = 13
-            GMEM_MOVEABLE = 0x0002
-
-            # 確保本執行緒有 COM（js bridge 執行緒）
-            try:
-                ctypes.windll.ole32.CoInitializeEx(None, 0x2)
-            except Exception:
-                pass
-
-            if not user32.OpenClipboard(None):
-                return {"status": "error", "msg": "OpenClipboard failed"}
-
-            try:
-                user32.EmptyClipboard()
-                data = text.encode("utf-16-le") + b"\x00\x00"
-                h_mem = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(data))
-                if not h_mem:
-                    return {"status": "error", "msg": "GlobalAlloc failed"}
-                ptr = kernel32.GlobalLock(h_mem)
-                ctypes.memmove(ptr, data, len(data))
-                kernel32.GlobalUnlock(h_mem)
-                if not user32.SetClipboardData(CF_UNICODETEXT, h_mem):
-                    return {"status": "error", "msg": "SetClipboardData failed"}
-            finally:
-                user32.CloseClipboard()
-
-            return {"status": "ok"}
-        except Exception as e:
-            return {"status": "error", "msg": str(e)}
-
-
 def main():
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(2)
@@ -198,6 +159,7 @@ def main():
             pass
 
     # COM 必須用 STA（Apartment-threaded），否則 WebEngine 剪貼簿會 0x800401f0
+    # 我也不知道為啥刪了這個就崩 哈哈
     COINIT_APARTMENTTHREADED = 0x2
     try:
         ctypes.windll.ole32.CoInitializeEx(None, COINIT_APARTMENTTHREADED)
@@ -224,7 +186,7 @@ def main():
     )
     api.set_window(window)
 
-    webview.start(gui="qt", debug=True)
+    webview.start(gui="edgechromium", debug=True)
 
 
 if __name__ == "__main__":

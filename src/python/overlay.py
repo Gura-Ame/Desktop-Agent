@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6.QtCore import Qt, QObject, pyqtSignal
-from PyQt6.QtGui import QPainter, QPen, QBrush, QColor, QFont
+from PyQt6.QtGui import QPainter, QPen, QBrush, QColor, QFont, QPainterPath
 
 def parse_hex_color(hex_str: str, alpha: int = 220) -> QColor:
     try:
@@ -20,7 +20,8 @@ class ScreenOverlay(QWidget):
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
             Qt.WindowType.WindowStaysOnTopHint |
-            Qt.WindowType.Tool
+            Qt.WindowType.Tool |
+            Qt.WindowType.WindowTransparentForInput
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
@@ -32,10 +33,42 @@ class ScreenOverlay(QWidget):
     def add_shape(self, shape_type, data):
         self.shapes.append({'type': shape_type, 'data': data})
         self.update()
+        QApplication.processEvents()  # 強制單執行緒立刻渲染畫面
 
     def clear(self):
         self.shapes.clear()
         self.update()
+        QApplication.processEvents()
+
+    def erase_near(self, x: int, y: int, radius: int = 40):
+        """局部橡皮擦：清除指定點 (x, y) 半徑內的筆跡/圖形"""
+        r_sq = radius ** 2
+        new_shapes = []
+        for item in self.shapes:
+            stype = item['type']
+            data = item['data']
+            keep = True
+
+            if stype == 'box':
+                cx, cy = data['x'], data['y']
+                if (cx - x) ** 2 + (cy - y) ** 2 <= r_sq:
+                    keep = False
+            elif stype == 'line':
+                cx, cy = data['x1'], data['y1']
+                if (cx - x) ** 2 + (cy - y) ** 2 <= r_sq:
+                    keep = False
+            elif stype == 'stroke':
+                for px, py in data.get('points', []):
+                    if (px - x) ** 2 + (py - y) ** 2 <= r_sq:
+                        keep = False
+                        break
+
+            if keep:
+                new_shapes.append(item)
+
+        self.shapes = new_shapes
+        self.update()
+        QApplication.processEvents()
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -82,9 +115,23 @@ class ScreenOverlay(QWidget):
 
                 painter.drawLine(x1, y1, x2, y2)
 
+            elif stype == 'stroke':
+                pen_width = data.get('width', 3)
+                pen = QPen(main_color, pen_width)
+                painter.setPen(pen)
+
+                points = data.get('points', [])
+                if len(points) > 1:
+                    path = QPainterPath()
+                    path.moveTo(int(points[0][0] / dpr), int(points[0][1] / dpr))
+                    for pt in points[1:]:
+                        path.lineTo(int(pt[0] / dpr), int(pt[1] / dpr))
+                    painter.drawPath(path)
+
 class OverlayBridge(QObject):
     add_shape_signal = pyqtSignal(str, dict)
     clear_signal = pyqtSignal()
+    erase_signal = pyqtSignal(int, int, int)
 
 class OverlayManager:
     def __init__(self, overlay: ScreenOverlay):
@@ -92,6 +139,7 @@ class OverlayManager:
         self.bridge = OverlayBridge()
         self.bridge.add_shape_signal.connect(self.overlay.add_shape)
         self.bridge.clear_signal.connect(self.overlay.clear)
+        self.bridge.erase_signal.connect(self.overlay.erase_near)
 
     def draw_box(self, x: int, y: int, width: int, height: int, label: str = "", color: str = "#FF0000") -> str:
         self.bridge.add_shape_signal.emit('box', {'x': x, 'y': y, 'w': width, 'h': height, 'label': label, 'color': color})
@@ -100,6 +148,16 @@ class OverlayManager:
     def draw_line(self, x1: int, y1: int, x2: int, y2: int, color: str = "#FFFF00") -> str:
         self.bridge.add_shape_signal.emit('line', {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'color': color})
         return f"Drew line from ({x1}, {y1}) to ({x2}, {y2}) with color {color}"
+
+    def draw_stroke(self, points: list, color: str = "#00FF00", width: int = 3) -> str:
+        """讓 LLM 畫連續塗鴉/畫筆筆畫，points 格式為 [[x1, y1], [x2, y2], ...]"""
+        self.bridge.add_shape_signal.emit('stroke', {'points': points, 'color': color, 'width': width})
+        return f"Drew stroke with {len(points)} points"
+
+    def erase_at(self, x: int, y: int, radius: int = 40) -> str:
+        """橡皮擦：擦除特定座標附近的筆畫"""
+        self.bridge.erase_signal.emit(x, y, radius)
+        return f"Erased drawings near ({x}, {y}) within radius {radius}"
 
     def clear_drawings(self) -> str:
         self.bridge.clear_signal.emit()

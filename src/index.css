@@ -1,29 +1,74 @@
 @import "tailwindcss";
 
-/* 鎖定全域視窗，禁止出現原生捲軸 */
-html, body, #root {
+/* class 策略：在 <html> 上切換 .dark */
+@custom-variant dark (&:where(.dark, .dark *));
+
+html,
+body,
+#root {
   height: 100%;
   width: 100%;
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: #09090b; /* zinc-950 */
-  color: #f4f4f5; /* zinc-100 */
   -webkit-user-select: text;
   user-select: text;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* 對話內容明確可選取、可複製 */
+/* 預設（淺色） */
+:root {
+  color-scheme: light;
+  --background: #fafafa;
+  --foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --border: #e4e4e7;
+  --input: #ffffff;
+  --ring: #a1a1aa;
+  --accent: #f4f4f5;
+  --selection: #e4e4e7;
+  --scrollbar: #d4d4d8;
+  --scrollbar-hover: #a1a1aa;
+  --katex: #27272a;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --muted: #18181b;
+  --muted-foreground: #a1a1aa;
+  --card: #0c0c0e;
+  --card-foreground: #fafafa;
+  --border: #27272a;
+  --input: #09090b;
+  --ring: #52525b;
+  --accent: #27272a;
+  --selection: #3f3f46;
+  --scrollbar: #27272a;
+  --scrollbar-hover: #3f3f46;
+  --katex: #e4e4e7;
+}
+
+html,
+body,
+#root {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
 .chat-selectable {
   -webkit-user-select: text !important;
   user-select: text !important;
   cursor: text;
 }
 
-/* KaTeX 在暗色背景上的可讀性 */
 .katex {
   font-size: 1.05em;
-  color: #e4e4e7;
+  color: var(--katex);
 }
 .katex-display {
   margin: 0.75em 0;
@@ -31,21 +76,17 @@ html, body, #root {
   overflow-y: hidden;
 }
 
-/* Shadcn 簡約暗黑風滾動條 */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #27272a; /* zinc-800 */
+  background: var(--scrollbar);
   border-radius: 9999px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46; /* zinc-700 */
+  background: var(--scrollbar-hover);
 }
