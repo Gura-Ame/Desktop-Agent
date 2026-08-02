@@ -11,7 +11,6 @@
 """
 
 CATEGORY_MARKERS = {
-    "router": "你是一個任務分流器",
     "planner": "你是一個 AI 任務規劃器",
     "decompose": "你是任務拆解器",
     "thinking": "高階思考 (Deep Thinking)",

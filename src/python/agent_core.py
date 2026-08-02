@@ -8,7 +8,7 @@ from openai import OpenAI
 
 from config import (
     API_BASE_URL, API_KEY, MODEL_NAME, SYSTEM_PROMPT,
-    ROUTER_PROMPT, PLANNER_SYSTEM_PROMPT, REFLECT_SYSTEM_PROMPT,
+    PLANNER_SYSTEM_PROMPT, REFLECT_SYSTEM_PROMPT,
     THINKING_SYSTEM_PROMPT, VERIFY_SYSTEM_PROMPT, DECOMPOSE_SYSTEM_PROMPT
 )
 from task_system import TaskEngine, ExecutionMode, TaskStatus, TaskNode
@@ -201,49 +201,82 @@ class AgentWorker:
         try:
             self._run_inner()
         except InterruptedError:
+            self.state = AgentState.IDLE
             self.emit("log", "[系統] Agent 已停止")
             self.emit("chunk", "\n\n*(已停止)*\n")
             self.emit("finished", "stopped")
         except Exception as e:
+            self.state = AgentState.IDLE
             self.emit("log", f"[錯誤] Agent 異常結束: {e}")
             self.emit("finished", f"error: {e}")
-        finally:
-            self.state = AgentState.IDLE
 
     def _run_inner(self):
-        # 1. 第一階段：路由判斷 (Router) —— 模型自己決定要不要 Planning
+        # 1. 第一階段：先做一次「簡短推理 + 嘗試回答」，讓模型自己判斷要不要切換到完整規劃模式。
+        #    不再需要額外的 Router 分類呼叫——這次呼叫本身就是串流顯示給使用者看的，
+        #    就算之後判斷要切換到規劃模式，這段推理過程使用者也已經看到了，沒有浪費掉。
         if self.state == AgentState.IDLE:
-            # 有附圖時直接走對話模式（vision），避免 planner 丟圖
+            # 有附圖時直接走對話模式（vision），避免 planner 丟圖，也不需要推理判斷
             if self.current_images:
                 self.emit("log", "[系統] 偵測到附圖，進入直接對話（Vision）模式。")
                 self._run_direct_mode()
                 return
 
-            self.emit("log", "[系統] 正在分析任務複雜度 (Router)...")
-            route_decision = self._route_intent(self.current_user_prompt)
+            if self._should_stop():
+                raise InterruptedError("Agent 已由使用者停止")
 
-            if route_decision == "DIRECT":
-                self.emit("log", "[系統] 判斷為直接對話模式。")
-                self._run_direct_mode()
-                return
+            self.emit("log", "[系統] 開始推理，判斷任務難度...")
+            attempt_user_content = self._build_user_content(self.current_user_prompt, self.current_images)
+            messages = [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": self.working_memory.render_context()},
+            ] + self.history + [{"role": "user", "content": attempt_user_content}]
 
-            self.emit("log", "[系統] 判斷為複雜任務，進入 Planning 模式生成 Task Tree...")
             try:
-                dsl_plan = self._call_llm(PLANNER_SYSTEM_PROMPT, self.current_user_prompt)
+                attempt_content = self._call_llm_stream(messages)
+            except InterruptedError:
+                raise
             except Exception as e:
-                self.emit("log", f"[錯誤] Planning 呼叫模型失敗: {e}，轉為直接模式。")
-                self._run_direct_mode()
+                self.emit("log", f"[錯誤] 推理呼叫模型失敗: {e}")
+                self.emit("finished", f"error: {e}")
                 return
 
-            if self.engine.load_initial_plan(dsl_plan):
-                self.state = AgentState.WAITING_CONFIRM
-                # 整個計畫的第一次審視，不受執行模式影響，一律需要人工確認才會開始跑
-                self.emit("ask_confirm", self.engine.render_tree_markdown())
-                return
-            else:
-                self.emit("log", "[錯誤] 生成 Task Tree 解析失敗，轉為直接模式。")
-                self._run_direct_mode()
-                return
+            if self._should_stop():
+                raise InterruptedError("Agent 已由使用者停止")
+
+            escalate_match = re.search(r'<\|switch_to_planning\|>\s*(.*)', attempt_content, re.DOTALL)
+            if escalate_match:
+                reason = escalate_match.group(1).strip() or "（模型沒有說明原因）"
+                self.emit("log", f"[系統] 推理後判斷需要切換到完整規劃模式：{reason}")
+
+                # 推理過程只在這一輪當草稿用，不寫進 self.history——
+                # Planning 模式管自己的 Task Tree 狀態，不靠對話歷史。
+                planner_user_prompt = (
+                    f"{self.current_user_prompt}\n\n"
+                    f"（先前已經簡短推理過，判斷這個任務需要完整規劃，原因: {reason}）"
+                )
+                try:
+                    dsl_plan = self._call_llm(PLANNER_SYSTEM_PROMPT, planner_user_prompt)
+                except Exception as e:
+                    self.emit("log", f"[錯誤] Planning 呼叫模型失敗: {e}，轉為直接模式重試。")
+                    self._run_direct_mode()
+                    return
+
+                if self.engine.load_initial_plan(dsl_plan):
+                    self.state = AgentState.WAITING_CONFIRM
+                    # 整個計畫的第一次審視，不受執行模式影響，一律需要人工確認才會開始跑
+                    self.emit("ask_confirm", self.engine.render_tree_markdown())
+                    return
+                else:
+                    self.emit("log", "[錯誤] 生成 Task Tree 解析失敗，轉為直接模式。")
+                    self._run_direct_mode()
+                    return
+
+            # 沒有要求切換：這次推理已經包含（或緊接著給出）答案/工具呼叫了，
+            # 直接把這則已經串流出去的內容交給對話模式接手，不用再呼叫一次模型。
+            self.history.append({"role": "user", "content": attempt_user_content})
+            self.current_images = []
+            self._run_direct_mode(initial_content=attempt_content)
+            return
 
         # 2. 第二階段：任務樹執行 —— 每個任務都會跑 think/decompose/execute/verify/retry 迴圈
         if self.state == AgentState.EXECUTING:
@@ -491,25 +524,38 @@ class AgentWorker:
     # ------------------------------------------------------------------
     # 直接對話模式（不經過 Task Tree）
     # ------------------------------------------------------------------
-    def _run_direct_mode(self):
-        user_content = self._build_user_content(self.current_user_prompt, self.current_images)
-        self.history.append({"role": "user", "content": user_content})
-        # 圖片只在本輪用一次，避免之後 history 一直帶大 base64
-        self.current_images = []
+    def _run_direct_mode(self, initial_content: str = None):
+        """一般對話/工具呼叫迴圈。
+
+        initial_content: 如果呼叫端已經有第一輪的模型輸出（例如 _run_inner 的推理階段
+        已經呼叫過模型、確認不需要切換到規劃模式），就傳進來直接處理，不要重打一次；
+        呼叫端也要負責先把 user 訊息 append 進 self.history。
+        傳 None（預設）代表要從頭開始：自己 append user 訊息、自己呼叫模型。
+        """
+        if initial_content is None:
+            user_content = self._build_user_content(self.current_user_prompt, self.current_images)
+            self.history.append({"role": "user", "content": user_content})
+            # 圖片只在本輪用一次，避免之後 history 一直帶大 base64
+            self.current_images = []
+
+        content = initial_content
 
         while True:
             if self._should_stop():
                 raise InterruptedError("Agent 已由使用者停止")
-            messages = [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "system", "content": self.working_memory.render_context()},
-            ] + self.history
             try:
-                content = self._call_llm_stream(messages)
-                if self._should_stop():
-                    raise InterruptedError("Agent 已由使用者停止")
+                if content is None:
+                    messages = [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "system", "content": self.working_memory.render_context()},
+                    ] + self.history
+                    content = self._call_llm_stream(messages)
+                    if self._should_stop():
+                        raise InterruptedError("Agent 已由使用者停止")
+
                 self.history.append({"role": "assistant", "content": content})
                 is_tool, tool_result = self._parse_and_execute_tool(content)
+                content = None  # 下一輪要重新呼叫模型
 
                 if is_tool:
                     self.emit("chunk", f"\n<tool_result>\n{tool_result}\n</tool_result>\n")
@@ -551,10 +597,6 @@ class AgentWorker:
             self.emit("chunk", f"\n<{tag}>\n{tool_result}\n</{tag}>\n")
             return tool_result
         return content
-
-    def _route_intent(self, user_prompt: str) -> str:
-        res = self._call_llm(ROUTER_PROMPT, user_prompt, temperature=0.0).strip().upper()
-        return "PLANNING" if "PLANNING" in res else "DIRECT"
 
     def _call_llm(self, system_prompt: str, user_prompt: str, temperature=0.2) -> str:
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]

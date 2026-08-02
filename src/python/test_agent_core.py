@@ -1,10 +1,10 @@
 """
 agent_core.py 的整合測試：用假的 OpenAI client（fake_llm.py）+ 假的工具函式，
-完整跑過 Router -> Planner -> Decompose -> Think -> Verify -> Retry -> SMART 暫停 -> ask_user
-這整條狀態機，完全不需要真的 LLM、不需要 pyautogui/PyQt6/webview。
+完整跑過「推理後自行判斷要不要切換到規劃模式」-> Planner -> Decompose -> Think -> Verify
+-> Retry -> SMART 暫停 -> ask_user 這整條狀態機，完全不需要真的 LLM、不需要 pyautogui/PyQt6/webview。
 
 執行方式：
-    python tests/test_agent_core.py
+    python test_agent_core.py
 
 注意：這個測試需要 `openai` 套件在你的 Python 環境裡（跟 main.py 用的是同一個依賴），
 但完全不會真的打網路，因為 client 會被替換成 FakeOpenAIClient。
@@ -48,9 +48,15 @@ def make_agent(scripts: dict, mode=ExecutionMode.SMART):
 
 
 # ----------------------------------------------------------------------
-# 情境一：完整跑一次 Planning -> Decompose -> Think/Retry -> 父任務自動完成
-#         -> SMART 模式在「需要確認」的任務前暫停 -> 使用者確認 -> 完成
+# 情境一：第一輪推理判斷「這個任務太複雜」-> 切換到 Planning -> Decompose
+#         -> Think/Retry -> 父任務自動完成 -> SMART 模式在「需要確認」的任務前暫停
+#         -> 使用者確認 -> 完成
 # ----------------------------------------------------------------------
+
+ESCALATE_RESPONSE = (
+    "這個任務要先建資料夾、再搬移檔案、最後回報結果，中間有好幾個步驟需要驗證，"
+    "<|switch_to_planning|>需要拆解成多個步驟並逐一驗證是否完成"
+)
 
 PLAN_DSL = """
 - [ ] [TASK-1] 整理桌面資料夾
@@ -107,18 +113,18 @@ THINK_RESPONSE_2 = (
 )
 
 
-def test_full_planning_scenario_with_decompose_and_smart_confirm():
+def test_reasoning_escalates_to_planning_with_decompose_and_smart_confirm():
     scripts = {
-        "router": ["PLANNING"],
-        "planner": [PLAN_DSL],
-        "decompose": [DECOMPOSE_DSL],
-        "thinking": [THINK_RESPONSE_1, THINK_RESPONSE_2],
         "system": [
+            ESCALATE_RESPONSE,  # 第一輪推理：判斷太複雜，切換到規劃模式
             '<|tool_call|>call:run_action("mkdir docs images")<|tool_call|>',
             '<|tool_call|>call:run_action("move files")<|tool_call|>',
             '<|tool_call|>call:run_action("move files carefully, retry")<|tool_call|>',
             '<|tool_call|>call:run_action("print report")<|tool_call|>',
         ],
+        "planner": [PLAN_DSL],
+        "decompose": [DECOMPOSE_DSL],
+        "thinking": [THINK_RESPONSE_1, THINK_RESPONSE_2],
         "verify": [
             "STATUS: PASS\nREASON: 資料夾都已建立",
             "STATUS: FAIL\nREASON: 還有檔案沒搬移乾淨",
@@ -129,14 +135,18 @@ def test_full_planning_scenario_with_decompose_and_smart_confirm():
     }
     agent, events, tool_calls = make_agent(scripts, mode=ExecutionMode.SMART)
 
-    # --- 第一階段：Router -> Planner，產生初版任務樹，一定要先暫停等人審過 ---
+    # --- 第一階段：推理後自行判斷要切換到 Planning，產生初版任務樹，一定要先暫停等人審過 ---
     agent.set_user_prompt("整理桌面上的檔案並回報")
     agent.state = AgentState.IDLE
     agent.start()
-    wait_until(lambda: not agent.is_running(), message="Planning 階段沒有在時限內結束")
+    wait_until(lambda: not agent.is_running(), message="推理 + Planning 階段沒有在時限內結束")
 
     assert agent.state == AgentState.WAITING_CONFIRM
     assert any(e[0] == "ask_confirm" for e in events), "初版計畫一定要送出 ask_confirm，不受執行模式影響"
+    # 推理過程本身有先串流給使用者看過（不是悄悄切換），且不該汙染對話歷史
+    chunk_texts = "".join(str(d) for t, d in events if t == "chunk")
+    assert "需要拆解成多個步驟" in chunk_texts, "切換前的推理內容應該有串流顯示給使用者看"
+    assert agent.history == [], "切換到 Planning 模式時，推理草稿不應該留在對話歷史裡"
 
     # --- 使用者確認整個計畫，開始執行 ---
     agent.confirm_and_start()
@@ -145,7 +155,6 @@ def test_full_planning_scenario_with_decompose_and_smart_confirm():
 
     # TASK-1 應該已經因為兩個子任務都完成而自動標記完成
     task1 = next(t for t in agent.engine.tasks if t.id == "TASK-1")
-    assert task1.status == TaskStatus.DECOMPOSED or task1.status == TaskStatus.COMPLETED
     assert task1.status == TaskStatus.COMPLETED, "兩個子任務都完成後，父任務應該自動標記完成"
     assert "TASK-1.1" in task1.result and "TASK-1.2" in task1.result
 
@@ -168,7 +177,37 @@ def test_full_planning_scenario_with_decompose_and_smart_confirm():
     assert task2.status == TaskStatus.COMPLETED
 
     assert len(tool_calls) == 4, f"應該總共呼叫了 4 次工具，實際: {tool_calls}"
-    print("[PASS] test_full_planning_scenario_with_decompose_and_smart_confirm")
+    print("[PASS] test_reasoning_escalates_to_planning_with_decompose_and_smart_confirm")
+
+
+# ----------------------------------------------------------------------
+# 情境一之二：推理後判斷「這個不難」-> 不切換，直接沿用第一輪的輸出繼續走對話/工具迴圈，
+#            不應該為了同一輪內容再多打一次模型
+# ----------------------------------------------------------------------
+
+def test_reasoning_does_not_escalate_reuses_first_call():
+    scripts = {
+        "system": [
+            '簡單問題，直接查詢時間就好。\n<|tool_call|>call:run_action("get_time")<|tool_call|>',
+            "現在是下午三點。",
+        ],
+    }
+    agent, events, tool_calls = make_agent(scripts, mode=ExecutionMode.AUTO)
+
+    agent.set_user_prompt("現在幾點？")
+    agent.state = AgentState.IDLE
+    agent.start()
+    wait_until(lambda: not agent.is_running(), message="沒有在時限內結束")
+
+    assert agent.state == AgentState.IDLE
+    assert any(e[0] == "finished" for e in events)
+    assert tool_calls == ["get_time"]
+    # 只應該打了 2 次「system」類別的模型呼叫（第一輪推理 + 看完工具結果後的回覆），
+    # 第一輪不應該因為「推理」跟「直接回答」被算成兩次呼叫。
+    system_calls = [c for c in agent.client.call_log if c == "system"]
+    assert len(system_calls) == 2, f"應該恰好 2 次，實際: {agent.client.call_log}"
+    assert len(agent.history) == 4, "user -> assistant(工具呼叫) -> user(工具結果) -> assistant(最終回覆)"
+    print("[PASS] test_reasoning_does_not_escalate_reuses_first_call")
 
 
 # ----------------------------------------------------------------------
@@ -226,7 +265,8 @@ def test_ask_user_triggered_after_max_retries():
 
 if __name__ == "__main__":
     tests = [
-        test_full_planning_scenario_with_decompose_and_smart_confirm,
+        test_reasoning_escalates_to_planning_with_decompose_and_smart_confirm,
+        test_reasoning_does_not_escalate_reuses_first_call,
         test_ask_user_triggered_after_max_retries,
     ]
     for t in tests:
