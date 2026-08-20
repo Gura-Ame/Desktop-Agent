@@ -88,6 +88,23 @@ export function useAgentChat() {
         });
         break;
 
+      // 後端把某一輪工具呼叫已經執行完畢的結果，就地內嵌回它自己那次呼叫後面
+      // （而不是等一整輪、甚至一整則訊息的所有工具都跑完才整批貼在最後面）。
+      // data 是 { old, new }：old 是剛才用 chunk 串流出去、還沒接結果的原始文字，
+      // new 是同一段文字但已經把結果內嵌進去；只在確定 old 真的還在訊息尾端時才替換，
+      // 對不上就保守地什麼都不做，避免誤改到不相關的內容。
+      case 'chunk_patch':
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          if (!last || last.role !== 'agent') return prev;
+          const { old, new: replacement } = data || {};
+          if (typeof old !== 'string' || typeof replacement !== 'string') return prev;
+          if (!last.content.endsWith(old)) return prev;
+          const patched = last.content.slice(0, last.content.length - old.length) + replacement;
+          return [...prev.slice(0, -1), { ...last, content: patched }];
+        });
+        break;
+
       case 'finished':
         isStreamingRef.current = false;
         isBusyRef.current = false;

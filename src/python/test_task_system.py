@@ -271,6 +271,48 @@ def test_render_tree_markdown_indents_children():
     print("[PASS] test_render_tree_markdown_indents_children")
 
 
+def test_parses_alphanumeric_dotted_id():
+    """code_impact.py 產生的影響檢查任務 id 長這樣：TASK-1.impact1，不是純數字的 TASK-1.1，
+    要確定這種格式在渲染/重新解析的來回過程中不會被切斷。"""
+    dsl = """
+- [ ] [TASK-1.impact1] 檢查 sample.route_request 是否受影響
+  - 方法: 讀取原始碼比對
+  - 條件: 確認呼叫的地方仍然正確
+  - 注意: 這是自動產生的任務
+  - 深度思考: NO
+  - 需要拆解: NO
+  - 需要確認: YES
+  - 信心值: 0.7
+"""
+    engine = new_engine()
+    ok = engine.load_initial_plan(dsl)
+    assert ok is True
+    assert engine.tasks[0].id == "TASK-1.impact1", f"實際: {engine.tasks[0].id}"
+    assert engine.tasks[0].title == "檢查 sample.route_request 是否受影響"
+    print("[PASS] test_parses_alphanumeric_dotted_id")
+
+
+def test_title_starting_with_bracket_not_misparsed_as_id():
+    """標題本身用中括號開頭（例如「[重要] 做某事」）不該被誤判成任務 id——
+    id 的字元集合限制在英數字/底線/點/連字號，中文不會被當成 id。"""
+    dsl = """
+- [ ] [TASK-1] [重要] 做某事
+  - 方法: 做某事的方法
+  - 條件: 做完了
+  - 注意: 無
+  - 深度思考: NO
+  - 需要拆解: NO
+  - 需要確認: NO
+  - 信心值: 0.9
+"""
+    engine = new_engine()
+    ok = engine.load_initial_plan(dsl)
+    assert ok is True
+    assert engine.tasks[0].id == "TASK-1"
+    assert engine.tasks[0].title == "[重要] 做某事", f"實際: {engine.tasks[0].title!r}"
+    print("[PASS] test_title_starting_with_bracket_not_misparsed_as_id")
+
+
 if __name__ == "__main__":
     tests = [
         test_load_initial_plan_parses_all_fields,
@@ -283,6 +325,8 @@ if __name__ == "__main__":
         test_check_and_complete_parent_completes_when_all_children_done,
         test_apply_reflected_dsl_protects_decomposed_container,
         test_render_tree_markdown_indents_children,
+        test_parses_alphanumeric_dotted_id,
+        test_title_starting_with_bracket_not_misparsed_as_id,
     ]
     for t in tests:
         t()

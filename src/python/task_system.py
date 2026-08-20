@@ -67,7 +67,10 @@ class TaskEngine:
                     continue
 
                 # id 允許 "TASK-1" 這種純數字，也允許 "TASK-1.1" 這種拆解後的階層 id
-                header_match = re.search(r'- \[(.)\] \[?(TASK-[\d.]+|[\d.]+)?\]?\s*(.*)', block)
+                # id 允許英數字/底線/點/連字號組成的任意識別字（例如 "TASK-1"、"TASK-1.1"、
+                # "TASK-1.impact1"），限制字元集合是為了避免誤把「[重要] 做某事」這種
+                # 標題本身就用中括號開頭的一般文字，誤判成任務 id。
+                header_match = re.search(r'- \[(.)\]\s*(?:\[([A-Za-z0-9_.\-]+)\])?\s*(.*)', block)
                 if not header_match:
                     continue
 

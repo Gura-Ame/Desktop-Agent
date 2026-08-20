@@ -14,6 +14,7 @@ import os
 import sys
 import time
 import threading
+import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -42,9 +43,21 @@ def make_agent(scripts: dict, mode=ExecutionMode.SMART):
         tool_calls.append(cmd)
         return f"executed: {cmd}"
 
-    agent = AgentWorker({"run_action": run_action}, event_callback=on_event, default_mode=mode)
+    fd, memory_path = tempfile.mkstemp(suffix=".json")
+    os.close(fd)
+    os.remove(memory_path)  # 讓 AgentWorker 自己建立全新的檔案，不要讀到其他測試留下的殘留資料
+    agent = AgentWorker({"run_action": run_action}, event_callback=on_event, default_mode=mode,
+                         memory_path=memory_path)
     agent.client = FakeOpenAIClient(scripts)  # 換掉真的 client，之後所有呼叫都吃劇本
     return agent, events, tool_calls
+
+
+def send_turn(agent, prompt):
+    """模擬使用者送出一則新訊息（例如按下 continue），等到這輪跑完為止。"""
+    agent.set_user_prompt(prompt)
+    agent.state = AgentState.IDLE
+    agent.start()
+    wait_until(lambda: not agent.is_running(), message=f"「{prompt}」這輪沒有在時限內完成")
 
 
 # ----------------------------------------------------------------------
@@ -53,10 +66,7 @@ def make_agent(scripts: dict, mode=ExecutionMode.SMART):
 #         -> 使用者確認 -> 完成
 # ----------------------------------------------------------------------
 
-ESCALATE_RESPONSE = (
-    "這個任務要先建資料夾、再搬移檔案、最後回報結果，中間有好幾個步驟需要驗證，"
-    "<|switch_to_planning|>需要拆解成多個步驟並逐一驗證是否完成"
-)
+ESCALATE_RESPONSE = "<|plan|>需要拆解成多個步驟並逐一驗證是否完成"
 
 PLAN_DSL = """
 - [ ] [TASK-1] 整理桌面資料夾
@@ -185,11 +195,125 @@ def test_reasoning_escalates_to_planning_with_decompose_and_smart_confirm():
 #            不應該為了同一輪內容再多打一次模型
 # ----------------------------------------------------------------------
 
+# ----------------------------------------------------------------------
+# 情境一之三：模型沒有講出 <|plan|>，也沒呼叫任何工具，就這樣被 max_tokens 截斷——
+#            這種「寫了一堆卻沒有收斂」的行為本身就要被系統當成需要規劃的證據，
+#            不能像 UI 上的 continue 按鈕一樣讓它接著同樣沒方向的內容繼續寫。
+# ----------------------------------------------------------------------
+
+def test_repeating_without_progress_auto_escalates_to_planning():
+    # 兩輪的回答幾乎一模一樣（模擬使用者連續按 continue，但模型只是換句話說重講一次）
+    verbose_reply = (
+        "這個問題需要證明 (a^2+b^2)/(ab+1) 是完全平方數。讓我們考慮 a 和 b 滿足條件，"
+        "首先我們可以嘗試代入具體數值來觀察規律，然後用代數變換來簡化這個表達式，"
+        "考慮到 ab+1 整除 a^2+b^2，我們可以進一步分析這個關係式的性質。"
+    )
+    scripts = {
+        "system": [verbose_reply, verbose_reply],  # 第二輪跟第一輪幾乎一樣
+        "planner": [
+            "- [ ] [TASK-1] 嘗試策略 A\n"
+            "  - 方法: 用 Vieta jumping 建構最小反例\n"
+            "  - 條件: 找出矛盾或證明成立\n"
+            "  - 注意: 無\n"
+            "  - 深度思考: YES\n"
+            "  - 需要拆解: NO\n"
+            "  - 需要確認: NO\n"
+            "  - 信心值: 0.4\n"
+        ],
+    }
+    agent, events, tool_calls = make_agent(scripts, mode=ExecutionMode.SMART)
+
+    # 第一輪：正常回答，不該觸發任何切換
+    send_turn(agent, "幫我證明這個數論題")
+    assert agent.state == AgentState.IDLE
+    assert not any(e[0] == "ask_confirm" for e in events)
+
+    # 第二輪：跟第一輪高度重複，應該被判定為原地打轉
+    send_turn(agent, "continue")
+
+    assert agent.state == AgentState.WAITING_CONFIRM
+    assert any(e[0] == "ask_confirm" for e in events)
+    assert any("原地打轉" in str(d) for t, d in events if t == "log")
+    print("[PASS] test_repeating_without_progress_auto_escalates_to_planning")
+
+
+def test_short_similar_replies_not_falsely_flagged():
+    """太短的內容本來就容易剛好長得像（例如簡短的招呼語），不該被誤判成原地打轉。"""
+    scripts = {"system": ["好的", "好的"]}
+    agent, events, tool_calls = make_agent(scripts, mode=ExecutionMode.AUTO)
+
+    send_turn(agent, "嗨")
+    send_turn(agent, "嗨")
+
+    assert not any(e[0] == "ask_confirm" for e in events), "內容太短，不該被判定為原地打轉"
+    print("[PASS] test_short_similar_replies_not_falsely_flagged")
+
+
+def test_truncated_without_conclusion_auto_escalates_to_planning():
+    rambling_no_conclusion = (
+        "這個問題需要證明...讓我們考慮 a 和 b 滿足條件...首先我們可以嘗試代入具體數值...\n"
+        "然後我們可以用代數變換來簡化這個表達式，考慮到...我們可以進一步分析..."
+        # 特意不包含 <|plan|>、也不包含 <|tool_call|>，模擬模型只顧著往下寫、忘了做難度判斷
+    )
+    scripts = {
+        "system": [(rambling_no_conclusion, "length")],  # finish_reason="length" 代表被截斷
+        "planner": [
+            "- [ ] [TASK-1] 嘗試策略 A：代數變換\n"
+            "  - 方法: 從 ab+1 | a^2+b^2 出發，用 Vieta jumping 建構最小反例\n"
+            "  - 條件: 找出矛盾或證明成立\n"
+            "  - 注意: 無\n"
+            "  - 深度思考: YES\n"
+            "  - 需要拆解: NO\n"
+            "  - 需要確認: NO\n"
+            "  - 信心值: 0.4\n"
+        ],
+    }
+    agent, events, tool_calls = make_agent(scripts, mode=ExecutionMode.SMART)
+
+    agent.set_user_prompt("Let a and b be positive integers such that ab+1 divides a^2+b^2...")
+    agent.state = AgentState.IDLE
+    agent.start()
+    wait_until(lambda: not agent.is_running(), message="沒有在時限內結束")
+
+    assert agent.state == AgentState.WAITING_CONFIRM
+    assert any(e[0] == "ask_confirm" for e in events), "被截斷又沒收斂，應該自動切換到規劃模式並送出 ask_confirm"
+    assert any("被長度上限截斷" in str(d) for t, d in events if t == "log")
+    assert agent.history == [], "自動切換到規劃模式時，這段沒結論的草稿不應該留在對話歷史裡"
+    assert tool_calls == [], "不應該把這段沒收斂的內容當成正常回答讓它去呼叫工具"
+    print("[PASS] test_truncated_without_conclusion_auto_escalates_to_planning")
+
+
+def test_truncated_but_has_tool_call_does_not_force_escalate():
+    """就算被截斷，只要這輪確實呼叫了工具，就不當成「沒收斂」，正常走對話模式繼續處理。"""
+    scripts = {
+        "system": [
+            ('<|tool_call|>call:run_action("do something long")<|tool_call|>\n後面接了很長的說明文字...', "length"),
+            "工具結果我看到了，這是最終回覆。",
+        ],
+    }
+    agent, events, tool_calls = make_agent(scripts, mode=ExecutionMode.AUTO)
+
+    agent.set_user_prompt("幫我做一件事")
+    agent.state = AgentState.IDLE
+    agent.start()
+    wait_until(lambda: not agent.is_running(), message="沒有在時限內結束")
+
+    assert agent.state == AgentState.IDLE
+    assert not any(e[0] == "ask_confirm" for e in events), "有呼叫工具就不該被誤判成需要規劃"
+    assert tool_calls == ["do something long"]
+    print("[PASS] test_truncated_but_has_tool_call_does_not_force_escalate")
+
+
 def test_reasoning_does_not_escalate_reuses_first_call():
     scripts = {
         "system": [
             '簡單問題，直接查詢時間就好。\n<|tool_call|>call:run_action("get_time")<|tool_call|>',
             "現在是下午三點。",
+        ],
+        # 視窗大小是 2，工具呼叫這輪中途 history 會累積到 3 則（user/assistant/tool結果），
+        # 超過視窗，中間會觸發一次壓縮，才能繼續打第二次 system 呼叫拿到最終回覆。
+        "compress": [
+            "- id: turn_note\n- type: Fact\n- summary: 使用者問了現在幾點\n- detail: \n"
         ],
     }
     agent, events, tool_calls = make_agent(scripts, mode=ExecutionMode.AUTO)
@@ -203,10 +327,10 @@ def test_reasoning_does_not_escalate_reuses_first_call():
     assert any(e[0] == "finished" for e in events)
     assert tool_calls == ["get_time"]
     # 只應該打了 2 次「system」類別的模型呼叫（第一輪推理 + 看完工具結果後的回覆），
-    # 第一輪不應該因為「推理」跟「直接回答」被算成兩次呼叫。
+    # 第一輪不應該因為「推理」跟「直接回答」被算成兩次呼叫；中間的壓縮呼叫算在 compress 類別，不算 system。
     system_calls = [c for c in agent.client.call_log if c == "system"]
     assert len(system_calls) == 2, f"應該恰好 2 次，實際: {agent.client.call_log}"
-    assert len(agent.history) == 4, "user -> assistant(工具呼叫) -> user(工具結果) -> assistant(最終回覆)"
+    assert any(c == "compress" for c in agent.client.call_log), "視窗大小是 2，這輪中途應該要觸發過一次壓縮"
     print("[PASS] test_reasoning_does_not_escalate_reuses_first_call")
 
 
@@ -266,6 +390,10 @@ def test_ask_user_triggered_after_max_retries():
 if __name__ == "__main__":
     tests = [
         test_reasoning_escalates_to_planning_with_decompose_and_smart_confirm,
+        test_truncated_without_conclusion_auto_escalates_to_planning,
+        test_truncated_but_has_tool_call_does_not_force_escalate,
+        test_repeating_without_progress_auto_escalates_to_planning,
+        test_short_similar_replies_not_falsely_flagged,
         test_reasoning_does_not_escalate_reuses_first_call,
         test_ask_user_triggered_after_max_retries,
     ]

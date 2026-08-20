@@ -5,9 +5,11 @@
 七種角色，每種角色各自維護一個劇本佇列（scripts[category]），每次呼叫就照順序 pop 一筆出來當回覆。
 
 佇列裡的項目可以是：
-- 字串：直接當作回覆內容
+- 字串：直接當作回覆內容，finish_reason 預設為 "stop"（正常結束）
+- (字串, finish_reason) 的 tuple：需要模擬「被截斷」等非正常結束情況時用，
+  例如 (content, "length") 代表這輪被 max_tokens 截斷、還沒收斂就被迫結束
 - callable(system_prompt, user_prompt) -> str：需要根據當下 prompt 內容動態產生回覆時用，
-  最常見的用法是「reflect 原封不動回傳目前的樹」（見 ECHO_REFLECT）
+  最常見的用法是「reflect 原封不動回傳目前的樹」（見 ECHO_REFLECT），finish_reason 一律視為 "stop"
 """
 
 CATEGORY_MARKERS = {
@@ -16,6 +18,8 @@ CATEGORY_MARKERS = {
     "thinking": "高階思考 (Deep Thinking)",
     "verify": "你是任務驗證器",
     "reflect": "你是一個任務狀態檢查器",
+    "compress": "你是一個上下文壓縮器",
+    "value_judgment": "你是一個價值判斷器",
     "system": "你是一個具備電腦自動化控制能力",
 }
 
@@ -47,13 +51,14 @@ class _FakeDelta:
 
 
 class _FakeChunkChoice:
-    def __init__(self, content):
+    def __init__(self, content, finish_reason="stop"):
         self.delta = _FakeDelta(content)
+        self.finish_reason = finish_reason
 
 
 class _FakeChunk:
-    def __init__(self, content):
-        self.choices = [_FakeChunkChoice(content)]
+    def __init__(self, content, finish_reason="stop"):
+        self.choices = [_FakeChunkChoice(content, finish_reason)]
 
 
 class _FakeMessage:
@@ -91,10 +96,15 @@ class _FakeCompletions:
             )
 
         item = queue.pop(0)
-        content = item(system_prompt, user_prompt) if callable(item) else item
+        if callable(item):
+            content, finish_reason = item(system_prompt, user_prompt), "stop"
+        elif isinstance(item, tuple):
+            content, finish_reason = item
+        else:
+            content, finish_reason = item, "stop"
 
         if stream:
-            return [_FakeChunk(content)]
+            return [_FakeChunk(content, finish_reason)]
         return _FakeResponse(content)
 
 

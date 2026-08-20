@@ -164,7 +164,7 @@ class JsApi:
         return {"status": "ok"}
 
     def clear_history(self):
-        self.agent.history = []
+        self.agent.clear_conversation_history()
         return {"status": "ok"}
 
 def main():

@@ -24,7 +24,7 @@ const STATUS_LABEL = {
 function TaskItem({ task }) {
   const [open, setOpen] = useState(false);
   const st = STATUS_LABEL[task.status] || STATUS_LABEL.pending;
-  const depth = (String(task.id).match(/\./g) || []).length;
+  const depth = task.depth || 0;
 
   return (
     <div
