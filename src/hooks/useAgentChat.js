@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useChatScroll } from './chat/useChatScroll';
+import { useAgentEventHandler } from './chat/useAgentEventHandler';
 
 function nowTs() {
   return Date.now();
@@ -14,8 +16,6 @@ const WELCOME = {
   content: '**你好！** 我是您的 AI 桌面自動化常駐助理。',
   ts: Date.now(),
 };
-
-const NEAR_BOTTOM_PX = 80;
 
 /**
  * 對話狀態 + agent 事件 + 分枝。
@@ -36,161 +36,26 @@ export function useAgentChat() {
     msg: '檢查中...',
   });
 
-  const chatEndRef = useRef(null);
-  const scrollContainerRef = useRef(null);
   const isStreamingRef = useRef(false);
   const isBusyRef = useRef(false);
-  const stickToBottomRef = useRef(true);
 
-  const handleScroll = useCallback(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
-    stickToBottomRef.current = distance <= NEAR_BOTTOM_PX;
-  }, []);
+  const {
+    chatEndRef,
+    scrollContainerRef,
+    stickToBottomRef,
+    handleScroll,
+    pinToBottom,
+  } = useChatScroll(messages, isStreamingRef);
 
-  const scrollToBottom = useCallback((behavior = 'smooth') => {
-    const el = scrollContainerRef.current;
-    if (!el) {
-      chatEndRef.current?.scrollIntoView({ behavior });
-      return;
-    }
-    if (behavior === 'auto') {
-      el.scrollTop = el.scrollHeight;
-    } else {
-      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-    }
-  }, []);
-
-  const handleAgentEvent = useCallback((event) => {
-    const { type, data } = event;
-
-    switch (type) {
-      case 'started':
-        isBusyRef.current = true;
-        break;
-
-      case 'chunk':
-        isStreamingRef.current = true;
-        isBusyRef.current = true;
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last?.role === 'agent' && last.isStreaming) {
-            return [
-              ...prev.slice(0, -1),
-              { ...last, content: last.content + data },
-            ];
-          }
-          return [
-            ...prev,
-            { id: uid(), role: 'agent', content: data, isStreaming: true, ts: nowTs() },
-          ];
-        });
-        break;
-
-      // 後端把某一輪工具呼叫已經執行完畢的結果，就地內嵌回它自己那次呼叫後面
-      // （而不是等一整輪、甚至一整則訊息的所有工具都跑完才整批貼在最後面）。
-      // data 是 { old, new }：old 是剛才用 chunk 串流出去、還沒接結果的原始文字，
-      // new 是同一段文字但已經把結果內嵌進去；只在確定 old 真的還在訊息尾端時才替換，
-      // 對不上就保守地什麼都不做，避免誤改到不相關的內容。
-      case 'chunk_patch':
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (!last || last.role !== 'agent') return prev;
-          const { old, new: replacement } = data || {};
-          if (typeof old !== 'string' || typeof replacement !== 'string') return prev;
-          if (!last.content.endsWith(old)) return prev;
-          const patched = last.content.slice(0, last.content.length - old.length) + replacement;
-          return [...prev.slice(0, -1), { ...last, content: patched }];
-        });
-        break;
-
-      case 'finished':
-        isStreamingRef.current = false;
-        isBusyRef.current = false;
-        setWaitingConfirm(false);
-        setWaitingUserInput(null);
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last?.role === 'agent') {
-            return [
-              ...prev.slice(0, -1),
-              { ...last, isStreaming: false, ts: last.ts || nowTs() },
-            ];
-          }
-          return prev;
-        });
-        break;
-
-      case 'log':
-        setLogs((prev) => [...prev, data]);
-        break;
-
-      case 'server_status':
-        setServerStatus(data);
-        break;
-
-      case 'ask_confirm':
-        isBusyRef.current = true;
-        isStreamingRef.current = false;
-        setWaitingConfirm(true);
-        setMessages((prev) => {
-          const next = [...prev];
-          while (next.length > 0) {
-            const last = next[next.length - 1];
-            if (last.role === 'agent' && last.isStreaming && !last.content?.trim()) {
-              next.pop();
-              continue;
-            }
-            if (last.role === 'agent' && last.isStreaming) {
-              next[next.length - 1] = { ...last, isStreaming: false };
-            }
-            break;
-          }
-          next.push({
-            id: uid(),
-            role: 'agent',
-            content: typeof data === 'string' ? data : String(data ?? ''),
-            isTree: true,
-            isStreaming: false,
-            ts: nowTs(),
-          });
-          return next;
-        });
-        break;
-
-      case 'waiting_input':
-        isBusyRef.current = true;
-        isStreamingRef.current = false;
-        setWaitingUserInput(data);
-        setMessages((prev) => {
-          const next = [...prev];
-          const last = next[next.length - 1];
-          if (last?.role === 'agent' && last.isStreaming) {
-            next[next.length - 1] = { ...last, isStreaming: false };
-          }
-          next.push({
-            id: uid(),
-            role: 'agent',
-            content: `**❓ 需要你的協助**\n\n${data}`,
-            isQuestion: true,
-            ts: nowTs(),
-          });
-          return next;
-        });
-        break;
-
-      default:
-        break;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!stickToBottomRef.current) return;
-    const behavior = isStreamingRef.current ? 'auto' : 'smooth';
-    const id = requestAnimationFrame(() => scrollToBottom(behavior));
-    return () => cancelAnimationFrame(id);
-  }, [messages, scrollToBottom]);
+  const { handleAgentEvent } = useAgentEventHandler({
+    setMessages,
+    setLogs,
+    setWaitingConfirm,
+    setWaitingUserInput,
+    setServerStatus,
+    isStreamingRef,
+    isBusyRef,
+  });
 
   const clearMessages = useCallback(() => {
     setMessages([]);
@@ -199,11 +64,7 @@ export function useAgentChat() {
     isBusyRef.current = false;
     isStreamingRef.current = false;
     stickToBottomRef.current = true;
-  }, []);
-
-  const pinToBottom = useCallback(() => {
-    stickToBottomRef.current = true;
-  }, []);
+  }, [stickToBottomRef]);
 
   /**
    * 編輯 user 訊息；resend=true 時建立新分枝並回傳要送給 LLM 的文字與圖片。
@@ -226,7 +87,6 @@ export function useAgentChat() {
       const oldUser = prev[idx];
       const oldTail = prev.slice(idx + 1);
 
-      // 舊分支：原 user 內容 + 之後的訊息
       const oldFork = {
         id: uid(),
         content: oldUser.content,
@@ -234,13 +94,10 @@ export function useAgentChat() {
         tail: oldTail,
       };
 
-      // 既有 forks（若這則已經是分枝點）
       const existingForks = oldUser.forks ? [...oldUser.forks] : [];
-      // 若還沒有 forks，把「目前這條」存成第 0 支
       if (existingForks.length === 0 && (oldTail.length > 0 || oldUser.content !== nextText)) {
         existingForks.push(oldFork);
       } else if (existingForks.length > 0) {
-        // 更新目前作用中那支的 tail 為當前 tail
         const fi = oldUser.forkIndex ?? existingForks.length - 1;
         existingForks[fi] = {
           ...existingForks[fi],
@@ -250,7 +107,6 @@ export function useAgentChat() {
         };
       }
 
-      // 新分支
       const newFork = {
         id: uid(),
         content: nextText,
@@ -298,7 +154,6 @@ export function useAgentChat() {
       if (!user.forks?.length) return prev;
 
       const cur = user.forkIndex ?? 0;
-      // 先把目前 tail 存回 forks[cur]
       const currentTail = prev.slice(idx + 1);
       const forks = user.forks.map((f, i) =>
         i === cur

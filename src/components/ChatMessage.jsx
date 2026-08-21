@@ -1,83 +1,19 @@
 import {
   Bot,
   Check,
-  ChevronLeft,
-  ChevronRight,
   Copy,
   Pencil,
   User,
   X,
 } from 'lucide-react';
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import { normalizeMathDelimiters } from '../lib/normalizeMath';
 import { parseMessageContent } from '../lib/parseMessage';
 import { cn } from '../lib/utils';
-import CodeBlock from './CodeBlock';
-import MathPreview from './MathPreview';
 import TaskTreeCard from './TaskTreeCard';
 import ToolCallBlock from './ToolCallBlock';
 import { Button } from './ui/Button';
-
-/** 從 children 抽出純文字 */
-function childText(children) {
-  if (children == null) return '';
-  if (typeof children === 'string' || typeof children === 'number') return String(children);
-  if (Array.isArray(children)) return children.map(childText).join('');
-  if (children.props?.children) return childText(children.props.children);
-  return '';
-}
-
-const markdownComponents = {
-  code({ className, children, ...props }) {
-    const match = /language-(\w+)/.exec(className || '');
-    const isInline = !match && !String(children).includes('\n');
-
-    // KaTeX / math
-    if (className?.includes('language-math') || className?.includes('math')) {
-      const raw = childText(children).replace(/\n$/, '');
-      const display = className?.includes('math-display');
-      return <MathPreview source={raw} display={display} />;
-    }
-
-    // 區塊程式碼 → 高亮
-    if (!isInline) {
-      return <CodeBlock code={childText(children)} language={match?.[1]} />;
-    }
-
-    return (
-      <code
-        className="break-all rounded border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 font-mono text-xs text-emerald-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-emerald-400"
-        {...props}
-      >
-        {children}
-      </code>
-    );
-  },
-  pre({ children }) {
-    // code 元件已處理 block，避免雙重包 pre
-    return <>{children}</>;
-  },
-  p({ children }) {
-    return <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>;
-  },
-  ul({ children }) {
-    return <ul className="mb-2 list-disc space-y-1 pl-5 last:mb-0">{children}</ul>;
-  },
-  ol({ children }) {
-    return <ol className="mb-2 list-decimal space-y-1 pl-5 last:mb-0">{children}</ol>;
-  },
-  li({ children }) {
-    return <li className="leading-relaxed">{children}</li>;
-  },
-  strong({ children }) {
-    return (
-      <strong className="font-semibold text-zinc-900 dark:text-zinc-50">{children}</strong>
-    );
-  },
-};
+import MarkdownBody from './chat/MarkdownBody';
+import MessageForksNav from './chat/MessageForksNav';
 
 function plainTextForCopy(content) {
   if (!content) return '';
@@ -86,18 +22,6 @@ function plainTextForCopy(content) {
     .replace(/<\/?tool_result>/g, '')
     .replace(/<\/?tool_error>/g, '')
     .trim();
-}
-
-function MarkdownBody({ content }) {
-  return (
-    <ReactMarkdown
-      remarkPlugins={[remarkMath]}
-      rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: 'ignore' }]]}
-      components={markdownComponents}
-    >
-      {normalizeMathDelimiters(content)}
-    </ReactMarkdown>
-  );
 }
 
 export default function ChatMessage({
@@ -199,28 +123,13 @@ export default function ChatMessage({
         )}
 
         {/* 分枝切換 */}
-        {isUser && forkCount > 1 && (
-          <div className="flex items-center justify-end gap-1 px-1">
-            <button
-              type="button"
-              onClick={() => onSwitchFork?.(msg.id, 'prev')}
-              className="rounded p-0.5 text-zinc-400 hover:bg-zinc-300/50 hover:text-zinc-700 dark:hover:bg-zinc-700/50 dark:hover:text-zinc-200"
-              title="上一個分枝"
-            >
-              <ChevronLeft size={14} />
-            </button>
-            <span className="min-w-[2.5rem] text-center text-[10px] tabular-nums text-zinc-400">
-              {forkIndex + 1} / {forkCount}
-            </span>
-            <button
-              type="button"
-              onClick={() => onSwitchFork?.(msg.id, 'next')}
-              className="rounded p-0.5 text-zinc-400 hover:bg-zinc-300/50 hover:text-zinc-700 dark:hover:bg-zinc-700/50 dark:hover:text-zinc-200"
-              title="下一個分枝"
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
+        {isUser && (
+          <MessageForksNav
+            msgId={msg.id}
+            forkIndex={forkIndex}
+            forkCount={forkCount}
+            onSwitchFork={onSwitchFork}
+          />
         )}
 
         <div

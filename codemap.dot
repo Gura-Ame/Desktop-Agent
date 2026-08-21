@@ -1,0 +1,668 @@
+digraph G {
+    graph [rankdir=TB, ranksep=0.5, layout=dot, concentrate=true, clusterrank="local"];
+    subgraph "cluster_G" {
+
+        graph [style="filled,rounded", fillcolor="#80808018", label=""];
+        "src__python__agent" [label="src.python.agent", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="0", tooltip="src.python.agent\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\__init__.py"];
+        "src__python__memory" [label="src.python.memory", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="1", tooltip="src.python.memory\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\__init__.py"];
+        "src__python__tools" [label="src.python.tools", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="2", tooltip="src.python.tools\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\__init__.py"];
+        "src__python__tools__automation_tools" [label="src.python.tools.automation_tools", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="3", tooltip="src.python.tools.automation_tools\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\automation_tools.py"];
+        "src__python__worldOS__entity" [label="src.python.worldOS.entity", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="4", tooltip="src.python.worldOS.entity\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\worldOS\entity.py"];
+        subgraph "cluster_src__python__agent__agent_core" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.agent_core"];
+            "src__python__agent__agent_core__AgentWorker" [label="AgentWorker", style="filled", fillcolor="#f7ff32b2", fontcolor="#000000", group="5", tooltip="src.python.agent.agent_core.AgentWorker\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_core.py:22\nclass in src.python.agent.agent_core"];
+            "src__python__agent__agent_core" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="5", tooltip="src.python.agent.agent_core\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_core.py"];
+        }
+        subgraph "cluster_src__python__agent__agent_core__AgentWorker" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.agent_core.AgentWorker"];
+            "src__python__agent__agent_core__AgentWorker____init__" [label="__init__", style="filled", fillcolor="#f6ff00b2", fontcolor="#000000", group="5", tooltip="src.python.agent.agent_core.AgentWorker.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_core.py:23\nmethod in src.python.agent.agent_core.AgentWorker"];
+            "src__python__agent__agent_core__AgentWorker___should_stop" [label="_should_stop", style="filled", fillcolor="#f6ff00b2", fontcolor="#000000", group="5", tooltip="src.python.agent.agent_core.AgentWorker._should_stop\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_core.py:98\nmethod in src.python.agent.agent_core.AgentWorker"];
+            "src__python__agent__agent_core__AgentWorker__ask_user" [label="ask_user", style="filled", fillcolor="#f6ff00b2", fontcolor="#000000", group="5", tooltip="src.python.agent.agent_core.AgentWorker.ask_user\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_core.py:70\nmethod in src.python.agent.agent_core.AgentWorker"];
+            "src__python__agent__agent_core__AgentWorker__confirm_and_start" [label="confirm_and_start", style="filled", fillcolor="#f6ff00b2", fontcolor="#000000", group="5", tooltip="src.python.agent.agent_core.AgentWorker.confirm_and_start\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_core.py:115\nmethod in src.python.agent.agent_core.AgentWorker"];
+            "src__python__agent__agent_core__AgentWorker__emit" [label="emit", style="filled", fillcolor="#f6ff00b2", fontcolor="#000000", group="5", tooltip="src.python.agent.agent_core.AgentWorker.emit\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_core.py:66\nmethod in src.python.agent.agent_core.AgentWorker"];
+            "src__python__agent__agent_core__AgentWorker__is_running" [label="is_running", style="filled", fillcolor="#f6ff00b2", fontcolor="#000000", group="5", tooltip="src.python.agent.agent_core.AgentWorker.is_running\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_core.py:105\nmethod in src.python.agent.agent_core.AgentWorker"];
+            "src__python__agent__agent_core__AgentWorker__request_stop" [label="request_stop", style="filled", fillcolor="#f6ff00b2", fontcolor="#000000", group="5", tooltip="src.python.agent.agent_core.AgentWorker.request_stop\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_core.py:80\nmethod in src.python.agent.agent_core.AgentWorker"];
+            "src__python__agent__agent_core__AgentWorker__resume_with_user_input" [label="resume_with_user_input", style="filled", fillcolor="#f6ff00b2", fontcolor="#000000", group="5", tooltip="src.python.agent.agent_core.AgentWorker.resume_with_user_input\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_core.py:101\nmethod in src.python.agent.agent_core.AgentWorker"];
+            "src__python__agent__agent_core__AgentWorker__set_execution_mode" [label="set_execution_mode", style="filled", fillcolor="#f6ff00b2", fontcolor="#000000", group="5", tooltip="src.python.agent.agent_core.AgentWorker.set_execution_mode\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_core.py:112\nmethod in src.python.agent.agent_core.AgentWorker"];
+            "src__python__agent__agent_core__AgentWorker__set_user_prompt" [label="set_user_prompt", style="filled", fillcolor="#f6ff00b2", fontcolor="#000000", group="5", tooltip="src.python.agent.agent_core.AgentWorker.set_user_prompt\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_core.py:108\nmethod in src.python.agent.agent_core.AgentWorker"];
+            "src__python__agent__agent_core__AgentWorker__start" [label="start", style="filled", fillcolor="#f6ff00b2", fontcolor="#000000", group="5", tooltip="src.python.agent.agent_core.AgentWorker.start\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_core.py:119\nmethod in src.python.agent.agent_core.AgentWorker"];
+        }
+        subgraph "cluster_src__python__agent__agent_direct_mode" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.agent_direct_mode"];
+            "src__python__agent__agent_direct_mode__AgentDirectModeMixin" [label="AgentDirectModeMixin", style="filled", fillcolor="#cdff32b2", fontcolor="#000000", group="6", tooltip="src.python.agent.agent_direct_mode.AgentDirectModeMixin\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_direct_mode.py:4\nclass in src.python.agent.agent_direct_mode"];
+            "src__python__agent__agent_direct_mode" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="6", tooltip="src.python.agent.agent_direct_mode\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_direct_mode.py"];
+        }
+        subgraph "cluster_src__python__agent__agent_direct_mode__AgentDirectModeMixin" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.agent_direct_mode.AgentDirectModeMixin"];
+            "src__python__agent__agent_direct_mode__AgentDirectModeMixin___run_direct_mode" [label="_run_direct_mode", style="filled", fillcolor="#c1ff00b2", fontcolor="#000000", group="6", tooltip="src.python.agent.agent_direct_mode.AgentDirectModeMixin._run_direct_mode\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_direct_mode.py:7\nmethod in src.python.agent.agent_direct_mode.AgentDirectModeMixin"];
+        }
+        subgraph "cluster_src__python__agent__agent_execution_cycle" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.agent_execution_cycle"];
+            "src__python__agent__agent_execution_cycle__AgentExecutionMixin" [label="AgentExecutionMixin", style="filled", fillcolor="#a3ff32b2", fontcolor="#000000", group="7", tooltip="src.python.agent.agent_execution_cycle.AgentExecutionMixin\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_execution_cycle.py:9\nclass in src.python.agent.agent_execution_cycle"];
+            "src__python__agent__agent_execution_cycle" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="7", tooltip="src.python.agent.agent_execution_cycle\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_execution_cycle.py"];
+        }
+        subgraph "cluster_src__python__agent__agent_execution_cycle__AgentExecutionMixin" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.agent_execution_cycle.AgentExecutionMixin"];
+            "src__python__agent__agent_execution_cycle__AgentExecutionMixin___decompose_task" [label="_decompose_task", style="filled", fillcolor="#8cff00b2", fontcolor="#000000", group="7", tooltip="src.python.agent.agent_execution_cycle.AgentExecutionMixin._decompose_task\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_execution_cycle.py:298\nmethod in src.python.agent.agent_execution_cycle.AgentExecutionMixin"];
+            "src__python__agent__agent_execution_cycle__AgentExecutionMixin___process_task" [label="_process_task", style="filled", fillcolor="#8cff00b2", fontcolor="#000000", group="7", tooltip="src.python.agent.agent_execution_cycle.AgentExecutionMixin._process_task\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_execution_cycle.py:160\nmethod in src.python.agent.agent_execution_cycle.AgentExecutionMixin"];
+            "src__python__agent__agent_execution_cycle__AgentExecutionMixin___reflect" [label="_reflect", style="filled", fillcolor="#8cff00b2", fontcolor="#000000", group="7", tooltip="src.python.agent.agent_execution_cycle.AgentExecutionMixin._reflect\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_execution_cycle.py:314\nmethod in src.python.agent.agent_execution_cycle.AgentExecutionMixin"];
+            "src__python__agent__agent_execution_cycle__AgentExecutionMixin___run" [label="_run", style="filled", fillcolor="#8cff00b2", fontcolor="#000000", group="7", tooltip="src.python.agent.agent_execution_cycle.AgentExecutionMixin._run\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_execution_cycle.py:12\nmethod in src.python.agent.agent_execution_cycle.AgentExecutionMixin"];
+            "src__python__agent__agent_execution_cycle__AgentExecutionMixin___run_inner" [label="_run_inner", style="filled", fillcolor="#8cff00b2", fontcolor="#000000", group="7", tooltip="src.python.agent.agent_execution_cycle.AgentExecutionMixin._run_inner\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_execution_cycle.py:28\nmethod in src.python.agent.agent_execution_cycle.AgentExecutionMixin"];
+            "src__python__agent__agent_execution_cycle__AgentExecutionMixin___should_pause_before" [label="_should_pause_before", style="filled", fillcolor="#8cff00b2", fontcolor="#000000", group="7", tooltip="src.python.agent.agent_execution_cycle.AgentExecutionMixin._should_pause_before\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_execution_cycle.py:151\nmethod in src.python.agent.agent_execution_cycle.AgentExecutionMixin"];
+        }
+        subgraph "cluster_src__python__agent__agent_llm_client" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.agent_llm_client"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin" [label="AgentLLMClientMixin", style="filled", fillcolor="#79ff32b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:15\nclass in src.python.agent.agent_llm_client"];
+            "src__python__agent__agent_llm_client" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py"];
+        }
+        subgraph "cluster_src__python__agent__agent_llm_client__AgentLLMClientMixin" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___build_user_content" [label="_build_user_content", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._build_user_content\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:18\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___call_and_execute" [label="_call_and_execute", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._call_and_execute\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:107\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___call_llm" [label="_call_llm", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._call_llm\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:121\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___call_llm_stream" [label="_call_llm_stream", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._call_llm_stream\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:129\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___execute_tools" [label="_execute_tools", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._execute_tools\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:171\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___judge_and_remember_from_turn" [label="_judge_and_remember_from_turn", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._judge_and_remember_from_turn\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:233\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___load_history" [label="_load_history", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._load_history\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:60\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___maybe_compress_history" [label="_maybe_compress_history", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._maybe_compress_history\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:38\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___parse_memory_facts" [label="_parse_memory_facts", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._parse_memory_facts\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:258\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___parse_structured_fields" [label="_parse_structured_fields", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._parse_structured_fields\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:164\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___parse_tool_arguments" [label="_parse_tool_arguments", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._parse_tool_arguments\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:205\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___remember_facts" [label="_remember_facts", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._remember_facts\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:273\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___save_history" [label="_save_history", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._save_history\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:67\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___similar_to_previous_reply" [label="_similar_to_previous_reply", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._similar_to_previous_reply\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:89\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___split_reflect_output" [label="_split_reflect_output", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._split_reflect_output\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:245\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin__clear_conversation_history" [label="clear_conversation_history", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin.clear_conversation_history\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:83\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin__update_api_config" [label="update_api_config", style="filled", fillcolor="#57ff00b2", fontcolor="#000000", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin.update_api_config\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:101\nmethod in src.python.agent.agent_llm_client.AgentLLMClientMixin"];
+        }
+        subgraph "cluster_src__python__agent__agent_llm_client__AgentLLMClientMixin___execute_tools" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.agent_llm_client.AgentLLMClientMixin._execute_tools"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___execute_tools___execute_and_format" [label="_execute_and_format", style="filled", fillcolor="#46cb00b2", fontcolor="#ffffff", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._execute_tools._execute_and_format\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:179\nfunction in src.python.agent.agent_llm_client.AgentLLMClientMixin._execute_tools"];
+            "src__python__agent__agent_llm_client__AgentLLMClientMixin___execute_tools___replace" [label="_replace", style="filled", fillcolor="#46cb00b2", fontcolor="#ffffff", group="8", tooltip="src.python.agent.agent_llm_client.AgentLLMClientMixin._execute_tools._replace\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_llm_client.py:197\nfunction in src.python.agent.agent_llm_client.AgentLLMClientMixin._execute_tools"];
+        }
+        subgraph "cluster_src__python__agent__agent_memory_mixin" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.agent_memory_mixin"];
+            "src__python__agent__agent_memory_mixin__AgentMemoryMixin" [label="AgentMemoryMixin", style="filled", fillcolor="#4fff32b2", fontcolor="#000000", group="9", tooltip="src.python.agent.agent_memory_mixin.AgentMemoryMixin\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_memory_mixin.py:5\nclass in src.python.agent.agent_memory_mixin"];
+            "src__python__agent__agent_memory_mixin" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="9", tooltip="src.python.agent.agent_memory_mixin\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_memory_mixin.py"];
+        }
+        subgraph "cluster_src__python__agent__agent_memory_mixin__AgentMemoryMixin" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.agent_memory_mixin.AgentMemoryMixin"];
+            "src__python__agent__agent_memory_mixin__AgentMemoryMixin___auto_queue_impact_checks" [label="_auto_queue_impact_checks", style="filled", fillcolor="#23ff00b2", fontcolor="#000000", group="9", tooltip="src.python.agent.agent_memory_mixin.AgentMemoryMixin._auto_queue_impact_checks\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_memory_mixin.py:115\nmethod in src.python.agent.agent_memory_mixin.AgentMemoryMixin"];
+            "src__python__agent__agent_memory_mixin__AgentMemoryMixin__build_code_graphX" [label="build_code_graph", style="filled", fillcolor="#23ff00b2", fontcolor="#000000", group="9", tooltip="src.python.agent.agent_memory_mixin.AgentMemoryMixin.build_code_graph\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_memory_mixin.py:83\nmethod in src.python.agent.agent_memory_mixin.AgentMemoryMixin"];
+            "src__python__agent__agent_memory_mixin__AgentMemoryMixin__build_code_graphX_for_project" [label="build_code_graph_for_project", style="filled", fillcolor="#23ff00b2", fontcolor="#000000", group="9", tooltip="src.python.agent.agent_memory_mixin.AgentMemoryMixin.build_code_graph_for_project\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_memory_mixin.py:92\nmethod in src.python.agent.agent_memory_mixin.AgentMemoryMixin"];
+            "src__python__agent__agent_memory_mixin__AgentMemoryMixin__find_callees" [label="find_callees", style="filled", fillcolor="#23ff00b2", fontcolor="#000000", group="9", tooltip="src.python.agent.agent_memory_mixin.AgentMemoryMixin.find_callees\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_memory_mixin.py:109\nmethod in src.python.agent.agent_memory_mixin.AgentMemoryMixin"];
+            "src__python__agent__agent_memory_mixin__AgentMemoryMixin__find_callers" [label="find_callers", style="filled", fillcolor="#23ff00b2", fontcolor="#000000", group="9", tooltip="src.python.agent.agent_memory_mixin.AgentMemoryMixin.find_callers\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_memory_mixin.py:103\nmethod in src.python.agent.agent_memory_mixin.AgentMemoryMixin"];
+            "src__python__agent__agent_memory_mixin__AgentMemoryMixin__recall" [label="recall", style="filled", fillcolor="#23ff00b2", fontcolor="#000000", group="9", tooltip="src.python.agent.agent_memory_mixin.AgentMemoryMixin.recall\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_memory_mixin.py:16\nmethod in src.python.agent.agent_memory_mixin.AgentMemoryMixin"];
+            "src__python__agent__agent_memory_mixin__AgentMemoryMixin__recall_observation" [label="recall_observation", style="filled", fillcolor="#23ff00b2", fontcolor="#000000", group="9", tooltip="src.python.agent.agent_memory_mixin.AgentMemoryMixin.recall_observation\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_memory_mixin.py:41\nmethod in src.python.agent.agent_memory_mixin.AgentMemoryMixin"];
+            "src__python__agent__agent_memory_mixin__AgentMemoryMixin__recall_related" [label="recall_related", style="filled", fillcolor="#23ff00b2", fontcolor="#000000", group="9", tooltip="src.python.agent.agent_memory_mixin.AgentMemoryMixin.recall_related\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_memory_mixin.py:64\nmethod in src.python.agent.agent_memory_mixin.AgentMemoryMixin"];
+            "src__python__agent__agent_memory_mixin__AgentMemoryMixin__recall_with_event" [label="recall_with_event", style="filled", fillcolor="#23ff00b2", fontcolor="#000000", group="9", tooltip="src.python.agent.agent_memory_mixin.AgentMemoryMixin.recall_with_event\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_memory_mixin.py:54\nmethod in src.python.agent.agent_memory_mixin.AgentMemoryMixin"];
+            "src__python__agent__agent_memory_mixin__AgentMemoryMixin__record_observation" [label="record_observation", style="filled", fillcolor="#23ff00b2", fontcolor="#000000", group="9", tooltip="src.python.agent.agent_memory_mixin.AgentMemoryMixin.record_observation\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_memory_mixin.py:33\nmethod in src.python.agent.agent_memory_mixin.AgentMemoryMixin"];
+            "src__python__agent__agent_memory_mixin__AgentMemoryMixin__relate" [label="relate", style="filled", fillcolor="#23ff00b2", fontcolor="#000000", group="9", tooltip="src.python.agent.agent_memory_mixin.AgentMemoryMixin.relate\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_memory_mixin.py:29\nmethod in src.python.agent.agent_memory_mixin.AgentMemoryMixin"];
+            "src__python__agent__agent_memory_mixin__AgentMemoryMixin__remember" [label="remember", style="filled", fillcolor="#23ff00b2", fontcolor="#000000", group="9", tooltip="src.python.agent.agent_memory_mixin.AgentMemoryMixin.remember\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_memory_mixin.py:10\nmethod in src.python.agent.agent_memory_mixin.AgentMemoryMixin"];
+            "src__python__agent__agent_memory_mixin__AgentMemoryMixin__search_memory" [label="search_memory", style="filled", fillcolor="#23ff00b2", fontcolor="#000000", group="9", tooltip="src.python.agent.agent_memory_mixin.AgentMemoryMixin.search_memory\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_memory_mixin.py:74\nmethod in src.python.agent.agent_memory_mixin.AgentMemoryMixin"];
+        }
+        subgraph "cluster_src__python__agent__agent_state" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.agent_state"];
+            "src__python__agent__agent_state__AgentState" [label="AgentState", style="filled", fillcolor="#32ff41b2", fontcolor="#000000", group="10", tooltip="src.python.agent.agent_state.AgentState\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_state.py:25\nclass in src.python.agent.agent_state"];
+            "src__python__agent__agent_state__HISTORY_NODE_ID" [label="HISTORY_NODE_ID", style="filled", fillcolor="#32ff41b2", fontcolor="#000000", group="10", tooltip="src.python.agent.agent_state.HISTORY_NODE_ID\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_state.py:22\nname in src.python.agent.agent_state"];
+            "src__python__agent__agent_state__HYBRID_WINDOW_MESSAGES" [label="HYBRID_WINDOW_MESSAGES", style="filled", fillcolor="#32ff41b2", fontcolor="#000000", group="10", tooltip="src.python.agent.agent_state.HYBRID_WINDOW_MESSAGES\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_state.py:18\nname in src.python.agent.agent_state"];
+            "src__python__agent__agent_state__MAX_RESPONSE_TOKENS" [label="MAX_RESPONSE_TOKENS", style="filled", fillcolor="#32ff41b2", fontcolor="#000000", group="10", tooltip="src.python.agent.agent_state.MAX_RESPONSE_TOKENS\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_state.py:12\nname in src.python.agent.agent_state"];
+            "src__python__agent__agent_state__MAX_RETRY_PER_TASK" [label="MAX_RETRY_PER_TASK", style="filled", fillcolor="#32ff41b2", fontcolor="#000000", group="10", tooltip="src.python.agent.agent_state.MAX_RETRY_PER_TASK\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_state.py:4\nname in src.python.agent.agent_state"];
+            "src__python__agent__agent_state__STOP_SEQUENCES" [label="STOP_SEQUENCES", style="filled", fillcolor="#32ff41b2", fontcolor="#000000", group="10", tooltip="src.python.agent.agent_state.STOP_SEQUENCES\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\agent_state.py:10\nname in src.python.agent.agent_state"];
+        }
+        subgraph "cluster_src__python__agent__context_compressor" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.context_compressor"];
+            "src__python__agent__context_compressor__ContextCompressor" [label="ContextCompressor", style="filled", fillcolor="#32ff6bb2", fontcolor="#000000", group="11", tooltip="src.python.agent.context_compressor.ContextCompressor\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\context_compressor.py:20\nclass in src.python.agent.context_compressor"];
+            "src__python__agent__context_compressor" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="11", tooltip="src.python.agent.context_compressor\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\context_compressor.py"];
+        }
+        subgraph "cluster_src__python__agent__context_compressor__ContextCompressor" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.context_compressor.ContextCompressor"];
+            "src__python__agent__context_compressor__ContextCompressor____init__" [label="__init__", style="filled", fillcolor="#00ff46b2", fontcolor="#000000", group="11", tooltip="src.python.agent.context_compressor.ContextCompressor.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\context_compressor.py:21\nmethod in src.python.agent.context_compressor.ContextCompressor"];
+            "src__python__agent__context_compressor__ContextCompressor___parse_facts" [label="_parse_facts", style="filled", fillcolor="#00ff46b2", fontcolor="#000000", group="11", tooltip="src.python.agent.context_compressor.ContextCompressor._parse_facts\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\context_compressor.py:94\nmethod in src.python.agent.context_compressor.ContextCompressor"];
+            "src__python__agent__context_compressor__ContextCompressor__compress" [label="compress", style="filled", fillcolor="#00ff46b2", fontcolor="#000000", group="11", tooltip="src.python.agent.context_compressor.ContextCompressor.compress\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\context_compressor.py:52\nmethod in src.python.agent.context_compressor.ContextCompressor"];
+            "src__python__agent__context_compressor__ContextCompressor__establish_baseline" [label="establish_baseline", style="filled", fillcolor="#00ff46b2", fontcolor="#000000", group="11", tooltip="src.python.agent.context_compressor.ContextCompressor.establish_baseline\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\context_compressor.py:34\nmethod in src.python.agent.context_compressor.ContextCompressor"];
+            "src__python__agent__context_compressor__ContextCompressor__estimate_tokens" [label="estimate_tokens", style="filled", fillcolor="#00ff46b2", fontcolor="#000000", group="11", tooltip="src.python.agent.context_compressor.ContextCompressor.estimate_tokens\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\context_compressor.py:44\nstaticmethod in src.python.agent.context_compressor.ContextCompressor"];
+            "src__python__agent__context_compressor__ContextCompressor__reset_baseline" [label="reset_baseline", style="filled", fillcolor="#00ff46b2", fontcolor="#000000", group="11", tooltip="src.python.agent.context_compressor.ContextCompressor.reset_baseline\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\context_compressor.py:30\nmethod in src.python.agent.context_compressor.ContextCompressor"];
+            "src__python__agent__context_compressor__ContextCompressor__should_compress" [label="should_compress", style="filled", fillcolor="#00ff46b2", fontcolor="#000000", group="11", tooltip="src.python.agent.context_compressor.ContextCompressor.should_compress\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\context_compressor.py:38\nmethod in src.python.agent.context_compressor.ContextCompressor"];
+        }
+        subgraph "cluster_src__python__agent__task_system" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.task_system"];
+            "src__python__agent__task_system__ExecutionMode" [label="ExecutionMode", style="filled", fillcolor="#32ff95b2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system.ExecutionMode\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py:15\nclass in src.python.agent.task_system"];
+            "src__python__agent__task_system__TaskEngine" [label="TaskEngine", style="filled", fillcolor="#32ff95b2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system.TaskEngine\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py:45\nclass in src.python.agent.task_system"];
+            "src__python__agent__task_system__TaskNode" [label="TaskNode", style="filled", fillcolor="#32ff95b2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system.TaskNode\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py:22\nclass in src.python.agent.task_system"];
+            "src__python__agent__task_system__TaskStatus" [label="TaskStatus", style="filled", fillcolor="#32ff95b2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system.TaskStatus\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py:6\nclass in src.python.agent.task_system"];
+            "src__python__agent__task_system" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py"];
+        }
+        subgraph "cluster_src__python__agent__task_system__TaskEngine" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.task_system.TaskEngine"];
+            "src__python__agent__task_system__TaskEngine____init__" [label="__init__", style="filled", fillcolor="#00ff7bb2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system.TaskEngine.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py:46\nmethod in src.python.agent.task_system.TaskEngine"];
+            "src__python__agent__task_system__TaskEngine___depth_of" [label="_depth_of", style="filled", fillcolor="#00ff7bb2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system.TaskEngine._depth_of\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py:222\nmethod in src.python.agent.task_system.TaskEngine"];
+            "src__python__agent__task_system__TaskEngine___extract_field" [label="_extract_field", style="filled", fillcolor="#00ff7bb2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system.TaskEngine._extract_field\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py:212\nmethod in src.python.agent.task_system.TaskEngine"];
+            "src__python__agent__task_system__TaskEngine__apply_reflected_dsl" [label="apply_reflected_dsl", style="filled", fillcolor="#00ff7bb2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system.TaskEngine.apply_reflected_dsl\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py:130\nmethod in src.python.agent.task_system.TaskEngine"];
+            "src__python__agent__task_system__TaskEngine__check_and_complete_parent" [label="check_and_complete_parent", style="filled", fillcolor="#00ff7bb2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system.TaskEngine.check_and_complete_parent\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py:193\nmethod in src.python.agent.task_system.TaskEngine"];
+            "src__python__agent__task_system__TaskEngine__decompose_task" [label="decompose_task", style="filled", fillcolor="#00ff7bb2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system.TaskEngine.decompose_task\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py:173\nmethod in src.python.agent.task_system.TaskEngine"];
+            "src__python__agent__task_system__TaskEngine__get_next_pending_task" [label="get_next_pending_task", style="filled", fillcolor="#00ff7bb2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system.TaskEngine.get_next_pending_task\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py:216\nmethod in src.python.agent.task_system.TaskEngine"];
+            "src__python__agent__task_system__TaskEngine__load_initial_plan" [label="load_initial_plan", style="filled", fillcolor="#00ff7bb2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system.TaskEngine.load_initial_plan\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py:121\nmethod in src.python.agent.task_system.TaskEngine"];
+            "src__python__agent__task_system__TaskEngine__parse_markdown_dsl" [label="parse_markdown_dsl", style="filled", fillcolor="#00ff7bb2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system.TaskEngine.parse_markdown_dsl\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py:54\nmethod in src.python.agent.task_system.TaskEngine"];
+            "src__python__agent__task_system__TaskEngine__render_tree_markdown" [label="render_tree_markdown", style="filled", fillcolor="#00ff7bb2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system.TaskEngine.render_tree_markdown\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py:232\nmethod in src.python.agent.task_system.TaskEngine"];
+        }
+        subgraph "cluster_src__python__agent__task_system__TaskNode" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.task_system.TaskNode"];
+            "src__python__agent__task_system__TaskNode____init__" [label="__init__", style="filled", fillcolor="#00ff7bb2", fontcolor="#000000", group="12", tooltip="src.python.agent.task_system.TaskNode.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\task_system.py:23\nmethod in src.python.agent.task_system.TaskNode"];
+        }
+        subgraph "cluster_src__python__agent__working_memory" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.working_memory"];
+            "src__python__agent__working_memory__WorkingMemory" [label="WorkingMemory", style="filled", fillcolor="#32ffbfb2", fontcolor="#000000", group="13", tooltip="src.python.agent.working_memory.WorkingMemory\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\working_memory.py:18\nclass in src.python.agent.working_memory"];
+            "src__python__agent__working_memory" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="13", tooltip="src.python.agent.working_memory\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\working_memory.py"];
+        }
+        subgraph "cluster_src__python__agent__working_memory__WorkingMemory" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.agent.working_memory.WorkingMemory"];
+            "src__python__agent__working_memory__WorkingMemory____init__" [label="__init__", style="filled", fillcolor="#00ffafb2", fontcolor="#000000", group="13", tooltip="src.python.agent.working_memory.WorkingMemory.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\working_memory.py:19\nmethod in src.python.agent.working_memory.WorkingMemory"];
+            "src__python__agent__working_memory__WorkingMemory__activate" [label="activate", style="filled", fillcolor="#00ffafb2", fontcolor="#000000", group="13", tooltip="src.python.agent.working_memory.WorkingMemory.activate\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\working_memory.py:24\nmethod in src.python.agent.working_memory.WorkingMemory"];
+            "src__python__agent__working_memory__WorkingMemory__activate_many" [label="activate_many", style="filled", fillcolor="#00ffafb2", fontcolor="#000000", group="13", tooltip="src.python.agent.working_memory.WorkingMemory.activate_many\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\working_memory.py:37\nmethod in src.python.agent.working_memory.WorkingMemory"];
+            "src__python__agent__working_memory__WorkingMemory__active_ids" [label="active_ids", style="filled", fillcolor="#00ffafb2", fontcolor="#000000", group="13", tooltip="src.python.agent.working_memory.WorkingMemory.active_ids\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\working_memory.py:47\nmethod in src.python.agent.working_memory.WorkingMemory"];
+            "src__python__agent__working_memory__WorkingMemory__clear" [label="clear", style="filled", fillcolor="#00ffafb2", fontcolor="#000000", group="13", tooltip="src.python.agent.working_memory.WorkingMemory.clear\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\working_memory.py:44\nmethod in src.python.agent.working_memory.WorkingMemory"];
+            "src__python__agent__working_memory__WorkingMemory__deactivate" [label="deactivate", style="filled", fillcolor="#00ffafb2", fontcolor="#000000", group="13", tooltip="src.python.agent.working_memory.WorkingMemory.deactivate\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\working_memory.py:41\nmethod in src.python.agent.working_memory.WorkingMemory"];
+            "src__python__agent__working_memory__WorkingMemory__render_context" [label="render_context", style="filled", fillcolor="#00ffafb2", fontcolor="#000000", group="13", tooltip="src.python.agent.working_memory.WorkingMemory.render_context\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\agent\working_memory.py:50\nmethod in src.python.agent.working_memory.WorkingMemory"];
+        }
+        subgraph "cluster_src__python__config" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.config"];
+            "src__python__config__API_BASE_URL" [label="API_BASE_URL", style="filled", fillcolor="#65ffefb2", fontcolor="#000000", group="14", tooltip="src.python.config.API_BASE_URL\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\config.py:1\nname in src.python.config"];
+            "src__python__config__API_KEY" [label="API_KEY", style="filled", fillcolor="#65ffefb2", fontcolor="#000000", group="14", tooltip="src.python.config.API_KEY\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\config.py:2\nname in src.python.config"];
+            "src__python__config__COMPRESS_SYSTEM_PROMPT" [label="COMPRESS_SYSTEM_PROMPT", style="filled", fillcolor="#65ffefb2", fontcolor="#000000", group="14", tooltip="src.python.config.COMPRESS_SYSTEM_PROMPT\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\config.py:251\nname in src.python.config"];
+            "src__python__config__DECOMPOSE_SYSTEM_PROMPT" [label="DECOMPOSE_SYSTEM_PROMPT", style="filled", fillcolor="#65ffefb2", fontcolor="#000000", group="14", tooltip="src.python.config.DECOMPOSE_SYSTEM_PROMPT\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\config.py:30\nname in src.python.config"];
+            "src__python__config__MODEL_NAME" [label="MODEL_NAME", style="filled", fillcolor="#65ffefb2", fontcolor="#000000", group="14", tooltip="src.python.config.MODEL_NAME\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\config.py:3\nname in src.python.config"];
+            "src__python__config__PLANNER_SYSTEM_PROMPT" [label="PLANNER_SYSTEM_PROMPT", style="filled", fillcolor="#65ffefb2", fontcolor="#000000", group="14", tooltip="src.python.config.PLANNER_SYSTEM_PROMPT\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\config.py:5\nname in src.python.config"];
+            "src__python__config__REFLECT_SYSTEM_PROMPT" [label="REFLECT_SYSTEM_PROMPT", style="filled", fillcolor="#65ffefb2", fontcolor="#000000", group="14", tooltip="src.python.config.REFLECT_SYSTEM_PROMPT\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\config.py:49\nname in src.python.config"];
+            "src__python__config__SYSTEM_PROMPT" [label="SYSTEM_PROMPT", style="filled", fillcolor="#65ffefb2", fontcolor="#000000", group="14", tooltip="src.python.config.SYSTEM_PROMPT\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\config.py:115\nname in src.python.config"];
+            "src__python__config__THINKING_SYSTEM_PROMPT" [label="THINKING_SYSTEM_PROMPT", style="filled", fillcolor="#65ffefb2", fontcolor="#000000", group="14", tooltip="src.python.config.THINKING_SYSTEM_PROMPT\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\config.py:84\nname in src.python.config"];
+            "src__python__config__VALUE_JUDGMENT_PROMPT" [label="VALUE_JUDGMENT_PROMPT", style="filled", fillcolor="#65ffefb2", fontcolor="#000000", group="14", tooltip="src.python.config.VALUE_JUDGMENT_PROMPT\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\config.py:266\nname in src.python.config"];
+            "src__python__config__VERIFY_SYSTEM_PROMPT" [label="VERIFY_SYSTEM_PROMPT", style="filled", fillcolor="#65ffefb2", fontcolor="#000000", group="14", tooltip="src.python.config.VERIFY_SYSTEM_PROMPT\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\config.py:103\nname in src.python.config"];
+        }
+        subgraph "cluster_src__python__fake_llm" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.fake_llm"];
+            "src__python__fake_llm__CATEGORY_MARKERS" [label="CATEGORY_MARKERS", style="filled", fillcolor="#65efffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm.CATEGORY_MARKERS\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:15\nname in src.python.fake_llm"];
+            "src__python__fake_llm__ECHO_REFLECT" [label="ECHO_REFLECT", style="filled", fillcolor="#65efffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm.ECHO_REFLECT\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:34\nfunction in src.python.fake_llm"];
+            "src__python__fake_llm__FakeOpenAIClient" [label="FakeOpenAIClient", style="filled", fillcolor="#65efffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm.FakeOpenAIClient\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:116\nclass in src.python.fake_llm"];
+            "src__python__fake_llm___FakeChat" [label="_FakeChat", style="filled", fillcolor="#65efffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeChat\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:111\nclass in src.python.fake_llm"];
+            "src__python__fake_llm___FakeChoice" [label="_FakeChoice", style="filled", fillcolor="#65efffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeChoice\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:69\nclass in src.python.fake_llm"];
+            "src__python__fake_llm___FakeChunk" [label="_FakeChunk", style="filled", fillcolor="#65efffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeChunk\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:59\nclass in src.python.fake_llm"];
+            "src__python__fake_llm___FakeChunkChoice" [label="_FakeChunkChoice", style="filled", fillcolor="#65efffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeChunkChoice\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:53\nclass in src.python.fake_llm"];
+            "src__python__fake_llm___FakeCompletions" [label="_FakeCompletions", style="filled", fillcolor="#65efffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeCompletions\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:79\nclass in src.python.fake_llm"];
+            "src__python__fake_llm___FakeDelta" [label="_FakeDelta", style="filled", fillcolor="#65efffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeDelta\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:48\nclass in src.python.fake_llm"];
+            "src__python__fake_llm___FakeMessage" [label="_FakeMessage", style="filled", fillcolor="#65efffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeMessage\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:64\nclass in src.python.fake_llm"];
+            "src__python__fake_llm___FakeResponse" [label="_FakeResponse", style="filled", fillcolor="#65efffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeResponse\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:74\nclass in src.python.fake_llm"];
+            "src__python__fake_llm__classify" [label="classify", style="filled", fillcolor="#65efffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm.classify\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:27\nfunction in src.python.fake_llm"];
+        }
+        subgraph "cluster_src__python__fake_llm__FakeOpenAIClient" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.fake_llm.FakeOpenAIClient"];
+            "src__python__fake_llm__FakeOpenAIClient____init__" [label="__init__", style="filled", fillcolor="#32e9ffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm.FakeOpenAIClient.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:119\nmethod in src.python.fake_llm.FakeOpenAIClient"];
+            "src__python__fake_llm__FakeOpenAIClient__call_log" [label="call_log", style="filled", fillcolor="#32e9ffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm.FakeOpenAIClient.call_log\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:124\nmethod in src.python.fake_llm.FakeOpenAIClient"];
+        }
+        subgraph "cluster_src__python__fake_llm___FakeChat" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.fake_llm._FakeChat"];
+            "src__python__fake_llm___FakeChat____init__" [label="__init__", style="filled", fillcolor="#32e9ffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeChat.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:112\nmethod in src.python.fake_llm._FakeChat"];
+        }
+        subgraph "cluster_src__python__fake_llm___FakeChoice" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.fake_llm._FakeChoice"];
+            "src__python__fake_llm___FakeChoice____init__" [label="__init__", style="filled", fillcolor="#32e9ffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeChoice.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:70\nmethod in src.python.fake_llm._FakeChoice"];
+        }
+        subgraph "cluster_src__python__fake_llm___FakeChunk" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.fake_llm._FakeChunk"];
+            "src__python__fake_llm___FakeChunk____init__" [label="__init__", style="filled", fillcolor="#32e9ffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeChunk.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:60\nmethod in src.python.fake_llm._FakeChunk"];
+        }
+        subgraph "cluster_src__python__fake_llm___FakeChunkChoice" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.fake_llm._FakeChunkChoice"];
+            "src__python__fake_llm___FakeChunkChoice____init__" [label="__init__", style="filled", fillcolor="#32e9ffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeChunkChoice.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:54\nmethod in src.python.fake_llm._FakeChunkChoice"];
+        }
+        subgraph "cluster_src__python__fake_llm___FakeCompletions" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.fake_llm._FakeCompletions"];
+            "src__python__fake_llm___FakeCompletions____init__" [label="__init__", style="filled", fillcolor="#32e9ffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeCompletions.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:80\nmethod in src.python.fake_llm._FakeCompletions"];
+            "src__python__fake_llm___FakeCompletions__create" [label="create", style="filled", fillcolor="#32e9ffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeCompletions.create\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:84\nmethod in src.python.fake_llm._FakeCompletions"];
+        }
+        subgraph "cluster_src__python__fake_llm___FakeDelta" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.fake_llm._FakeDelta"];
+            "src__python__fake_llm___FakeDelta____init__" [label="__init__", style="filled", fillcolor="#32e9ffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeDelta.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:49\nmethod in src.python.fake_llm._FakeDelta"];
+        }
+        subgraph "cluster_src__python__fake_llm___FakeMessage" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.fake_llm._FakeMessage"];
+            "src__python__fake_llm___FakeMessage____init__" [label="__init__", style="filled", fillcolor="#32e9ffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeMessage.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:65\nmethod in src.python.fake_llm._FakeMessage"];
+        }
+        subgraph "cluster_src__python__fake_llm___FakeResponse" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.fake_llm._FakeResponse"];
+            "src__python__fake_llm___FakeResponse____init__" [label="__init__", style="filled", fillcolor="#32e9ffb2", fontcolor="#000000", group="15", tooltip="src.python.fake_llm._FakeResponse.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\fake_llm.py:75\nmethod in src.python.fake_llm._FakeResponse"];
+        }
+        subgraph "cluster_src__python__main" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.main"];
+            "src__python__main__JsApi" [label="JsApi", style="filled", fillcolor="#65cfffb2", fontcolor="#000000", group="16", tooltip="src.python.main.JsApi\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py:28\nclass in src.python.main"];
+            "src__python__main__main" [label="main", style="filled", fillcolor="#65cfffb2", fontcolor="#000000", group="16", tooltip="src.python.main.main\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py:170\nfunction in src.python.main"];
+            "src__python__main" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="16", tooltip="src.python.main\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py"];
+        }
+        subgraph "cluster_src__python__main__JsApi" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.main.JsApi"];
+            "src__python__main__JsApi____init__" [label="__init__", style="filled", fillcolor="#32bfffb2", fontcolor="#000000", group="16", tooltip="src.python.main.JsApi.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py:29\nmethod in src.python.main.JsApi"];
+            "src__python__main__JsApi__clear_drawings" [label="clear_drawings", style="filled", fillcolor="#32bfffb2", fontcolor="#000000", group="16", tooltip="src.python.main.JsApi.clear_drawings\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py:162\nmethod in src.python.main.JsApi"];
+            "src__python__main__JsApi__clear_history" [label="clear_history", style="filled", fillcolor="#32bfffb2", fontcolor="#000000", group="16", tooltip="src.python.main.JsApi.clear_history\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py:166\nmethod in src.python.main.JsApi"];
+            "src__python__main__JsApi__confirm_step" [label="confirm_step", style="filled", fillcolor="#32bfffb2", fontcolor="#000000", group="16", tooltip="src.python.main.JsApi.confirm_step\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py:133\nmethod in src.python.main.JsApi"];
+            "src__python__main__JsApi__dispatch_event" [label="dispatch_event", style="filled", fillcolor="#32bfffb2", fontcolor="#000000", group="16", tooltip="src.python.main.JsApi.dispatch_event\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py:67\nmethod in src.python.main.JsApi"];
+            "src__python__main__JsApi__poll_events" [label="poll_events", style="filled", fillcolor="#32bfffb2", fontcolor="#000000", group="16", tooltip="src.python.main.JsApi.poll_events\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py:79\nmethod in src.python.main.JsApi"];
+            "src__python__main__JsApi__send_prompt" [label="send_prompt", style="filled", fillcolor="#32bfffb2", fontcolor="#000000", group="16", tooltip="src.python.main.JsApi.send_prompt\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py:107\nmethod in src.python.main.JsApi"];
+            "src__python__main__JsApi__set_execution_mode" [label="set_execution_mode", style="filled", fillcolor="#32bfffb2", fontcolor="#000000", group="16", tooltip="src.python.main.JsApi.set_execution_mode\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py:139\nmethod in src.python.main.JsApi"];
+            "src__python__main__JsApi__set_window" [label="set_window", style="filled", fillcolor="#32bfffb2", fontcolor="#000000", group="16", tooltip="src.python.main.JsApi.set_window\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py:64\nmethod in src.python.main.JsApi"];
+            "src__python__main__JsApi__stop_agent" [label="stop_agent", style="filled", fillcolor="#32bfffb2", fontcolor="#000000", group="16", tooltip="src.python.main.JsApi.stop_agent\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py:126\nmethod in src.python.main.JsApi"];
+            "src__python__main__JsApi__submit_user_input" [label="submit_user_input", style="filled", fillcolor="#32bfffb2", fontcolor="#000000", group="16", tooltip="src.python.main.JsApi.submit_user_input\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py:136\nmethod in src.python.main.JsApi"];
+            "src__python__main__JsApi__toggle_local_server" [label="toggle_local_server", style="filled", fillcolor="#32bfffb2", fontcolor="#000000", group="16", tooltip="src.python.main.JsApi.toggle_local_server\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py:151\nmethod in src.python.main.JsApi"];
+            "src__python__main__JsApi__update_api_config" [label="update_api_config", style="filled", fillcolor="#32bfffb2", fontcolor="#000000", group="16", tooltip="src.python.main.JsApi.update_api_config\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\main.py:147\nmethod in src.python.main.JsApi"];
+        }
+        subgraph "cluster_src__python__memory__memory_store" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.memory.memory_store"];
+            "src__python__memory__memory_store__MemoryNode" [label="MemoryNode", style="filled", fillcolor="#3295ffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryNode\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:37\nclass in src.python.memory.memory_store"];
+            "src__python__memory__memory_store__MemoryStore" [label="MemoryStore", style="filled", fillcolor="#3295ffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:76\nclass in src.python.memory.memory_store"];
+            "src__python__memory__memory_store___compact_summary" [label="_compact_summary", style="filled", fillcolor="#3295ffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store._compact_summary\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:27\nfunction in src.python.memory.memory_store"];
+            "src__python__memory__memory_store" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py"];
+        }
+        subgraph "cluster_src__python__memory__memory_store__MemoryNode" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.memory.memory_store.MemoryNode"];
+            "src__python__memory__memory_store__MemoryNode____init__" [label="__init__", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryNode.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:38\nmethod in src.python.memory.memory_store.MemoryNode"];
+            "src__python__memory__memory_store__MemoryNode___compute_version" [label="_compute_version", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryNode._compute_version\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:49\nmethod in src.python.memory.memory_store.MemoryNode"];
+            "src__python__memory__memory_store__MemoryNode__from_dict" [label="from_dict", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryNode.from_dict\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:68\nclassmethod in src.python.memory.memory_store.MemoryNode"];
+            "src__python__memory__memory_store__MemoryNode__to_dict" [label="to_dict", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryNode.to_dict\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:59\nmethod in src.python.memory.memory_store.MemoryNode"];
+            "src__python__memory__memory_store__MemoryNode__touch_version" [label="touch_version", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryNode.touch_version\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:55\nmethod in src.python.memory.memory_store.MemoryNode"];
+        }
+        subgraph "cluster_src__python__memory__memory_store__MemoryStore" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.memory.memory_store.MemoryStore"];
+            "src__python__memory__memory_store__MemoryStore____init__" [label="__init__", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:81\nmethod in src.python.memory.memory_store.MemoryStore"];
+            "src__python__memory__memory_store__MemoryStore___load" [label="_load", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore._load\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:91\nmethod in src.python.memory.memory_store.MemoryStore"];
+            "src__python__memory__memory_store__MemoryStore___rebuild_reverse_index" [label="_rebuild_reverse_index", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore._rebuild_reverse_index\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:98\nmethod in src.python.memory.memory_store.MemoryStore"];
+            "src__python__memory__memory_store__MemoryStore__add_relation" [label="add_relation", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore.add_relation\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:159\nmethod in src.python.memory.memory_store.MemoryStore"];
+            "src__python__memory__memory_store__MemoryStore__delete_nodeX" [label="delete_node", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore.delete_node\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:136\nmethod in src.python.memory.memory_store.MemoryStore"];
+            "src__python__memory__memory_store__MemoryStore__get_effective_properties" [label="get_effective_properties", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore.get_effective_properties\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:213\nmethod in src.python.memory.memory_store.MemoryStore"];
+            "src__python__memory__memory_store__MemoryStore__get_incoming" [label="get_incoming", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore.get_incoming\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:178\nmethod in src.python.memory.memory_store.MemoryStore"];
+            "src__python__memory__memory_store__MemoryStore__get_nodeX" [label="get_node", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore.get_node\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:133\nmethod in src.python.memory.memory_store.MemoryStore"];
+            "src__python__memory__memory_store__MemoryStore__get_outgoing" [label="get_outgoing", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore.get_outgoing\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:172\nmethod in src.python.memory.memory_store.MemoryStore"];
+            "src__python__memory__memory_store__MemoryStore__get_properties_with_event_override" [label="get_properties_with_event_override", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore.get_properties_with_event_override\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:237\nmethod in src.python.memory.memory_store.MemoryStore"];
+            "src__python__memory__memory_store__MemoryStore__is_observation_stale" [label="is_observation_stale", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore.is_observation_stale\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:264\nmethod in src.python.memory.memory_store.MemoryStore"];
+            "src__python__memory__memory_store__MemoryStore__record_observation" [label="record_observation", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore.record_observation\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:251\nmethod in src.python.memory.memory_store.MemoryStore"];
+            "src__python__memory__memory_store__MemoryStore__save" [label="save", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore.save\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:109\nmethod in src.python.memory.memory_store.MemoryStore"];
+            "src__python__memory__memory_store__MemoryStore__search" [label="search", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore.search\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:185\nmethod in src.python.memory.memory_store.MemoryStore"];
+            "src__python__memory__memory_store__MemoryStore__upsert_nodeX" [label="upsert_node", style="filled", fillcolor="#007bffb2", fontcolor="#000000", group="17", tooltip="src.python.memory.memory_store.MemoryStore.upsert_node\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\memory\memory_store.py:117\nmethod in src.python.memory.memory_store.MemoryStore"];
+        }
+        subgraph "cluster_src__python__overlay" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.overlay"];
+            "src__python__overlay__OverlayBridge" [label="OverlayBridge", style="filled", fillcolor="#6590ffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay.OverlayBridge\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:161\nclass in src.python.overlay"];
+            "src__python__overlay__OverlayManager" [label="OverlayManager", style="filled", fillcolor="#6590ffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay.OverlayManager\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:166\nclass in src.python.overlay"];
+            "src__python__overlay__ScreenOverlay" [label="ScreenOverlay", style="filled", fillcolor="#6590ffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay.ScreenOverlay\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:30\nclass in src.python.overlay"];
+            "src__python__overlay___point_segment_dist_sq" [label="_point_segment_dist_sq", style="filled", fillcolor="#6590ffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay._point_segment_dist_sq\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:17\nfunction in src.python.overlay"];
+            "src__python__overlay__parse_hex_color" [label="parse_hex_color", style="filled", fillcolor="#6590ffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay.parse_hex_color\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:5\nfunction in src.python.overlay"];
+            "src__python__overlay" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py"];
+        }
+        subgraph "cluster_src__python__overlay__OverlayManager" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.overlay.OverlayManager"];
+            "src__python__overlay__OverlayManager____init__" [label="__init__", style="filled", fillcolor="#326bffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay.OverlayManager.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:167\nmethod in src.python.overlay.OverlayManager"];
+            "src__python__overlay__OverlayManager__clear_drawings" [label="clear_drawings", style="filled", fillcolor="#326bffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay.OverlayManager.clear_drawings\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:192\nmethod in src.python.overlay.OverlayManager"];
+            "src__python__overlay__OverlayManager__draw_box" [label="draw_box", style="filled", fillcolor="#326bffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay.OverlayManager.draw_box\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:174\nmethod in src.python.overlay.OverlayManager"];
+            "src__python__overlay__OverlayManager__draw_line" [label="draw_line", style="filled", fillcolor="#326bffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay.OverlayManager.draw_line\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:178\nmethod in src.python.overlay.OverlayManager"];
+            "src__python__overlay__OverlayManager__draw_stroke" [label="draw_stroke", style="filled", fillcolor="#326bffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay.OverlayManager.draw_stroke\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:182\nmethod in src.python.overlay.OverlayManager"];
+            "src__python__overlay__OverlayManager__erase_at" [label="erase_at", style="filled", fillcolor="#326bffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay.OverlayManager.erase_at\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:187\nmethod in src.python.overlay.OverlayManager"];
+        }
+        subgraph "cluster_src__python__overlay__ScreenOverlay" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.overlay.ScreenOverlay"];
+            "src__python__overlay__ScreenOverlay____init__" [label="__init__", style="filled", fillcolor="#326bffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay.ScreenOverlay.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:31\nmethod in src.python.overlay.ScreenOverlay"];
+            "src__python__overlay__ScreenOverlay__add_shape" [label="add_shape", style="filled", fillcolor="#326bffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay.ScreenOverlay.add_shape\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:46\nmethod in src.python.overlay.ScreenOverlay"];
+            "src__python__overlay__ScreenOverlay__clear" [label="clear", style="filled", fillcolor="#326bffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay.ScreenOverlay.clear\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:51\nmethod in src.python.overlay.ScreenOverlay"];
+            "src__python__overlay__ScreenOverlay__erase_near" [label="erase_near", style="filled", fillcolor="#326bffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay.ScreenOverlay.erase_near\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:56\nmethod in src.python.overlay.ScreenOverlay"];
+            "src__python__overlay__ScreenOverlay__paintEvent" [label="paintEvent", style="filled", fillcolor="#326bffb2", fontcolor="#000000", group="18", tooltip="src.python.overlay.ScreenOverlay.paintEvent\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\overlay.py:94\nmethod in src.python.overlay.ScreenOverlay"];
+        }
+        subgraph "cluster_src__python__server_manager" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.server_manager"];
+            "src__python__server_manager__LlamaServerManager" [label="LlamaServerManager", style="filled", fillcolor="#6570ffb2", fontcolor="#000000", group="19", tooltip="src.python.server_manager.LlamaServerManager\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\server_manager.py:6\nclass in src.python.server_manager"];
+            "src__python__server_manager" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="19", tooltip="src.python.server_manager\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\server_manager.py"];
+        }
+        subgraph "cluster_src__python__server_manager__LlamaServerManager" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.server_manager.LlamaServerManager"];
+            "src__python__server_manager__LlamaServerManager____init__" [label="__init__", style="filled", fillcolor="#3241ffb2", fontcolor="#000000", group="19", tooltip="src.python.server_manager.LlamaServerManager.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\server_manager.py:7\nmethod in src.python.server_manager.LlamaServerManager"];
+            "src__python__server_manager__LlamaServerManager___read_output" [label="_read_output", style="filled", fillcolor="#3241ffb2", fontcolor="#000000", group="19", tooltip="src.python.server_manager.LlamaServerManager._read_output\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\server_manager.py:47\nmethod in src.python.server_manager.LlamaServerManager"];
+            "src__python__server_manager__LlamaServerManager__is_running" [label="is_running", style="filled", fillcolor="#3241ffb2", fontcolor="#000000", group="19", tooltip="src.python.server_manager.LlamaServerManager.is_running\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\server_manager.py:12\nmethod in src.python.server_manager.LlamaServerManager"];
+            "src__python__server_manager__LlamaServerManager__start_server" [label="start_server", style="filled", fillcolor="#3241ffb2", fontcolor="#000000", group="19", tooltip="src.python.server_manager.LlamaServerManager.start_server\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\server_manager.py:15\nmethod in src.python.server_manager.LlamaServerManager"];
+            "src__python__server_manager__LlamaServerManager__stop_server" [label="stop_server", style="filled", fillcolor="#3241ffb2", fontcolor="#000000", group="19", tooltip="src.python.server_manager.LlamaServerManager.stop_server\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\server_manager.py:36\nmethod in src.python.server_manager.LlamaServerManager"];
+        }
+        subgraph "cluster_src__python__tools__app_tools" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.tools.app_tools"];
+            "src__python__tools__app_tools__launch_app" [label="launch_app", style="filled", fillcolor="#4f32ffb2", fontcolor="#000000", group="20", tooltip="src.python.tools.app_tools.launch_app\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\app_tools.py:25\nfunction in src.python.tools.app_tools"];
+            "src__python__tools__app_tools__search_installed_apps" [label="search_installed_apps", style="filled", fillcolor="#4f32ffb2", fontcolor="#000000", group="20", tooltip="src.python.tools.app_tools.search_installed_apps\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\app_tools.py:5\nfunction in src.python.tools.app_tools"];
+            "src__python__tools__app_tools" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="20", tooltip="src.python.tools.app_tools\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\app_tools.py"];
+        }
+        subgraph "cluster_src__python__tools__code_graphX" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.tools.code_graph"];
+            "src__python__tools__code_graphX__CodeGraphBuilder" [label="CodeGraphBuilder", style="filled", fillcolor="#7932ffb2", fontcolor="#000000", group="21", tooltip="src.python.tools.code_graph.CodeGraphBuilder\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\code_graph.py:36\nclass in src.python.tools.code_graph"];
+            "src__python__tools__code_graphX" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="21", tooltip="src.python.tools.code_graph\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\code_graph.py"];
+        }
+        subgraph "cluster_src__python__tools__code_graphX__CodeGraphBuilder" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.tools.code_graph.CodeGraphBuilder"];
+            "src__python__tools__code_graphX__CodeGraphBuilder____init__" [label="__init__", style="filled", fillcolor="#5700ffb2", fontcolor="#000000", group="21", tooltip="src.python.tools.code_graph.CodeGraphBuilder.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\code_graph.py:37\nmethod in src.python.tools.code_graph.CodeGraphBuilder"];
+            "src__python__tools__code_graphX__CodeGraphBuilder___collect_imports" [label="_collect_imports", style="filled", fillcolor="#5700ffb2", fontcolor="#000000", group="21", tooltip="src.python.tools.code_graph.CodeGraphBuilder._collect_imports\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\code_graph.py:172\nmethod in src.python.tools.code_graph.CodeGraphBuilder"];
+            "src__python__tools__code_graphX__CodeGraphBuilder___discover_python_files" [label="_discover_python_files", style="filled", fillcolor="#5700ffb2", fontcolor="#000000", group="21", tooltip="src.python.tools.code_graph.CodeGraphBuilder._discover_python_files\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\code_graph.py:147\nmethod in src.python.tools.code_graph.CodeGraphBuilder"];
+            "src__python__tools__code_graphX__CodeGraphBuilder___module_name_from_path" [label="_module_name_from_path", style="filled", fillcolor="#5700ffb2", fontcolor="#000000", group="21", tooltip="src.python.tools.code_graph.CodeGraphBuilder._module_name_from_path\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\code_graph.py:157\nmethod in src.python.tools.code_graph.CodeGraphBuilder"];
+            "src__python__tools__code_graphX__CodeGraphBuilder___resolve_call_name" [label="_resolve_call_name", style="filled", fillcolor="#5700ffb2", fontcolor="#000000", group="21", tooltip="src.python.tools.code_graph.CodeGraphBuilder._resolve_call_name\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\code_graph.py:79\nmethod in src.python.tools.code_graph.CodeGraphBuilder"];
+            "src__python__tools__code_graphX__CodeGraphBuilder___resolve_call_target" [label="_resolve_call_target", style="filled", fillcolor="#5700ffb2", fontcolor="#000000", group="21", tooltip="src.python.tools.code_graph.CodeGraphBuilder._resolve_call_target\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\code_graph.py:194\nmethod in src.python.tools.code_graph.CodeGraphBuilder"];
+            "src__python__tools__code_graphX__CodeGraphBuilder__build_from_file" [label="build_from_file", style="filled", fillcolor="#5700ffb2", fontcolor="#000000", group="21", tooltip="src.python.tools.code_graph.CodeGraphBuilder.build_from_file\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\code_graph.py:43\nmethod in src.python.tools.code_graph.CodeGraphBuilder"];
+            "src__python__tools__code_graphX__CodeGraphBuilder__build_project" [label="build_project", style="filled", fillcolor="#5700ffb2", fontcolor="#000000", group="21", tooltip="src.python.tools.code_graph.CodeGraphBuilder.build_project\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\code_graph.py:89\nmethod in src.python.tools.code_graph.CodeGraphBuilder"];
+            "src__python__tools__code_graphX__CodeGraphBuilder__find_callees" [label="find_callees", style="filled", fillcolor="#5700ffb2", fontcolor="#000000", group="21", tooltip="src.python.tools.code_graph.CodeGraphBuilder.find_callees\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\code_graph.py:218\nmethod in src.python.tools.code_graph.CodeGraphBuilder"];
+            "src__python__tools__code_graphX__CodeGraphBuilder__find_callers" [label="find_callers", style="filled", fillcolor="#5700ffb2", fontcolor="#000000", group="21", tooltip="src.python.tools.code_graph.CodeGraphBuilder.find_callers\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\code_graph.py:214\nmethod in src.python.tools.code_graph.CodeGraphBuilder"];
+        }
+        subgraph "cluster_src__python__tools__code_impact" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.tools.code_impact"];
+            "src__python__tools__code_impact__queue_impact_check_tasks" [label="queue_impact_check_tasks", style="filled", fillcolor="#a332ffb2", fontcolor="#000000", group="22", tooltip="src.python.tools.code_impact.queue_impact_check_tasks\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\code_impact.py:14\nfunction in src.python.tools.code_impact"];
+            "src__python__tools__code_impact" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="22", tooltip="src.python.tools.code_impact\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\code_impact.py"];
+        }
+        subgraph "cluster_src__python__tools__input_tools" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.tools.input_tools"];
+            "src__python__tools__input_tools__click_mouse" [label="click_mouse", style="filled", fillcolor="#cd32ffb2", fontcolor="#000000", group="23", tooltip="src.python.tools.input_tools.click_mouse\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\input_tools.py:15\nfunction in src.python.tools.input_tools"];
+            "src__python__tools__input_tools__get_mouse_position" [label="get_mouse_position", style="filled", fillcolor="#cd32ffb2", fontcolor="#000000", group="23", tooltip="src.python.tools.input_tools.get_mouse_position\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\input_tools.py:7\nfunction in src.python.tools.input_tools"];
+            "src__python__tools__input_tools__get_screen_size" [label="get_screen_size", style="filled", fillcolor="#cd32ffb2", fontcolor="#000000", group="23", tooltip="src.python.tools.input_tools.get_screen_size\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\input_tools.py:3\nfunction in src.python.tools.input_tools"];
+            "src__python__tools__input_tools__move_mouse" [label="move_mouse", style="filled", fillcolor="#cd32ffb2", fontcolor="#000000", group="23", tooltip="src.python.tools.input_tools.move_mouse\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\input_tools.py:11\nfunction in src.python.tools.input_tools"];
+            "src__python__tools__input_tools" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="23", tooltip="src.python.tools.input_tools\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\input_tools.py"];
+            "src__python__tools__input_tools__type_text" [label="type_text", style="filled", fillcolor="#cd32ffb2", fontcolor="#000000", group="23", tooltip="src.python.tools.input_tools.type_text\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\input_tools.py:19\nfunction in src.python.tools.input_tools"];
+        }
+        subgraph "cluster_src__python__tools__python_runner" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.tools.python_runner"];
+            "src__python__tools__python_runner__execute_python" [label="execute_python", style="filled", fillcolor="#f732ffb2", fontcolor="#000000", group="24", tooltip="src.python.tools.python_runner.execute_python\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\python_runner.py:5\nfunction in src.python.tools.python_runner"];
+            "src__python__tools__python_runner" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="24", tooltip="src.python.tools.python_runner\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\python_runner.py"];
+        }
+        subgraph "cluster_src__python__tools__relation_impact" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.tools.relation_impact"];
+            "src__python__tools__relation_impact__queue_relation_impact_tasks" [label="queue_relation_impact_tasks", style="filled", fillcolor="#ff32dbb2", fontcolor="#000000", group="25", tooltip="src.python.tools.relation_impact.queue_relation_impact_tasks\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\relation_impact.py:16\nfunction in src.python.tools.relation_impact"];
+            "src__python__tools__relation_impact" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="25", tooltip="src.python.tools.relation_impact\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\relation_impact.py"];
+        }
+        subgraph "cluster_src__python__tools__screen_tools" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.tools.screen_tools"];
+            "src__python__tools__screen_tools__ScreenCache" [label="ScreenCache", style="filled", fillcolor="#ff32b1b2", fontcolor="#000000", group="26", tooltip="src.python.tools.screen_tools.ScreenCache\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\screen_tools.py:10\nclass in src.python.tools.screen_tools"];
+            "src__python__tools__screen_tools__query_screen_element" [label="query_screen_element", style="filled", fillcolor="#ff32b1b2", fontcolor="#000000", group="26", tooltip="src.python.tools.screen_tools.query_screen_element\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\screen_tools.py:151\nfunction in src.python.tools.screen_tools"];
+            "src__python__tools__screen_tools__read_screen" [label="read_screen", style="filled", fillcolor="#ff32b1b2", fontcolor="#000000", group="26", tooltip="src.python.tools.screen_tools.read_screen\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\screen_tools.py:64\nfunction in src.python.tools.screen_tools"];
+            "src__python__tools__screen_tools__read_screen_api" [label="read_screen_api", style="filled", fillcolor="#ff32b1b2", fontcolor="#000000", group="26", tooltip="src.python.tools.screen_tools.read_screen_api\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\screen_tools.py:136\nfunction in src.python.tools.screen_tools"];
+            "src__python__tools__screen_tools__screen_cache" [label="screen_cache", style="filled", fillcolor="#ff32b1b2", fontcolor="#000000", group="26", tooltip="src.python.tools.screen_tools.screen_cache\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\screen_tools.py:62\nname in src.python.tools.screen_tools"];
+            "src__python__tools__screen_tools" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="26", tooltip="src.python.tools.screen_tools\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\screen_tools.py"];
+        }
+        subgraph "cluster_src__python__tools__screen_tools__ScreenCache" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.tools.screen_tools.ScreenCache"];
+            "src__python__tools__screen_tools__ScreenCache____init__" [label="__init__", style="filled", fillcolor="#ff009eb2", fontcolor="#000000", group="26", tooltip="src.python.tools.screen_tools.ScreenCache.__init__\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\screen_tools.py:11\nmethod in src.python.tools.screen_tools.ScreenCache"];
+            "src__python__tools__screen_tools__ScreenCache__get_element_by_id" [label="get_element_by_id", style="filled", fillcolor="#ff009eb2", fontcolor="#000000", group="26", tooltip="src.python.tools.screen_tools.ScreenCache.get_element_by_id\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\screen_tools.py:56\nmethod in src.python.tools.screen_tools.ScreenCache"];
+            "src__python__tools__screen_tools__ScreenCache__query_element" [label="query_element", style="filled", fillcolor="#ff009eb2", fontcolor="#000000", group="26", tooltip="src.python.tools.screen_tools.ScreenCache.query_element\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\screen_tools.py:43\nmethod in src.python.tools.screen_tools.ScreenCache"];
+            "src__python__tools__screen_tools__ScreenCache__save_snapshot" [label="save_snapshot", style="filled", fillcolor="#ff009eb2", fontcolor="#000000", group="26", tooltip="src.python.tools.screen_tools.ScreenCache.save_snapshot\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\screen_tools.py:15\nmethod in src.python.tools.screen_tools.ScreenCache"];
+        }
+        subgraph "cluster_src__python__tools__window_tools" {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="src.python.tools.window_tools"];
+            "src__python__tools__window_tools__get_active_window" [label="get_active_window", style="filled", fillcolor="#ff3287b2", fontcolor="#000000", group="27", tooltip="src.python.tools.window_tools.get_active_window\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\window_tools.py:7\nfunction in src.python.tools.window_tools"];
+            "src__python__tools__window_tools__inspect_window" [label="inspect_window", style="filled", fillcolor="#ff3287b2", fontcolor="#000000", group="27", tooltip="src.python.tools.window_tools.inspect_window\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\window_tools.py:34\nfunction in src.python.tools.window_tools"];
+            "src__python__tools__window_tools" [label="<module>", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="27", tooltip="src.python.tools.window_tools\nC:\Users\NOBTG\Documents\Projects\Desktop-Agent\src\python\tools\window_tools.py"];
+        }
+    }
+        "src__python__agent__agent_core" -> "src__python__agent__agent_direct_mode__AgentDirectModeMixin" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core" -> "src__python__agent__agent_execution_cycle__AgentExecutionMixin" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core" -> "src__python__agent__agent_llm_client__AgentLLMClientMixin" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core" -> "src__python__agent__agent_memory_mixin__AgentMemoryMixin" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core" -> "src__python__agent__agent_state__AgentState" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core" -> "src__python__agent__agent_state__HISTORY_NODE_ID" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core" -> "src__python__agent__agent_state__HYBRID_WINDOW_MESSAGES" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core" -> "src__python__agent__agent_state__MAX_RESPONSE_TOKENS" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core" -> "src__python__agent__agent_state__MAX_RETRY_PER_TASK" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core" -> "src__python__agent__agent_state__STOP_SEQUENCES" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core" -> "src__python__agent__task_system__ExecutionMode" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core__AgentWorker____init__" -> "src__python__agent__agent_core__AgentWorker____init__" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core__AgentWorker____init__" -> "src__python__agent__agent_core__AgentWorker__ask_user" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core__AgentWorker____init__" -> "src__python__agent__context_compressor__ContextCompressor" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core__AgentWorker____init__" -> "src__python__agent__task_system__TaskEngine" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core__AgentWorker____init__" -> "src__python__agent__working_memory__WorkingMemory" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core__AgentWorker____init__" -> "src__python__config__API_BASE_URL" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core__AgentWorker____init__" -> "src__python__config__API_KEY" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core__AgentWorker____init__" -> "src__python__config__MODEL_NAME" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core__AgentWorker____init__" -> "src__python__memory__memory_store__MemoryStore" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core__AgentWorker____init__" -> "src__python__tools__code_graphX__CodeGraphBuilder" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core__AgentWorker__ask_user" -> "src__python__agent__agent_core__AgentWorker__emit" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core__AgentWorker__confirm_and_start" -> "src__python__agent__agent_core__AgentWorker__start" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core__AgentWorker__is_running" -> "src__python__agent__agent_core__AgentWorker____init__" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core__AgentWorker__request_stop" -> "src__python__agent__agent_core__AgentWorker____init__" [style="solid",  color="#000000"];
+        "src__python__agent__agent_core__AgentWorker__request_stop" -> "src__python__agent__agent_core__AgentWorker__emit" [style="solid",  color="#000000"];
+        "src__python__agent__agent_direct_mode" -> "src__python__agent__agent_state__AgentState" [style="solid",  color="#000000"];
+        "src__python__agent__agent_direct_mode__AgentDirectModeMixin___run_direct_mode" -> "src__python__config__SYSTEM_PROMPT" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle" -> "src__python__agent__agent_state__AgentState" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle" -> "src__python__agent__task_system__ExecutionMode" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle" -> "src__python__agent__task_system__TaskNode" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle" -> "src__python__agent__task_system__TaskStatus" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle" -> "src__python__config__THINKING_SYSTEM_PROMPT" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle__AgentExecutionMixin___decompose_task" -> "src__python__config__DECOMPOSE_SYSTEM_PROMPT" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle__AgentExecutionMixin___process_task" -> "src__python__agent__agent_execution_cycle__AgentExecutionMixin___decompose_task" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle__AgentExecutionMixin___process_task" -> "src__python__agent__agent_execution_cycle__AgentExecutionMixin___reflect" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle__AgentExecutionMixin___process_task" -> "src__python__agent__agent_state__MAX_RETRY_PER_TASK" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle__AgentExecutionMixin___process_task" -> "src__python__config__VERIFY_SYSTEM_PROMPT" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle__AgentExecutionMixin___reflect" -> "src__python__config__REFLECT_SYSTEM_PROMPT" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle__AgentExecutionMixin___run" -> "src__python__agent__agent_execution_cycle__AgentExecutionMixin___run_inner" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle__AgentExecutionMixin___run_inner" -> "src__python__agent__agent_execution_cycle__AgentExecutionMixin___process_task" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle__AgentExecutionMixin___run_inner" -> "src__python__agent__agent_execution_cycle__AgentExecutionMixin___should_pause_before" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle__AgentExecutionMixin___run_inner" -> "src__python__config__PLANNER_SYSTEM_PROMPT" [style="solid",  color="#000000"];
+        "src__python__agent__agent_execution_cycle__AgentExecutionMixin___run_inner" -> "src__python__config__SYSTEM_PROMPT" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client" -> "src__python__config__API_BASE_URL" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client" -> "src__python__config__API_KEY" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client" -> "src__python__config__MODEL_NAME" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___call_and_execute" -> "src__python__agent__agent_llm_client__AgentLLMClientMixin___call_llm_stream" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___call_and_execute" -> "src__python__agent__agent_llm_client__AgentLLMClientMixin___execute_tools" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___call_and_execute" -> "src__python__config__SYSTEM_PROMPT" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___call_llm" -> "src__python__agent__agent_state__MAX_RESPONSE_TOKENS" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___call_llm" -> "src__python__agent__agent_state__STOP_SEQUENCES" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___call_llm_stream" -> "src__python__agent__agent_state__MAX_RESPONSE_TOKENS" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___call_llm_stream" -> "src__python__agent__agent_state__STOP_SEQUENCES" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___execute_tools" -> "src__python__agent__agent_llm_client__AgentLLMClientMixin___execute_tools___replace" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___execute_tools___execute_and_format" -> "src__python__agent__agent_llm_client__AgentLLMClientMixin___parse_tool_arguments" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___execute_tools___replace" -> "src__python__agent__agent_llm_client__AgentLLMClientMixin___execute_tools___execute_and_format" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___judge_and_remember_from_turn" -> "src__python__agent__agent_llm_client__AgentLLMClientMixin___call_llm" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___judge_and_remember_from_turn" -> "src__python__agent__agent_llm_client__AgentLLMClientMixin___parse_memory_facts" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___judge_and_remember_from_turn" -> "src__python__agent__agent_llm_client__AgentLLMClientMixin___remember_facts" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___judge_and_remember_from_turn" -> "src__python__config__VALUE_JUDGMENT_PROMPT" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___load_history" -> "src__python__agent__agent_state__HISTORY_NODE_ID" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___maybe_compress_history" -> "src__python__agent__agent_llm_client__AgentLLMClientMixin___call_llm" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___maybe_compress_history" -> "src__python__agent__agent_llm_client__AgentLLMClientMixin___save_history" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___maybe_compress_history" -> "src__python__agent__agent_state__HYBRID_WINDOW_MESSAGES" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___maybe_compress_history" -> "src__python__config__SYSTEM_PROMPT" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___save_history" -> "src__python__agent__agent_llm_client__AgentLLMClientMixin" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___save_history" -> "src__python__agent__agent_state__HISTORY_NODE_ID" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___similar_to_previous_reply" -> "src__python__agent__agent_llm_client__AgentLLMClientMixin" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin___split_reflect_output" -> "src__python__agent__agent_llm_client__AgentLLMClientMixin___parse_memory_facts" [style="solid",  color="#000000"];
+        "src__python__agent__agent_llm_client__AgentLLMClientMixin__clear_conversation_history" -> "src__python__agent__agent_state__HISTORY_NODE_ID" [style="solid",  color="#000000"];
+        "src__python__agent__agent_memory_mixin" -> "src__python__agent__task_system__TaskNode" [style="solid",  color="#000000"];
+        "src__python__agent__agent_memory_mixin__AgentMemoryMixin___auto_queue_impact_checks" -> "src__python__tools__code_impact__queue_impact_check_tasks" [style="solid",  color="#000000"];
+        "src__python__agent__agent_memory_mixin__AgentMemoryMixin___auto_queue_impact_checks" -> "src__python__tools__relation_impact__queue_relation_impact_tasks" [style="solid",  color="#000000"];
+        "src__python__agent__context_compressor" -> "src__python__memory__memory_store__MemoryStore" [style="solid",  color="#000000"];
+        "src__python__agent__context_compressor__ContextCompressor__compress" -> "src__python__agent__context_compressor__ContextCompressor____init__" [style="solid",  color="#000000"];
+        "src__python__agent__context_compressor__ContextCompressor__compress" -> "src__python__agent__context_compressor__ContextCompressor___parse_facts" [style="solid",  color="#000000"];
+        "src__python__agent__context_compressor__ContextCompressor__compress" -> "src__python__agent__context_compressor__ContextCompressor__estimate_tokens" [style="solid",  color="#000000"];
+        "src__python__agent__context_compressor__ContextCompressor__compress" -> "src__python__config__COMPRESS_SYSTEM_PROMPT" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine" -> "src__python__agent__task_system__ExecutionMode" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine____init__" -> "src__python__agent__task_system__ExecutionMode" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine____init__" -> "src__python__agent__task_system__TaskNode" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine___depth_of" -> "src__python__agent__task_system__TaskNode" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__apply_reflected_dsl" -> "src__python__agent__task_system__TaskEngine__parse_markdown_dsl" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__apply_reflected_dsl" -> "src__python__agent__task_system__TaskStatus" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__check_and_complete_parent" -> "src__python__agent__task_system__TaskEngine__check_and_complete_parent" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__check_and_complete_parent" -> "src__python__agent__task_system__TaskEngine__parse_markdown_dsl" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__check_and_complete_parent" -> "src__python__agent__task_system__TaskStatus" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__decompose_task" -> "src__python__agent__task_system__TaskEngine__parse_markdown_dsl" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__decompose_task" -> "src__python__agent__task_system__TaskStatus" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__get_next_pending_task" -> "src__python__agent__task_system__TaskEngine__parse_markdown_dsl" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__get_next_pending_task" -> "src__python__agent__task_system__TaskNode" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__get_next_pending_task" -> "src__python__agent__task_system__TaskStatus" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__load_initial_plan" -> "src__python__agent__task_system__TaskEngine__parse_markdown_dsl" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__parse_markdown_dsl" -> "src__python__agent__task_system__TaskEngine___extract_field" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__parse_markdown_dsl" -> "src__python__agent__task_system__TaskNode" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__parse_markdown_dsl" -> "src__python__agent__task_system__TaskNode____init__" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__parse_markdown_dsl" -> "src__python__agent__task_system__TaskStatus" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__render_tree_markdown" -> "src__python__agent__task_system__TaskEngine___depth_of" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__render_tree_markdown" -> "src__python__agent__task_system__TaskEngine__parse_markdown_dsl" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskEngine__render_tree_markdown" -> "src__python__agent__task_system__TaskStatus" [style="solid",  color="#000000"];
+        "src__python__agent__task_system__TaskNode____init__" -> "src__python__agent__task_system__TaskStatus" [style="solid",  color="#000000"];
+        "src__python__agent__working_memory" -> "src__python__memory__memory_store__MemoryNode" [style="solid",  color="#000000"];
+        "src__python__agent__working_memory" -> "src__python__memory__memory_store__MemoryStore" [style="solid",  color="#000000"];
+        "src__python__agent__working_memory__WorkingMemory__activate" -> "src__python__agent__working_memory__WorkingMemory____init__" [style="solid",  color="#000000"];
+        "src__python__agent__working_memory__WorkingMemory__activate_many" -> "src__python__agent__working_memory__WorkingMemory__activate" [style="solid",  color="#000000"];
+        "src__python__fake_llm__FakeOpenAIClient____init__" -> "src__python__fake_llm___FakeChat" [style="solid",  color="#000000"];
+        "src__python__fake_llm__FakeOpenAIClient____init__" -> "src__python__fake_llm___FakeChat____init__" [style="solid",  color="#000000"];
+        "src__python__fake_llm__FakeOpenAIClient____init__" -> "src__python__fake_llm___FakeCompletions" [style="solid",  color="#000000"];
+        "src__python__fake_llm__FakeOpenAIClient____init__" -> "src__python__fake_llm___FakeCompletions____init__" [style="solid",  color="#000000"];
+        "src__python__fake_llm__FakeOpenAIClient__call_log" -> "src__python__fake_llm___FakeCompletions" [style="solid",  color="#000000"];
+        "src__python__fake_llm___FakeChoice____init__" -> "src__python__fake_llm___FakeMessage" [style="solid",  color="#000000"];
+        "src__python__fake_llm___FakeChoice____init__" -> "src__python__fake_llm___FakeMessage____init__" [style="solid",  color="#000000"];
+        "src__python__fake_llm___FakeChunkChoice____init__" -> "src__python__fake_llm___FakeDelta" [style="solid",  color="#000000"];
+        "src__python__fake_llm___FakeChunkChoice____init__" -> "src__python__fake_llm___FakeDelta____init__" [style="solid",  color="#000000"];
+        "src__python__fake_llm___FakeChunk____init__" -> "src__python__fake_llm___FakeChunkChoice" [style="solid",  color="#000000"];
+        "src__python__fake_llm___FakeChunk____init__" -> "src__python__fake_llm___FakeChunkChoice____init__" [style="solid",  color="#000000"];
+        "src__python__fake_llm___FakeCompletions__create" -> "src__python__fake_llm___FakeChunk" [style="solid",  color="#000000"];
+        "src__python__fake_llm___FakeCompletions__create" -> "src__python__fake_llm___FakeChunk____init__" [style="solid",  color="#000000"];
+        "src__python__fake_llm___FakeCompletions__create" -> "src__python__fake_llm___FakeCompletions____init__" [style="solid",  color="#000000"];
+        "src__python__fake_llm___FakeCompletions__create" -> "src__python__fake_llm___FakeResponse" [style="solid",  color="#000000"];
+        "src__python__fake_llm___FakeCompletions__create" -> "src__python__fake_llm___FakeResponse____init__" [style="solid",  color="#000000"];
+        "src__python__fake_llm___FakeCompletions__create" -> "src__python__fake_llm__classify" [style="solid",  color="#000000"];
+        "src__python__fake_llm___FakeResponse____init__" -> "src__python__fake_llm___FakeChoice" [style="solid",  color="#000000"];
+        "src__python__fake_llm___FakeResponse____init__" -> "src__python__fake_llm___FakeChoice____init__" [style="solid",  color="#000000"];
+        "src__python__fake_llm__classify" -> "src__python__fake_llm__CATEGORY_MARKERS" [style="solid",  color="#000000"];
+        "src__python__main" -> "src__python__main__main" [style="solid",  color="#000000"];
+        "src__python__main__JsApi____init__" -> "src__python__agent__agent_core__AgentWorker" [style="solid",  color="#000000"];
+        "src__python__main__JsApi____init__" -> "src__python__main__JsApi__dispatch_event" [style="solid",  color="#000000"];
+        "src__python__main__JsApi____init__" -> "src__python__overlay__OverlayManager" [style="solid",  color="#000000"];
+        "src__python__main__JsApi____init__" -> "src__python__server_manager__LlamaServerManager" [style="solid",  color="#000000"];
+        "src__python__main__JsApi__dispatch_event" -> "src__python__main__JsApi____init__" [style="solid",  color="#000000"];
+        "src__python__main__JsApi__poll_events" -> "src__python__main__JsApi____init__" [style="solid",  color="#000000"];
+        "src__python__main__JsApi__set_execution_mode" -> "src__python__agent__task_system__ExecutionMode" [style="solid",  color="#000000"];
+        "src__python__main__JsApi__toggle_local_server" -> "src__python__main__JsApi__dispatch_event" [style="solid",  color="#000000"];
+        "src__python__main__main" -> "src__python__main__JsApi" [style="solid",  color="#000000"];
+        "src__python__main__main" -> "src__python__main__JsApi____init__" [style="solid",  color="#000000"];
+        "src__python__main__main" -> "src__python__main__JsApi__set_window" [style="solid",  color="#000000"];
+        "src__python__main__main" -> "src__python__overlay__ScreenOverlay" [style="solid",  color="#000000"];
+        "src__python__memory" -> "src__python__memory__memory_store__MemoryStore" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryNode____init__" -> "src__python__memory__memory_store__MemoryNode___compute_version" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryNode____init__" -> "src__python__memory__memory_store___compact_summary" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryNode__from_dict" -> "src__python__memory__memory_store__MemoryNode____init__" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryNode__to_dict" -> "src__python__memory__memory_store__MemoryNode___compute_version" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryNode__to_dict" -> "src__python__memory__memory_store___compact_summary" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryNode__touch_version" -> "src__python__memory__memory_store__MemoryNode___compute_version" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore____init__" -> "src__python__memory__memory_store__MemoryNode" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore____init__" -> "src__python__memory__memory_store__MemoryStore___load" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore___load" -> "src__python__memory__memory_store__MemoryNode__from_dict" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore___load" -> "src__python__memory__memory_store__MemoryStore___rebuild_reverse_index" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore___rebuild_reverse_index" -> "src__python__memory__memory_store__MemoryStore____init__" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__add_relation" -> "src__python__memory__memory_store__MemoryStore____init__" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__add_relation" -> "src__python__memory__memory_store__MemoryStore__save" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__delete_nodeX" -> "src__python__memory__memory_store__MemoryStore____init__" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__delete_nodeX" -> "src__python__memory__memory_store__MemoryStore__save" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__get_effective_properties" -> "src__python__memory__memory_store__MemoryStore__get_outgoing" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__get_incoming" -> "src__python__memory__memory_store__MemoryStore____init__" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__get_nodeX" -> "src__python__memory__memory_store__MemoryNode" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__get_properties_with_event_override" -> "src__python__memory__memory_store__MemoryStore__get_effective_properties" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__is_observation_stale" -> "src__python__memory__memory_store__MemoryStore__get_outgoing" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__record_observation" -> "src__python__memory__memory_store__MemoryNode" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__record_observation" -> "src__python__memory__memory_store__MemoryStore__add_relation" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__record_observation" -> "src__python__memory__memory_store__MemoryStore__upsert_nodeX" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__upsert_nodeX" -> "src__python__memory__memory_store__MemoryNode" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__upsert_nodeX" -> "src__python__memory__memory_store__MemoryNode____init__" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__upsert_nodeX" -> "src__python__memory__memory_store__MemoryNode__touch_version" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__upsert_nodeX" -> "src__python__memory__memory_store__MemoryStore__save" [style="solid",  color="#000000"];
+        "src__python__memory__memory_store__MemoryStore__upsert_nodeX" -> "src__python__memory__memory_store___compact_summary" [style="solid",  color="#000000"];
+        "src__python__overlay__OverlayManager____init__" -> "src__python__overlay__OverlayBridge" [style="solid",  color="#000000"];
+        "src__python__overlay__OverlayManager____init__" -> "src__python__overlay__ScreenOverlay" [style="solid",  color="#000000"];
+        "src__python__overlay__ScreenOverlay____init__" -> "src__python__overlay__ScreenOverlay____init__" [style="solid",  color="#000000"];
+        "src__python__overlay__ScreenOverlay__add_shape" -> "src__python__overlay__ScreenOverlay____init__" [style="solid",  color="#000000"];
+        "src__python__overlay__ScreenOverlay__clear" -> "src__python__overlay__ScreenOverlay____init__" [style="solid",  color="#000000"];
+        "src__python__overlay__ScreenOverlay__erase_near" -> "src__python__overlay__ScreenOverlay____init__" [style="solid",  color="#000000"];
+        "src__python__overlay__ScreenOverlay__erase_near" -> "src__python__overlay___point_segment_dist_sq" [style="solid",  color="#000000"];
+        "src__python__overlay__ScreenOverlay__paintEvent" -> "src__python__overlay__ScreenOverlay____init__" [style="solid",  color="#000000"];
+        "src__python__overlay__ScreenOverlay__paintEvent" -> "src__python__overlay__parse_hex_color" [style="solid",  color="#000000"];
+        "src__python__server_manager__LlamaServerManager__is_running" -> "src__python__server_manager__LlamaServerManager____init__" [style="solid",  color="#000000"];
+        "src__python__server_manager__LlamaServerManager__start_server" -> "src__python__server_manager__LlamaServerManager___read_output" [style="solid",  color="#000000"];
+        "src__python__server_manager__LlamaServerManager__start_server" -> "src__python__server_manager__LlamaServerManager__is_running" [style="solid",  color="#000000"];
+        "src__python__server_manager__LlamaServerManager__stop_server" -> "src__python__server_manager__LlamaServerManager__is_running" [style="solid",  color="#000000"];
+        "src__python__tools__automation_tools" -> "src__python__tools__app_tools__launch_app" [style="solid",  color="#000000"];
+        "src__python__tools__automation_tools" -> "src__python__tools__app_tools__search_installed_apps" [style="solid",  color="#000000"];
+        "src__python__tools__automation_tools" -> "src__python__tools__input_tools__click_mouse" [style="solid",  color="#000000"];
+        "src__python__tools__automation_tools" -> "src__python__tools__input_tools__get_mouse_position" [style="solid",  color="#000000"];
+        "src__python__tools__automation_tools" -> "src__python__tools__input_tools__get_screen_size" [style="solid",  color="#000000"];
+        "src__python__tools__automation_tools" -> "src__python__tools__input_tools__move_mouse" [style="solid",  color="#000000"];
+        "src__python__tools__automation_tools" -> "src__python__tools__input_tools__type_text" [style="solid",  color="#000000"];
+        "src__python__tools__automation_tools" -> "src__python__tools__python_runner__execute_python" [style="solid",  color="#000000"];
+        "src__python__tools__automation_tools" -> "src__python__tools__screen_tools__ScreenCache" [style="solid",  color="#000000"];
+        "src__python__tools__automation_tools" -> "src__python__tools__screen_tools__query_screen_element" [style="solid",  color="#000000"];
+        "src__python__tools__automation_tools" -> "src__python__tools__screen_tools__read_screen" [style="solid",  color="#000000"];
+        "src__python__tools__automation_tools" -> "src__python__tools__screen_tools__read_screen_api" [style="solid",  color="#000000"];
+        "src__python__tools__automation_tools" -> "src__python__tools__screen_tools__screen_cache" [style="solid",  color="#000000"];
+        "src__python__tools__automation_tools" -> "src__python__tools__window_tools__get_active_window" [style="solid",  color="#000000"];
+        "src__python__tools__automation_tools" -> "src__python__tools__window_tools__inspect_window" [style="solid",  color="#000000"];
+        "src__python__tools__code_graphX" -> "src__python__memory__memory_store__MemoryStore" [style="solid",  color="#000000"];
+        "src__python__tools__code_graphX__CodeGraphBuilder__build_from_file" -> "src__python__tools__code_graphX__CodeGraphBuilder____init__" [style="solid",  color="#000000"];
+        "src__python__tools__code_graphX__CodeGraphBuilder__build_from_file" -> "src__python__tools__code_graphX__CodeGraphBuilder___resolve_call_name" [style="solid",  color="#000000"];
+        "src__python__tools__code_graphX__CodeGraphBuilder__build_project" -> "src__python__tools__code_graphX__CodeGraphBuilder____init__" [style="solid",  color="#000000"];
+        "src__python__tools__code_graphX__CodeGraphBuilder__build_project" -> "src__python__tools__code_graphX__CodeGraphBuilder___collect_imports" [style="solid",  color="#000000"];
+        "src__python__tools__code_graphX__CodeGraphBuilder__build_project" -> "src__python__tools__code_graphX__CodeGraphBuilder___discover_python_files" [style="solid",  color="#000000"];
+        "src__python__tools__code_graphX__CodeGraphBuilder__build_project" -> "src__python__tools__code_graphX__CodeGraphBuilder___module_name_from_path" [style="solid",  color="#000000"];
+        "src__python__tools__code_graphX__CodeGraphBuilder__build_project" -> "src__python__tools__code_graphX__CodeGraphBuilder___resolve_call_target" [style="solid",  color="#000000"];
+        "src__python__tools__code_graphX__CodeGraphBuilder__find_callees" -> "src__python__tools__code_graphX__CodeGraphBuilder____init__" [style="solid",  color="#000000"];
+        "src__python__tools__code_graphX__CodeGraphBuilder__find_callers" -> "src__python__tools__code_graphX__CodeGraphBuilder____init__" [style="solid",  color="#000000"];
+        "src__python__tools__code_impact" -> "src__python__agent__task_system__TaskEngine" [style="solid",  color="#000000"];
+        "src__python__tools__code_impact" -> "src__python__memory__memory_store__MemoryStore" [style="solid",  color="#000000"];
+        "src__python__tools__code_impact__queue_impact_check_tasks" -> "src__python__agent__task_system__TaskNode" [style="solid",  color="#000000"];
+        "src__python__tools__relation_impact" -> "src__python__agent__task_system__TaskEngine" [style="solid",  color="#000000"];
+        "src__python__tools__relation_impact" -> "src__python__memory__memory_store__MemoryStore" [style="solid",  color="#000000"];
+        "src__python__tools__relation_impact__queue_relation_impact_tasks" -> "src__python__agent__task_system__TaskNode" [style="solid",  color="#000000"];
+        "src__python__tools__screen_tools__ScreenCache__get_element_by_id" -> "src__python__tools__screen_tools__ScreenCache____init__" [style="solid",  color="#000000"];
+        "src__python__tools__screen_tools__ScreenCache__query_element" -> "src__python__tools__screen_tools__ScreenCache____init__" [style="solid",  color="#000000"];
+        "src__python__tools__screen_tools__query_screen_element" -> "src__python__tools__screen_tools__ScreenCache__query_element" [style="solid",  color="#000000"];
+        "src__python__tools__screen_tools__read_screen_api" -> "src__python__tools__screen_tools__ScreenCache" [style="solid",  color="#000000"];
+        "src__python__tools__screen_tools__read_screen_api" -> "src__python__tools__screen_tools__ScreenCache__save_snapshot" [style="solid",  color="#000000"];
+        "src__python__tools__screen_tools__read_screen_api" -> "src__python__tools__screen_tools__read_screen" [style="solid",  color="#000000"];
+    }

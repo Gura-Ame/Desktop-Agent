@@ -15,10 +15,10 @@ import webview
 os.environ["QT_LOGGING_RULES"] = "qt.qpa.window.warning=false"
 warnings.filterwarnings("ignore", category=UserWarning, module="pywinauto")
 
-import automation_tools as tools
+import tools.automation_tools as tools
 from overlay import ScreenOverlay, OverlayManager
-from agent_core import AgentWorker, AgentState
-from task_system import ExecutionMode
+from agent.agent_core import AgentWorker, AgentState
+from agent.task_system import ExecutionMode
 from server_manager import LlamaServerManager
 
 pyautogui.FAILSAFE = True
