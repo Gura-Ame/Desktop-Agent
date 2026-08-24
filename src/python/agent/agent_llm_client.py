@@ -208,15 +208,34 @@ class AgentLLMClientMixin:
             return [], {}
 
         if func_name == "execute_python":
+            # 優先用 ast.literal_eval 把 args_str 當成一個 Python 字串字面值來解析。
+            # 這是唯一不會破壞非 ASCII 字元的做法——全程都是 Python str 在處理，
+            # 沒有經過任何 bytes 編碼/解碼的轉換，模型如果照 Python 語法正確跳脫，
+            # 這裡解析出來的中文字元完全不會被動到。
+            try:
+                parsed = ast.literal_eval(args_str)
+                if isinstance(parsed, str):
+                    return [parsed], {}
+            except Exception:
+                pass
+
+            # ast.literal_eval 解析失敗（例如模型寫出來的字串裡有沒跳脫好的實際換行），
+            # 退而求其次：只手動剝掉最外層引號，並且只替換「常見的跳脫序列本身」
+            # （\n \t \" \' \\），不對整個字串做 unicode_escape 解碼——
+            # 那個做法會把 UTF-8 編碼的中文字元誤判成 Latin-1 字元，變成亂碼，
+            # 這正是之前「人生的意義」被印成亂碼的原因。
             code_str = args_str
             for q in ('"""', "'''", '"', "'"):
                 if code_str.startswith(q) and code_str.endswith(q) and len(code_str) >= len(q) * 2:
                     code_str = code_str[len(q):-len(q)]
                     break
-            try:
-                code_str = bytes(code_str, "utf-8").decode("unicode_escape")
-            except Exception:
-                pass
+            code_str = (
+                code_str.replace("\\n", "\n")
+                .replace("\\t", "\t")
+                .replace('\\"', '"')
+                .replace("\\'", "'")
+                .replace("\\\\", "\\")
+            )
             return [code_str], {}
 
         try:
