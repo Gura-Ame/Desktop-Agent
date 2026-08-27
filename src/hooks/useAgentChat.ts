@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useChatScroll } from './chat/useChatScroll';
 import { useAgentEventHandler } from './chat/useAgentEventHandler';
+import type { ChatMessage, EditUserPayload, ForkDirection, MessageFork, ServerStatus } from '../types';
 
 function nowTs() {
   return Date.now();
@@ -10,7 +11,7 @@ function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-const WELCOME = {
+const WELCOME: ChatMessage = {
   id: 'welcome',
   role: 'agent',
   content: '**你好！** 我是您的 AI 桌面自動化常駐助理。',
@@ -27,11 +28,11 @@ const WELCOME = {
  * - 主線 `messages` 永遠是「目前選中的完整路徑」
  */
 export function useAgentChat() {
-  const [messages, setMessages] = useState([WELCOME]);
-  const [logs, setLogs] = useState([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
+  const [logs, setLogs] = useState<string[]>([]);
   const [waitingConfirm, setWaitingConfirm] = useState(false);
-  const [waitingUserInput, setWaitingUserInput] = useState(null);
-  const [serverStatus, setServerStatus] = useState({
+  const [waitingUserInput, setWaitingUserInput] = useState<string | null>(null);
+  const [serverStatus, setServerStatus] = useState<ServerStatus>({
     running: false,
     msg: '檢查中...',
   });
@@ -69,8 +70,12 @@ export function useAgentChat() {
   /**
    * 編輯 user 訊息；resend=true 時建立新分枝並回傳要送給 LLM 的文字與圖片。
    */
-  const editUserMessage = useCallback((msg, nextText, resend) => {
-    let payload = null;
+  const editUserMessage = useCallback((
+    msg: ChatMessage,
+    nextText: string,
+    resend: boolean,
+  ): EditUserPayload | null => {
+    let payload: EditUserPayload | null = null;
 
     setMessages((prev) => {
       const idx = prev.findIndex((m) => m.id === msg.id || m === msg);
@@ -87,14 +92,14 @@ export function useAgentChat() {
       const oldUser = prev[idx];
       const oldTail = prev.slice(idx + 1);
 
-      const oldFork = {
+      const oldFork: MessageFork = {
         id: uid(),
         content: oldUser.content,
         images: oldUser.images || [],
         tail: oldTail,
       };
 
-      const existingForks = oldUser.forks ? [...oldUser.forks] : [];
+      const existingForks: MessageFork[] = oldUser.forks ? [...oldUser.forks] : [];
       if (existingForks.length === 0 && (oldTail.length > 0 || oldUser.content !== nextText)) {
         existingForks.push(oldFork);
       } else if (existingForks.length > 0) {
@@ -107,7 +112,7 @@ export function useAgentChat() {
         };
       }
 
-      const newFork = {
+      const newFork: MessageFork = {
         id: uid(),
         content: nextText,
         images: oldUser.images || [],
@@ -116,7 +121,7 @@ export function useAgentChat() {
       const forks = [...existingForks, newFork];
       const forkIndex = forks.length - 1;
 
-      const newUser = {
+      const newUser: ChatMessage = {
         ...oldUser,
         content: nextText,
         forks,
@@ -124,7 +129,7 @@ export function useAgentChat() {
         ts: nowTs(),
       };
 
-      const agentPlaceholder = {
+      const agentPlaceholder: ChatMessage = {
         id: uid(),
         role: 'agent',
         content: '',
@@ -146,7 +151,7 @@ export function useAgentChat() {
   /**
    * 在分枝點切換 fork（◀ ▶）
    */
-  const switchFork = useCallback((msgId, direction) => {
+  const switchFork = useCallback((msgId: string, direction: ForkDirection) => {
     setMessages((prev) => {
       const idx = prev.findIndex((m) => m.id === msgId);
       if (idx < 0) return prev;
@@ -167,7 +172,7 @@ export function useAgentChat() {
           : (cur + 1) % forks.length;
 
       const target = forks[nextIdx];
-      const restoredUser = {
+      const restoredUser: ChatMessage = {
         ...user,
         content: target.content,
         images: target.images || [],

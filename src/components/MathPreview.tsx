@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
 import { normalizeMathDelimiters } from '../lib/normalizeMath';
 
+type MathPreviewProps = {
+  source: string;
+  display?: boolean;
+};
+
 /**
  * 將 $...$ / $$...$$ / \(...\) 渲染成 KaTeX HTML 預覽。
  */
-export default function MathPreview({ source, display = false }) {
+export default function MathPreview({ source, display = false }: MathPreviewProps) {
   const [html, setHtml] = useState('');
 
   useEffect(() => {

@@ -1,12 +1,12 @@
 import { Check, Copy } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { cn } from '../lib/utils';
 
 /**
  * 語法高亮程式碼區塊。
  * 優先用 highlight.js（若已安裝）；否則純文字 + 基本關鍵字著色。
  */
-function fallbackHighlight(code, lang) {
+function fallbackHighlight(code: string) {
   const escaped = code
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -32,10 +32,14 @@ function fallbackHighlight(code, lang) {
     );
 }
 
-export default function CodeBlock({ code, language }) {
+type CodeBlockProps = {
+  code: string | string[] | unknown;
+  language?: string;
+};
+
+export default function CodeBlock({ code, language }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
-  const [html, setHtml] = useState(null);
-  const preRef = useRef(null);
+  const [html, setHtml] = useState<string | null>(null);
   const lang = (language || '').replace(/^language-/, '') || 'text';
 
   const plain = useMemo(() => {
@@ -50,7 +54,7 @@ export default function CodeBlock({ code, language }) {
       try {
         const hljs = (await import('highlight.js/lib/core')).default;
         // 常用語言按需註冊
-        const langs = {
+        const langs: Record<string, () => Promise<{ default: (hljsApi: typeof hljs) => unknown }>> = {
           python: () => import('highlight.js/lib/languages/python'),
           py: () => import('highlight.js/lib/languages/python'),
           javascript: () => import('highlight.js/lib/languages/javascript'),
@@ -75,7 +79,7 @@ export default function CodeBlock({ code, language }) {
         const loader = langs[lang.toLowerCase()];
         if (loader && !hljs.getLanguage(lang.toLowerCase())) {
           const mod = await loader();
-          hljs.registerLanguage(lang.toLowerCase(), mod.default);
+          hljs.registerLanguage(lang.toLowerCase(), mod.default as Parameters<typeof hljs.registerLanguage>[1]);
         }
         if (cancelled) return;
         if (hljs.getLanguage(lang.toLowerCase())) {
@@ -84,7 +88,7 @@ export default function CodeBlock({ code, language }) {
           setHtml(hljs.highlightAuto(plain).value);
         }
       } catch {
-        if (!cancelled) setHtml(fallbackHighlight(plain, lang));
+        if (!cancelled) setHtml(fallbackHighlight(plain));
       }
     })();
     return () => {
@@ -122,7 +126,6 @@ export default function CodeBlock({ code, language }) {
         </button>
       </div>
       <pre
-        ref={preRef}
         className={cn(
           'code-block overflow-x-auto p-3 font-mono text-[12px] leading-relaxed',
           'text-zinc-800 dark:text-zinc-200',

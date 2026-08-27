@@ -1,6 +1,9 @@
+import type { HTMLAttributes } from 'react';
 import { cn } from '../../lib/utils';
 
-export function Card({ className, ...props }) {
+type DivProps = HTMLAttributes<HTMLDivElement>;
+
+export function Card({ className, ...props }: DivProps) {
   return (
     <div
       className={cn(
@@ -13,7 +16,7 @@ export function Card({ className, ...props }) {
   );
 }
 
-export function CardHeader({ className, ...props }) {
+export function CardHeader({ className, ...props }: DivProps) {
   return (
     <div
       className={cn('flex items-center justify-between gap-2 px-3.5 pt-3.5 pb-2', className)}
@@ -22,7 +25,7 @@ export function CardHeader({ className, ...props }) {
   );
 }
 
-export function CardTitle({ className, ...props }) {
+export function CardTitle({ className, ...props }: DivProps) {
   return (
     <div
       className={cn(
@@ -34,6 +37,6 @@ export function CardTitle({ className, ...props }) {
   );
 }
 
-export function CardContent({ className, ...props }) {
+export function CardContent({ className, ...props }: DivProps) {
   return <div className={cn('px-3.5 pb-3.5 space-y-3', className)} {...props} />;
 }

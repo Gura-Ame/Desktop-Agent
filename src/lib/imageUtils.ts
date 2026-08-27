@@ -1,8 +1,14 @@
+import type { ChatImage } from '../types';
+
 /**
  * 壓縮圖片再送給本地 Vision 模型（GGUF / llama.cpp 對超大 data URL 很不穩）
- * @returns {Promise<string>} data URL (jpeg)
+ * @returns data URL (jpeg)
  */
-export function compressImageDataUrl(dataUrl, maxSide = 1280, quality = 0.85) {
+export function compressImageDataUrl(
+  dataUrl: string,
+  maxSide = 1280,
+  quality = 0.85,
+): Promise<string> {
   return new Promise((resolve) => {
     if (!dataUrl || typeof dataUrl !== 'string') {
       resolve(dataUrl);
@@ -22,6 +28,10 @@ export function compressImageDataUrl(dataUrl, maxSide = 1280, quality = 0.85) {
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(dataUrl);
+        return;
+      }
       ctx.drawImage(img, 0, 0, width, height);
       try {
         resolve(canvas.toDataURL('image/jpeg', quality));
@@ -34,8 +44,8 @@ export function compressImageDataUrl(dataUrl, maxSide = 1280, quality = 0.85) {
   });
 }
 
-export async function compressImages(images) {
-  const out = [];
+export async function compressImages(images: ChatImage[]): Promise<ChatImage[]> {
+  const out: ChatImage[] = [];
   for (const img of images) {
     const dataUrl = await compressImageDataUrl(img.dataUrl);
     out.push({ ...img, dataUrl });

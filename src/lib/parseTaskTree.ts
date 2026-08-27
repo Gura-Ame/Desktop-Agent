@@ -1,7 +1,9 @@
+import type { ParsedTask, TaskStatus } from '../types';
+
 /**
  * 解析 Task Tree Markdown DSL → 結構化任務列表（給 UI 用）
  */
-export function parseTaskTreeMarkdown(text) {
+export function parseTaskTreeMarkdown(text: string | undefined | null): ParsedTask[] {
   if (!text || typeof text !== 'string') return [];
 
   const cleaned = text
@@ -11,7 +13,7 @@ export function parseTaskTreeMarkdown(text) {
     .trim();
 
   const blocks = cleaned.split(/\n(?=[ \t]*- \[.\])/);
-  const tasks = [];
+  const tasks: ParsedTask[] = [];
 
   for (const block of blocks) {
     if (!block.trim()) continue;
@@ -33,14 +35,14 @@ export function parseTaskTreeMarkdown(text) {
     const leadingWhitespace = block.match(/^[ \t]*/)?.[0] ?? '';
     const depth = Math.floor(leadingWhitespace.length / 2);
 
-    const field = (name) => {
+    const field = (name: string) => {
       const m = block.match(new RegExp(`${name}\\s*[:：]\\s*(.*)`, 'i'));
       return m ? m[1].trim() : '';
     };
 
-    const yes = (s) => /YES|TRUE|是/i.test(s);
+    const yes = (s: string) => /YES|TRUE|是/i.test(s);
 
-    let status = 'pending';
+    let status: TaskStatus = 'pending';
     if (icon.toLowerCase() === 'x') status = 'completed';
     else if (icon === '▾' || icon === '▼') status = 'decomposed';
     else if (icon === '~' || icon === '…' || icon === '➜' || icon === '>') status = 'running';

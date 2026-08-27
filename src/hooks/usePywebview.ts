@@ -1,16 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { RefObject } from 'react';
+import type { AgentEvent, ExecutionMode } from '../types';
 
 function isBridgeReady() {
   const api = window.pywebview?.api;
   return !!(api && typeof api.poll_events === 'function');
 }
 
+type PendingCall = {
+  method: string;
+  args: unknown[];
+};
+
+type UsePywebviewArgs = {
+  onEvent?: (event: AgentEvent) => void;
+  executionModeRef?: RefObject<ExecutionMode>;
+};
+
 /**
  * pywebview bridge：就緒偵測、排隊呼叫、事件輪詢、複製攔截。
  */
-export function usePywebview({ onEvent, executionModeRef }) {
+export function usePywebview({ onEvent, executionModeRef }: UsePywebviewArgs) {
   const [apiReady, setApiReady] = useState(false);
-  const pendingCallsRef = useRef([]);
+  const pendingCallsRef = useRef<PendingCall[]>([]);
 
   // 等 bridge 真正可用
   useEffect(() => {
@@ -65,7 +77,7 @@ export function usePywebview({ onEvent, executionModeRef }) {
     if (typeof fn === 'function' && executionModeRef?.current) {
       try {
         fn(executionModeRef.current);
-      } catch (_) {
+      } catch {
         /* ignore */
       }
     }
@@ -83,7 +95,7 @@ export function usePywebview({ onEvent, executionModeRef }) {
         if (events?.length) {
           for (const ev of events) onEvent(ev);
         }
-      } catch (_) {
+      } catch {
         /* bridge 短暫不可用 */
       }
     };
@@ -101,12 +113,12 @@ export function usePywebview({ onEvent, executionModeRef }) {
   }, [onEvent]);
 
   const callApi = useCallback(
-    (method, ...args) => {
+    (method: string, ...args: unknown[]) => {
       if (!apiReady || !isBridgeReady()) {
         pendingCallsRef.current.push({ method, args });
         return undefined;
       }
-      const fn = window.pywebview.api[method];
+      const fn = window.pywebview?.api?.[method];
       if (typeof fn !== 'function') {
         console.warn('[pywebview] method not found:', method);
         return undefined;

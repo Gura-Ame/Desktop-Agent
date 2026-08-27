@@ -1,6 +1,19 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import type { ForkDirection } from '../../types';
 
-export default function MessageForksNav({ msgId, forkIndex, forkCount, onSwitchFork }) {
+type MessageForksNavProps = {
+  msgId: string;
+  forkIndex: number;
+  forkCount: number;
+  onSwitchFork?: (msgId: string, direction: ForkDirection) => void;
+};
+
+export default function MessageForksNav({
+  msgId,
+  forkIndex,
+  forkCount,
+  onSwitchFork,
+}: MessageForksNavProps) {
   if (!forkCount || forkCount <= 1) return null;
 
   return (

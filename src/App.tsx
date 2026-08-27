@@ -6,19 +6,20 @@ import SideBar from './components/SideBar';
 import { useAgentChat } from './hooks/useAgentChat';
 import { usePywebview } from './hooks/usePywebview';
 import { useTheme } from './hooks/useTheme';
+import type { AgentEvent, ChatImage, ExecutionMode } from './types';
 
 /** 視窗寬度低於此值時自動收合側欄 */
 const SIDEBAR_AUTO_COLLAPSE_PX = 900;
 
 export default function App() {
   const [input, setInput] = useState('');
-  const [pendingImages, setPendingImages] = useState([]);
+  const [pendingImages, setPendingImages] = useState<ChatImage[]>([]);
   const [agentBusy, setAgentBusy] = useState(false);
   const [showLog, setShowLog] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => typeof window !== 'undefined' && window.innerWidth < SIDEBAR_AUTO_COLLAPSE_PX,
   );
-  const [executionMode, setExecutionMode] = useState('STEP_BY_STEP');
+  const [executionMode, setExecutionMode] = useState<ExecutionMode>('STEP_BY_STEP');
   const [forgettingEnabled, setForgettingEnabled] = useState(false);
   const [activationEnabled, setActivationEnabled] = useState(false);
   const [baseUrl, setBaseUrl] = useState('http://localhost:12356/v1');
@@ -59,7 +60,7 @@ export default function App() {
   } = useAgentChat();
 
   const onAgentEvent = useCallback(
-    (event) => {
+    (event: AgentEvent) => {
       handleAgentEvent(event);
       if (event?.type === 'finished' || event?.type === 'ask_confirm') {
         // ask_confirm 仍算等待中；finished 才真正結束
@@ -93,7 +94,7 @@ export default function App() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const handleSidebarCollapse = useCallback((collapsed) => {
+  const handleSidebarCollapse = useCallback((collapsed: boolean) => {
     userPreferCollapsedRef.current = collapsed;
     autoCollapsedRef.current = false;
     setSidebarCollapsed(collapsed);
@@ -136,19 +137,19 @@ export default function App() {
   }, [checkServerHealth]);
 
   const handleCopy = useCallback(
-    async (text) => {
+    async (text: string) => {
       if (!text) return;
       try {
         if (window.pywebview?.api?.copy_to_clipboard) {
           await window.pywebview.api.copy_to_clipboard(text);
           return;
         }
-      } catch (_) {
+      } catch {
         /* fallback */
       }
       try {
         await navigator.clipboard.writeText(text);
-      } catch (_) {
+      } catch {
         /* ignore */
       }
     },

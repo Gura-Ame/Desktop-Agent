@@ -2,12 +2,20 @@ import { CheckCircle2, ChevronDown, ChevronRight, Code2, XCircle } from 'lucide-
 import { useState } from 'react';
 import { cn } from '../lib/utils';
 import { Badge } from './ui/Badge';
+import type { ToolStatus } from '../types';
 
-export default function ToolCallBlock({ funcName, args, result, status }) {
+type ToolCallBlockProps = {
+  funcName: string;
+  args?: string;
+  result?: string | null;
+  status?: ToolStatus;
+};
+
+export default function ToolCallBlock({ funcName, args, result, status }: ToolCallBlockProps) {
   const [open, setOpen] = useState(false);
 
   // status: 'running' | 'success' | 'error'；若未傳則依 result 推斷
-  const resolved =
+  const resolved: ToolStatus =
     status ||
     (result == null
       ? 'running'

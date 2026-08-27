@@ -8,12 +8,37 @@ import {
     BrainCog,
     Zap
 } from 'lucide-react';
+import type { ExecutionMode, ServerStatus, Theme } from '../types';
 
-const MODE_OPTIONS = [
+const MODE_OPTIONS: { value: ExecutionMode; label: string; hint: string }[] = [
     { value: 'STEP_BY_STEP', label: '逐步確認', hint: '無視任務自己的判斷，每完成一步就暫停，等待你確認才繼續' },
     { value: 'SMART', label: '智慧確認', hint: '由模型規劃時標的「需要確認」決定：高風險步驟才暫停，其餘自動繼續' },
     { value: 'AUTO', label: '全自動', hint: '無視任務自己的判斷，中間不再暫停，直到全部完成或需要你介入' },
 ];
+
+type SidebarProps = {
+    isCollapsed: boolean;
+    setIsCollapsed: (collapsed: boolean) => void;
+    baseUrl: string;
+    setBaseUrl: (url: string) => void;
+    modelName: string;
+    setModelName: (name: string) => void;
+    applyApiConfig: () => void;
+    serverStatus: ServerStatus;
+    checkServerHealth: () => void;
+    executionMode: ExecutionMode;
+    handleModeChange: (mode: ExecutionMode) => void;
+    clearDrawings: () => void;
+    clearHistory: () => void;
+    showLogWindow: boolean;
+    setShowLogWindow: (show: boolean) => void;
+    forgettingEnabled: boolean;
+    handleForgettingToggle: (enabled: boolean) => void;
+    activationEnabled: boolean;
+    handleActivationToggle: (enabled: boolean) => void;
+    theme?: Theme;
+    toggleTheme?: () => void;
+};
 
 export default function Sidebar({
     isCollapsed,
@@ -34,8 +59,8 @@ export default function Sidebar({
     forgettingEnabled,
     handleForgettingToggle,
     activationEnabled,
-    handleActivationToggle
-}) {
+    handleActivationToggle,
+}: SidebarProps) {
     return (
         <aside
             className={`bg-zinc-900/60 border-r border-zinc-800 flex flex-col shrink-0 transition-all duration-300 ease-in-out relative ${isCollapsed ? 'w-16 p-3 items-center' : 'w-80 p-4'

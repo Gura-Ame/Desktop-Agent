@@ -1,6 +1,20 @@
 import { ImagePlus, Send, Square, X } from 'lucide-react';
+import type { ChangeEvent, CSSProperties, KeyboardEvent } from 'react';
 import { useRef } from 'react';
 import { Button } from './ui/Button';
+import type { ChatImage } from '../types';
+
+type ChatInputProps = {
+  value: string;
+  onChange: (value: string) => void;
+  onSend: () => void;
+  onStop: () => void;
+  waitingUserInput: string | null;
+  isBusy: boolean;
+  images?: ChatImage[];
+  onAddImages?: (list: ChatImage[]) => void;
+  onRemoveImage?: (id: string) => void;
+};
 
 export default function ChatInput({
   value,
@@ -12,17 +26,17 @@ export default function ChatInput({
   images = [],
   onAddImages,
   onRemoveImage,
-}) {
-  const fileRef = useRef(null);
+}: ChatInputProps) {
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const onKeyDown = (e) => {
+  const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (!isBusy) onSend();
     }
   };
 
-  const onFileChange = (e) => {
+  const onFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     e.target.value = '';
     if (!files.length || !onAddImages) return;
@@ -31,14 +45,14 @@ export default function ChatInput({
       .filter((f) => f.type.startsWith('image/'))
       .map(
         (f) =>
-          new Promise((resolve) => {
+          new Promise<ChatImage>((resolve) => {
             const reader = new FileReader();
             reader.onload = () => {
               resolve({
                 id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
                 name: f.name,
                 mime: f.type,
-                dataUrl: reader.result,
+                dataUrl: String(reader.result ?? ''),
               });
             };
             reader.readAsDataURL(f);
@@ -123,7 +137,7 @@ export default function ChatInput({
                 : '輸入指令或問題…（Enter 送出，Shift+Enter 換行）'
             }
             className="max-h-36 min-h-[36px] flex-1 resize-none bg-transparent px-1 py-1.5 text-sm leading-5 text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100 dark:placeholder:text-zinc-500"
-            style={{ fieldSizing: 'content' }}
+            style={{ fieldSizing: 'content' } as CSSProperties}
           />
 
           {isBusy ? (

@@ -1,4 +1,7 @@
+import type { ReactNode } from 'react';
+import { isValidElement } from 'react';
 import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { normalizeMathDelimiters } from '../../lib/normalizeMath';
@@ -6,15 +9,17 @@ import CodeBlock from '../CodeBlock';
 import MathPreview from '../MathPreview';
 
 /** 從 children 抽出純文字 */
-function childText(children) {
+function childText(children: ReactNode): string {
   if (children == null) return '';
   if (typeof children === 'string' || typeof children === 'number') return String(children);
   if (Array.isArray(children)) return children.map(childText).join('');
-  if (children.props?.children) return childText(children.props.children);
+  if (isValidElement<{ children?: ReactNode }>(children) && children.props.children) {
+    return childText(children.props.children);
+  }
   return '';
 }
 
-const markdownComponents = {
+const markdownComponents: Components = {
   code({ className, children, ...props }) {
     const match = /language-(\w+)/.exec(className || '');
     const isInline = !match && !String(children).includes('\n');
@@ -62,7 +67,11 @@ const markdownComponents = {
   },
 };
 
-export default function MarkdownBody({ content }) {
+type MarkdownBodyProps = {
+  content: string;
+};
+
+export default function MarkdownBody({ content }: MarkdownBodyProps) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkMath]}

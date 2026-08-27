@@ -1,3 +1,4 @@
+import type { ButtonHTMLAttributes } from 'react';
 import { cn } from '../../lib/utils';
 
 const variants = {
@@ -20,13 +21,21 @@ const sizes = {
   icon: 'h-8 w-8 p-0',
 };
 
+type ButtonVariant = keyof typeof variants;
+type ButtonSize = keyof typeof sizes;
+
+type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+};
+
 export function Button({
   className,
   variant = 'default',
   size = 'default',
   type = 'button',
   ...props
-}) {
+}: ButtonProps) {
   return (
     <button
       type={type}

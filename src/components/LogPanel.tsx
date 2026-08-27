@@ -1,7 +1,12 @@
 import { Terminal, X } from 'lucide-react';
 import { Button } from './ui/Button';
 
-export default function LogPanel({ logs, onClose }) {
+type LogPanelProps = {
+  logs: string[];
+  onClose: () => void;
+};
+
+export default function LogPanel({ logs, onClose }: LogPanelProps) {
   return (
     <aside className="flex w-80 shrink-0 flex-col border-l border-zinc-200 bg-white font-mono text-xs dark:border-zinc-800 dark:bg-zinc-950">
       <div className="flex items-center justify-between border-b border-zinc-200 px-3 py-2.5 font-sans text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">

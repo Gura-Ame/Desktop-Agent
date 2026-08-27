@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useRef } from 'react';
+import type { ChatMessage } from '../../types';
 
 const NEAR_BOTTOM_PX = 80;
 
-export function useChatScroll(messages, isStreamingRef) {
-  const chatEndRef = useRef(null);
-  const scrollContainerRef = useRef(null);
+export function useChatScroll(
+  messages: ChatMessage[],
+  isStreamingRef: { current: boolean },
+) {
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
 
   const handleScroll = useCallback(() => {
@@ -14,7 +18,7 @@ export function useChatScroll(messages, isStreamingRef) {
     stickToBottomRef.current = distance <= NEAR_BOTTOM_PX;
   }, []);
 
-  const scrollToBottom = useCallback((behavior = 'smooth') => {
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     const el = scrollContainerRef.current;
     if (!el) {
       chatEndRef.current?.scrollIntoView({ behavior });
@@ -29,7 +33,7 @@ export function useChatScroll(messages, isStreamingRef) {
 
   useEffect(() => {
     if (!stickToBottomRef.current) return;
-    const behavior = isStreamingRef.current ? 'auto' : 'smooth';
+    const behavior: ScrollBehavior = isStreamingRef.current ? 'auto' : 'smooth';
     const id = requestAnimationFrame(() => scrollToBottom(behavior));
     return () => cancelAnimationFrame(id);
   }, [messages, isStreamingRef, scrollToBottom]);

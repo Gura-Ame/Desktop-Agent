@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App.jsx'
+import App from './App.tsx'
 import './index.css'
 import 'katex/dist/katex.min.css'
 
@@ -12,7 +12,7 @@ try {
   } else if (t === 'light') {
     document.documentElement.classList.remove('dark')
   }
-} catch (_) {
+} catch {
   /* ignore */
 }
 

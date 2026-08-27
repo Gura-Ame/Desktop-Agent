@@ -14,8 +14,9 @@ import ToolCallBlock from './ToolCallBlock';
 import { Button } from './ui/Button';
 import MarkdownBody from './chat/MarkdownBody';
 import MessageForksNav from './chat/MessageForksNav';
+import type { ChatMessage as ChatMessageType, ForkDirection } from '../types';
 
-function plainTextForCopy(content) {
+function plainTextForCopy(content: string | undefined) {
   if (!content) return '';
   return content
     .replace(/<\|tool_call\|>[\s\S]*?(?:<\/?\|?tool_call\|?>|$)/g, '')
@@ -23,6 +24,16 @@ function plainTextForCopy(content) {
     .replace(/<\/?tool_error>/g, '')
     .trim();
 }
+
+type ChatMessageProps = {
+  msg: ChatMessageType;
+  isLast: boolean;
+  waitingConfirm: boolean;
+  onConfirmStep: () => void;
+  onCopy?: (text: string) => Promise<void> | void;
+  onEditUser?: (msg: ChatMessageType, nextText: string, resend: boolean) => void;
+  onSwitchFork?: (msgId: string, direction: ForkDirection) => void;
+};
 
 export default function ChatMessage({
   msg,
@@ -32,7 +43,7 @@ export default function ChatMessage({
   onCopy,
   onEditUser,
   onSwitchFork,
-}) {
+}: ChatMessageProps) {
   const isUser = msg.role === 'user';
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -82,7 +93,7 @@ export default function ChatMessage({
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const saveEdit = (resend) => {
+  const saveEdit = (resend: boolean) => {
     const next = draft.trim();
     if (!next) return;
     onEditUser?.(msg, next, resend);
@@ -174,7 +185,7 @@ export default function ChatMessage({
             )}
           </div>
 
-          {msg.images?.length > 0 && (
+          {!!msg.images?.length && (
             <div className="mb-2 flex flex-wrap gap-2">
               {msg.images.map((img) => (
                 <a

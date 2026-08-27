@@ -1,3 +1,5 @@
+import type { MessageBlock, ToolStatus } from '../types';
+
 /**
  * 把 agent 回覆拆成 text / tool 區塊。
  * 支援 <|tool_call|>call:fn(...)<|tool_call|> 與後續 <tool_result> / <tool_error>
@@ -5,10 +7,17 @@
  * 注意：tool_result 可能中間夾空白/換行；finished 後仍無 result 視為失敗，不要永遠「執行中」。
  */
 
-function findToolResult(afterToolCall) {
+type ToolResultMatch = {
+  resultType: string;
+  result: string;
+  end: number;
+  complete: boolean;
+};
+
+function findToolResult(afterToolCall: string): ToolResultMatch | null {
   // 允許 tool_call 結尾與 <tool_result> 之間有空白
   const m = afterToolCall.match(/^\s*<(tool_result|tool_error)>/);
-  if (!m) return null;
+  if (!m || m.index == null) return null;
 
   const resultType = m[1];
   const contentStart = m.index + m[0].length;
@@ -33,15 +42,14 @@ function findToolResult(afterToolCall) {
   };
 }
 
-/**
- * @param {string} content
- * @param {{ isStreaming?: boolean }} [opts]
- */
-export function parseMessageContent(content, opts = {}) {
+export function parseMessageContent(
+  content: string | undefined | null,
+  opts: { isStreaming?: boolean } = {},
+): MessageBlock[] {
   if (!content) return [];
 
   const isStreaming = !!opts.isStreaming;
-  const blocks = [];
+  const blocks: MessageBlock[] = [];
   let cursor = 0;
 
   while (cursor < content.length) {
@@ -77,7 +85,7 @@ export function parseMessageContent(content, opts = {}) {
     const argsStartIdx = toolCallStart + 13 + callMatch[0].length;
     const closeMatch = content.slice(argsStartIdx).match(/\)\s*<\/?\|?tool_call\|?>/);
 
-    if (!closeMatch) {
+    if (!closeMatch || closeMatch.index == null) {
       // tool_call 尚未串完
       let currentArgs = content.slice(argsStartIdx).trim();
       if (currentArgs.endsWith(')')) currentArgs = currentArgs.slice(0, -1).trim();
@@ -92,7 +100,7 @@ export function parseMessageContent(content, opts = {}) {
     }
 
     const argsEndRelativeIdx = closeMatch.index;
-    let rawArgs = content.slice(argsStartIdx, argsStartIdx + argsEndRelativeIdx).trim();
+    const rawArgs = content.slice(argsStartIdx, argsStartIdx + argsEndRelativeIdx).trim();
     // closeMatch 已從 ) 開始，args 不含最後的 )
     const toolCallEndIdx =
       argsStartIdx + argsEndRelativeIdx + closeMatch[0].length;
@@ -117,6 +125,12 @@ export function parseMessageContent(content, opts = {}) {
       found.resultType === 'tool_error' ||
       /錯誤|失敗|Exception|Error|Traceback/i.test(found.result || '');
 
+    const status: ToolStatus = !found.complete
+      ? 'running'
+      : isError
+        ? 'error'
+        : 'success';
+
     blocks.push({
       type: 'tool',
       funcName,
@@ -125,11 +139,7 @@ export function parseMessageContent(content, opts = {}) {
         found.resultType === 'tool_error' && found.result && !found.result.startsWith('錯誤')
           ? `錯誤: ${found.result}`
           : found.result,
-      status: !found.complete
-        ? 'running'
-        : isError
-          ? 'error'
-          : 'success',
+      status,
     });
 
     cursor = toolCallEndIdx + found.end;

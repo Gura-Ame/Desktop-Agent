@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import {
   Brain,
   CheckCircle2,
@@ -12,8 +13,12 @@ import { parseTaskTreeMarkdown } from '../lib/parseTaskTree';
 import { cn } from '../lib/utils';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import type { ParsedTask } from '../types';
 
-const STATUS_LABEL = {
+const STATUS_LABEL: Record<
+  ParsedTask['status'],
+  { label: string; variant: 'default' | 'warning' | 'success' | 'danger' }
+> = {
   pending: { label: '待執行', variant: 'default' },
   running: { label: '執行中', variant: 'warning' },
   completed: { label: '已完成', variant: 'success' },
@@ -21,7 +26,7 @@ const STATUS_LABEL = {
   failed: { label: '失敗', variant: 'danger' },
 };
 
-function TaskItem({ task }) {
+function TaskItem({ task }: { task: ParsedTask }) {
   const [open, setOpen] = useState(false);
   const st = STATUS_LABEL[task.status] || STATUS_LABEL.pending;
   const depth = task.depth || 0;
@@ -93,7 +98,7 @@ function TaskItem({ task }) {
   );
 }
 
-function Field({ label, children }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
       <div className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-400">
@@ -106,7 +111,13 @@ function Field({ label, children }) {
   );
 }
 
-export default function TaskTreeCard({ markdown, waitingConfirm, onConfirmStep }) {
+type TaskTreeCardProps = {
+  markdown: string;
+  waitingConfirm?: boolean;
+  onConfirmStep?: () => void;
+};
+
+export default function TaskTreeCard({ markdown, waitingConfirm, onConfirmStep }: TaskTreeCardProps) {
   const tasks = parseTaskTreeMarkdown(markdown);
 
   return (
