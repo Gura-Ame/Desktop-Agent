@@ -113,9 +113,11 @@ rel 可以指定只看某一種關聯類型，不填就全部列出來。
 """.strip(),
 
     "record_observation": """
-record_observation(id, about_id, conclusion, confidence=0.8) — 記錄一次「分析出來的結論」。
+record_observation(id, about_id, conclusion, confidence=0.8, runtime_action="context") — 記錄一次「分析出來的結論」。
 跟 remember 不一樣的地方是它會自動記下當時被分析對象的版本，之後可以判斷結論還新不新鮮。
 about_id 必須是已經用 remember 記住過的東西。
+runtime_action 預設為 "context"，只把結論提供給模型；可明確指定 "skip_task"（跳過相關 task）或
+"replan"（讓相關 task 進入重新規劃）。只有關聯對象內容沒有變動、結論仍新鮮時才會生效。
 
 範例（先記住一個函式，再記錄對它的分析結論）：
 <|tool_call|>call:remember("parser.parse_expr", "Function", "解析運算式的核心函式")<|tool_call|>

@@ -186,7 +186,7 @@ SYSTEM_PROMPT = """你是一個具備電腦自動化控制能力的 AI 助手。
 21. search_memory(keyword) 📖 # 用關鍵字找記憶（不確定 id 時用這個，別亂猜）
 22. relate(source_id, rel, target_id) 📖 # 幫兩個已記住的東西建立關聯
 23. recall_related(id, rel=None) # 查誰跟這個東西有關聯
-24. record_observation(id, about_id, conclusion, confidence=0.8) 📖 # 記錄一次分析結論，附帶時效性追蹤
+24. record_observation(id, about_id, conclusion, confidence=0.8, runtime_action="context") 📖 # 記錄一次分析結論；可用 context、skip_task 或 replan 改變相關 task 的 runtime 決策
 25. recall_observation(id) # 讀回分析結論，過期會提醒你
 26. recall_with_event(id, event_id) # 查某個東西在特定事件情境下的屬性
 27. build_code_graph(filepath, module_name=None) 📖 # 解析單一 .py 檔案的函式呼叫關係

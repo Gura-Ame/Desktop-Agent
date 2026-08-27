@@ -2,12 +2,14 @@ import sys
 import os
 import subprocess
 import threading
+from collections.abc import Callable
+from typing import Any, Optional
 
 class LlamaServerManager:
-    def __init__(self, event_callback):
-        self.process = None
+    def __init__(self, event_callback: Callable[[str, Any], None]):
+        self.process: Optional[subprocess.Popen[str]] = None
         self.event_callback = event_callback
-        self._read_thread = None
+        self._read_thread: Optional[threading.Thread] = None
 
     def is_running(self) -> bool:
         return self.process is not None and self.process.poll() is None
@@ -34,23 +36,31 @@ class LlamaServerManager:
         self._read_thread.start()
 
     def stop_server(self):
-        if self.process and self.is_running():
+        process = self.process
+        if process is not None and process.poll() is None:
             self.event_callback("log", "[Server] 正在停止 Llama-CPP Server...")
-            self.process.terminate()
+            process.terminate()
             try:
-                self.process.wait(timeout=3)
+                process.wait(timeout=3)
             except subprocess.TimeoutExpired:
-                self.process.kill()
+                process.kill()
             self.event_callback("log", "[Server] Llama-CPP Server 已停止。")
             self.event_callback("server_status", {"running": False, "msg": "離線"})
 
     def _read_output(self):
-        for line in iter(self.process.stdout.readline, ''):
+        # Hold one immutable process/stream reference for this reader thread.  The
+        # manager may be stopped while the thread is running, so re-reading
+        # self.process here would be both unsafe at runtime and Optional to Pylance.
+        process = self.process
+        if process is None or process.stdout is None:
+            return
+        stdout = process.stdout
+        for line in iter(stdout.readline, ''):
             if not line:
                 break
             self.event_callback("log", line)
             if any(k in line for k in ["Uvicorn running on", "Application startup complete", "HTTP Request"]):
                 self.event_callback("server_status", {"running": True, "msg": "連線就緒 (Running)"})
-        self.process.stdout.close()
-        self.process.wait()
+        stdout.close()
+        process.wait()
         self.event_callback("server_status", {"running": False, "msg": "已停止"})

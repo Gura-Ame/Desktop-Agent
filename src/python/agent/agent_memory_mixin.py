@@ -30,13 +30,19 @@ class AgentMemoryMixin:
         self.memory_store.add_relation(source_id, rel, target_id)
         return f"已建立關聯: {source_id} -{rel}-> {target_id}"
 
-    def record_observation(self, id: str, about_id: str, conclusion: str, confidence: float = 0.8) -> str:
+    def record_observation(self, id: str, about_id: str, conclusion: str,
+                           confidence: float = 0.8, runtime_action: str = "context") -> str:
         if not self.memory_store.get_node(about_id):
             return f"找不到 {about_id}，要先用 remember 記住它，才能對它記錄 Observation。"
-        obs = self.memory_store.record_observation(id, about_id, conclusion, confidence)
+        obs = self.memory_store.record_observation(
+            id, about_id, conclusion, confidence, runtime_action
+        )
         self.working_memory.activate(id)
         self.emit("log", f"🔎 記錄了一個結論 [{id}]（關於 {about_id}）: {conclusion}")
-        return f"已記錄結論 {id}（關於 {about_id}，信心值 {confidence:.2f}）: {conclusion}"
+        return (
+            f"已記錄結論 {id}（關於 {about_id}，信心值 {confidence:.2f}，"
+            f"runtime_action={obs.properties.get('runtime_action', 'context')}）: {conclusion}"
+        )
 
     def recall_observation(self, id: str) -> str:
         node = self.memory_store.get_node(id)

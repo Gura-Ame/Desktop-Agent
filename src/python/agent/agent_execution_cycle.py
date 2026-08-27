@@ -205,6 +205,34 @@ class AgentExecutionMixin:
             return next_task.need_confirm
         return True
 
+    def _apply_fresh_observation_decision(self, task: TaskNode) -> str:
+        """Apply an explicit directive from fresh observations relevant to task."""
+        observations = self.memory_store.get_fresh_observations(
+            self.working_memory.active_ids()
+        )
+        actions = {obs.properties.get("runtime_action", "context") for obs in observations}
+
+        if "replan" in actions:
+            summaries = [obs.summary for obs in observations if obs.properties.get("runtime_action") == "replan"]
+            result = "；".join(filter(None, summaries)) or "新鮮 Observation 要求重新規劃"
+            self.emit("log", f"[Observation] [{task.id}] 觸發重新規劃: {result}")
+            self._reflect(task, result, in_progress=True,
+                          reason="fresh Observation runtime_action=replan")
+            task.status = TaskStatus.PENDING
+            return "replan"
+
+        if "skip_task" in actions:
+            summaries = [obs.summary for obs in observations if obs.properties.get("runtime_action") == "skip_task"]
+            result = "；".join(filter(None, summaries)) or "新鮮 Observation 表示此步驟不需要執行"
+            task.status = TaskStatus.COMPLETED
+            task.result = f"由 Observation 跳過：{result}"
+            self.engine.check_and_complete_parent(task.id)
+            self.emit("log", f"[Observation] [✓ 跳過 {task.id}]: {result}")
+            self._reflect(task, task.result)
+            return "skip_task"
+
+        return "context"
+
     def _process_task(self, task: TaskNode) -> bool:
         last_fail_reason = ""
 
@@ -221,10 +249,16 @@ class AgentExecutionMixin:
                 + (" …" if len(retrieved_ids) > 5 else "")
             )
 
+        observation_decision = self._apply_fresh_observation_decision(task)
+        if observation_decision == "skip_task":
+            return True
+        if observation_decision == "replan":
+            return True
+
         # 2. 潛在影響預掃（任務開始前）
         #    找出這個任務可能觸碰到的已知節點，提前插入影響檢查任務，
         #    讓模型在執行前就能注意到潛在的連帶影響。
-        self._auto_queue_impact_checks(task)
+            self._auto_queue_impact_checks(task)
 
         while True:
             if task.need_decompose and not task.is_decomposed:

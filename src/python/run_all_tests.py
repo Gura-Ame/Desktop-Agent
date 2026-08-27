@@ -1,14 +1,21 @@
 import os
 import sys
-import glob
 import subprocess
+from pathlib import Path
 
-test_files = sorted(glob.glob("C:/Users/NOBTG/Documents/Projects/Desktop-Agent/src/python/tests/test_*.py"))
+tests_dir = Path(__file__).resolve().parent / "tests"
+test_files = sorted(tests_dir.glob("test_*.py"))
 passed = 0
 failed = []
 
 for tf in test_files:
-    p = subprocess.run([sys.executable, tf], capture_output=True, text=True, encoding="utf-8")
+    p = subprocess.run(
+        [sys.executable, str(tf)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
     if p.returncode == 0:
         passed += 1
         print(f"[PASS] {os.path.basename(tf)}")

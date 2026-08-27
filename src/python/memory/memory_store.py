@@ -339,18 +339,44 @@ class MemoryStore:
     # ------------------------------------------------------------------
     # Observation：快取「上次分析的結論」，並能判斷是否過期
     # ------------------------------------------------------------------
-    def record_observation(self, obs_id: str, about_id: str, conclusion: str, confidence: float = 0.8) -> MemoryNode:
+    def record_observation(self, obs_id: str, about_id: str, conclusion: str,
+                           confidence: float = 0.8, runtime_action: str = "context") -> MemoryNode:
+        """Store a versioned conclusion and its explicit runtime policy.
+
+        ``runtime_action`` is deliberately structured rather than inferred from
+        prose: ``context`` only informs the model, ``skip_task`` completes a
+        matching task without executing it, and ``replan`` sends a matching task
+        through the existing replanning path. Invalid values fail closed.
+        """
+        if runtime_action not in {"context", "skip_task", "replan"}:
+            runtime_action = "context"
         about_node = self.nodes.get(about_id)
         based_on_version = about_node.version if about_node else None
 
         obs = self.upsert_node(
             obs_id, "Observation",
-            properties={"based_on_version": based_on_version},
+            properties={
+                "based_on_version": based_on_version,
+                "runtime_action": runtime_action,
+            },
             summary=conclusion, confidence=confidence,
         )
         if about_id in self.nodes:
             self.add_relation(obs_id, "ABOUT", about_id)
         return obs
+
+    def get_fresh_observations(self, related_ids: List[str]) -> List[MemoryNode]:
+        """Return fresh observations ABOUT at least one active related entity."""
+        related = set(related_ids)
+        if not related:
+            return []
+        matches: List[MemoryNode] = []
+        for node in self.nodes.values():
+            if node.type != "Observation" or self.is_observation_stale(node.id):
+                continue
+            if related.intersection(self.get_outgoing(node.id, rel="ABOUT")):
+                matches.append(node)
+        return matches
 
     def is_observation_stale(self, observation_id: str) -> bool:
         """目標物件的內容自從這個 Observation 產生之後有沒有變過？"""
