@@ -19,6 +19,8 @@ export default function App() {
     () => typeof window !== 'undefined' && window.innerWidth < SIDEBAR_AUTO_COLLAPSE_PX,
   );
   const [executionMode, setExecutionMode] = useState('STEP_BY_STEP');
+  const [forgettingEnabled, setForgettingEnabled] = useState(false);
+  const [activationEnabled, setActivationEnabled] = useState(false);
   const [baseUrl, setBaseUrl] = useState('http://localhost:12356/v1');
   const [modelName, setModelName] = useState('local-model');
 
@@ -249,6 +251,16 @@ export default function App() {
         handleModeChange={(mode) => {
           setExecutionMode(mode);
           callApi('set_execution_mode', mode);
+        }}
+        forgettingEnabled={forgettingEnabled}
+        handleForgettingToggle={(enabled) => {
+          setForgettingEnabled(enabled);
+          callApi('set_forgetting_enabled', enabled);
+        }}
+        activationEnabled={activationEnabled}
+        handleActivationToggle={(enabled) => {
+          setActivationEnabled(enabled);
+          callApi('set_activation_enabled', enabled);
         }}
         clearDrawings={() => callApi('clear_drawings')}
         clearHistory={() => {

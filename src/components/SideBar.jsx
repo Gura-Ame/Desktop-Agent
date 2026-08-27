@@ -4,7 +4,9 @@ import {
     ListTree,
     PanelLeftClose, PanelLeftOpen, RefreshCw,
     Terminal,
-    Trash2
+    Trash2,
+    BrainCog,
+    Zap
 } from 'lucide-react';
 
 const MODE_OPTIONS = [
@@ -28,7 +30,11 @@ export default function Sidebar({
     clearDrawings,
     clearHistory,
     showLogWindow,
-    setShowLogWindow
+    setShowLogWindow,
+    forgettingEnabled,
+    handleForgettingToggle,
+    activationEnabled,
+    handleActivationToggle
 }) {
     return (
         <aside
@@ -130,6 +136,60 @@ export default function Sidebar({
                         </div>
                         <p className="text-[11px] text-zinc-500 leading-relaxed">
                             {MODE_OPTIONS.find((o) => o.value === executionMode)?.hint || '每完成一步就暫停，等待你確認才繼續'}
+                        </p>
+                    </div>
+
+                    {/* 漸進式遺忘開關卡片 */}
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-2 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-400">
+                                <BrainCog size={14} /> 漸進式遺忘
+                            </span>
+                            <button
+                                onClick={() => handleForgettingToggle(!forgettingEnabled)}
+                                role="switch"
+                                aria-checked={forgettingEnabled}
+                                title={forgettingEnabled ? '點擊關閉' : '點擊開啟'}
+                                className={`relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0 ${forgettingEnabled ? 'bg-emerald-500' : 'bg-zinc-700'
+                                    }`}
+                            >
+                                <span
+                                    className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${forgettingEnabled ? 'translate-x-4' : 'translate-x-0'
+                                        }`}
+                                />
+                            </button>
+                        </div>
+                        <p className="text-[11px] text-zinc-500 leading-relaxed">
+                            {forgettingEnabled
+                                ? '開啟中：長期沒被存取的記憶會自動降低解析度（先回收局部覆寫，很久之後再精煉成更抽象的摘要），不會直接刪除。'
+                                : '關閉中：所有長期記憶維持原本的細節，不會自動被降低解析度。'}
+                        </p>
+                    </div>
+
+                    {/* Activation 開關卡片 */}
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-2 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-400">
+                                <Zap size={14} /> Activation（跨對話記憶啟用度）
+                            </span>
+                            <button
+                                onClick={() => handleActivationToggle(!activationEnabled)}
+                                role="switch"
+                                aria-checked={activationEnabled}
+                                title={activationEnabled ? '點擊關閉' : '點擊開啟'}
+                                className={`relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0 ${activationEnabled ? 'bg-emerald-500' : 'bg-zinc-700'
+                                    }`}
+                            >
+                                <span
+                                    className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${activationEnabled ? 'translate-x-4' : 'translate-x-0'
+                                        }`}
+                                />
+                            </button>
+                        </div>
+                        <p className="text-[11px] text-zinc-500 leading-relaxed">
+                            {activationEnabled
+                                ? '開啟中：記憶被想起（recall / search）的次數與新鮮度會跨對話累積成分數，之後排序時常被想起的東西會更優先被看到（會隨時間慢慢衰減，不是永久加分）。'
+                                : '關閉中：所有記憶單純依照關聯度與最近使用時間排序，不會有額外的「常被想起」加權。'}
                         </p>
                     </div>
                 </div>

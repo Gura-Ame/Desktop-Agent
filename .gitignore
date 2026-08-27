@@ -1,29 +1,21 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# pycache
-__pycache__
-*.pyc
+# Python virtual environments and generated files
+.venv/
+venv/
+env/
+ENV/
+Scripts/
+Lib/
+Include/
+pyvenv.cfg
 __pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node/Vite generated files
+node_modules/
+dist/
+
+# Local application state and editor files
+agent_memory.json
+.vscode/
+.idea/

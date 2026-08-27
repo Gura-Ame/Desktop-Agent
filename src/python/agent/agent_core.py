@@ -19,6 +19,7 @@ from agent.agent_execution_cycle import AgentExecutionMixin
 from agent.agent_direct_mode import AgentDirectModeMixin
 from agent.retriever import Retriever
 from agent.attention_manager import AttentionManager
+from agent.forgetting import ForgettingManager
 
 
 class AgentWorker(AgentMemoryMixin, AgentLLMClientMixin, AgentExecutionMixin, AgentDirectModeMixin):
@@ -26,6 +27,10 @@ class AgentWorker(AgentMemoryMixin, AgentLLMClientMixin, AgentExecutionMixin, Ag
                  memory_path: str = "agent_memory.json", memory_max_nodes: int = 20):
         self.available_functions = available_functions
         self.available_functions["ask_user"] = self.ask_user
+        self.available_functions["read_tool_doc"] = self.read_tool_doc
+        # 追蹤本次對話裡，哪些工具的詳細文件已經送給過模型了（不管是它自己主動查的，
+        # 還是第一次實際呼叫時系統自動夾帶的），避免重複贈送浪費 token。
+        self._doc_shown_tools = set()
 
         self.memory_store = MemoryStore(memory_path)
         self.working_memory = WorkingMemory(self.memory_store, max_nodes=memory_max_nodes)
@@ -33,6 +38,8 @@ class AgentWorker(AgentMemoryMixin, AgentLLMClientMixin, AgentExecutionMixin, Ag
         # CCS 中間層：Retriever 和 AttentionManager
         self.retriever = Retriever(self.memory_store, self.working_memory)
         self.attention_manager = AttentionManager()
+        # 漸進式遺忘：預設關閉，由使用者透過 set_forgetting_enabled 決定要不要打開
+        self.forgetting_manager = ForgettingManager()
         self.available_functions["remember"] = self.remember
         self.available_functions["recall"] = self.recall
         self.available_functions["relate"] = self.relate
@@ -116,6 +123,48 @@ class AgentWorker(AgentMemoryMixin, AgentLLMClientMixin, AgentExecutionMixin, Ag
 
     def set_execution_mode(self, mode: ExecutionMode):
         self.engine.mode = mode
+
+    def set_forgetting_enabled(self, enabled: bool):
+        """使用者決定要不要打開漸進式遺忘。這是這個功能唯一的開關入口，
+        不透過 available_functions 暴露給模型——這是使用者的設定，不是 agent 的工具。
+        """
+        self.forgetting_manager.set_enabled(enabled)
+        self.emit(
+            "log",
+            f"[系統] 漸進式遺忘已{'開啟' if enabled else '關閉'}"
+            + ("，長期沒被存取的記憶之後會自動降低解析度。" if enabled else "。")
+        )
+
+    def set_activation_enabled(self, enabled: bool):
+        """使用者決定要不要打開 Activation（跨 session 的「常被想起」分數）。
+        同樣不透過 available_functions 暴露給模型，純粹是使用者的偏好設定。
+        關閉時 activation 永遠停在 0，AttentionManager 的排序就完全不受影響，
+        等於功能不存在；開啟後每次 remember/recall/search_memory 命中，
+        分數都會疊加、跨 session 持續存在，只有「要不要繼續累積」是每次啟動時的選擇。
+        """
+        self.memory_store.set_activation_enabled(enabled)
+        self.emit(
+            "log",
+            f"[系統] Activation 已{'開啟' if enabled else '關閉'}"
+            + ("，之後常被想起的記憶會在排序中更容易被優先看到。" if enabled else "。")
+        )
+
+    def maybe_run_forgetting_pass(self):
+        """在每一輪新的使用者請求開始時檢查一次是否該跑 decay pass。
+        頻率由 ForgettingManager 內部的 min_pass_interval 控制，不是每次呼叫都真的掃描，
+        避免使用者聊得很頻繁時，每一輪都重新掃一次整個 Disk。
+        """
+        if not self.forgetting_manager.should_run_pass():
+            return
+        try:
+            changed = self.forgetting_manager.run_decay_pass(self.memory_store, call_llm=self._call_llm)
+            if changed:
+                self.emit(
+                    "log",
+                    f"[系統] 漸進式遺忘：{len(changed)} 個長期沒被存取的記憶節點已降低解析度。"
+                )
+        except Exception as e:
+            self.emit("log", f"[警告] 漸進式遺忘掃描失敗（不影響本輪對話）: {e}")
 
     def confirm_and_start(self):
         self.state = AgentState.EXECUTING

@@ -11,6 +11,7 @@ from config import (
 from agent.agent_state import (
     STOP_SEQUENCES, MAX_RESPONSE_TOKENS, HYBRID_WINDOW_MESSAGES, HISTORY_NODE_ID
 )
+from agent.tool_docs import TOOL_DOCS, get_tool_doc
 
 class AgentLLMClientMixin:
     """提供 AgentWorker 與 OpenAI client 通訊、History 管理與工具呼叫解析。"""
@@ -98,6 +99,19 @@ class AgentLLMClientMixin:
         ratio = difflib.SequenceMatcher(None, prev_assistant, new_content).ratio()
         return ratio >= threshold
 
+    def _is_repeating_tail(self, text: str, window: int = 260, threshold: float = 0.72) -> bool:
+        """比對『這段文字最新的一段』跟『再往前一段』有多相似，用來抓模型在單一次
+        生成裡自己原地打轉的情況（例如反覆寫同一段推導）。這跟 _similar_to_previous_reply
+        不同：那個是比對「整則已完成的訊息」跟「上一整則」，這裡是在同一次串流生成
+        「進行中」就即時比對，不用等它把 token 額度燒完才發現。
+        """
+        if len(text) < window * 3:
+            return False
+        tail = text[-window:]
+        before_tail = text[-window * 2:-window]
+        ratio = difflib.SequenceMatcher(None, before_tail, tail).ratio()
+        return ratio >= threshold
+
     def update_api_config(self, base_url: str, api_key: str, model_name: str):
         self.base_url = base_url
         self.api_key = api_key
@@ -136,6 +150,7 @@ class AgentLLMClientMixin:
         self._active_stream = response
         full_content = ""
         self._last_finish_reason = None
+        next_repeat_check_at = 780  # window*3，累積到這個長度才第一次檢查，避免對短內容誤判
         try:
             for chunk in response:
                 if self._should_stop():
@@ -145,6 +160,16 @@ class AgentLLMClientMixin:
                         text = chunk.choices[0].delta.content
                         full_content += text
                         self.emit("chunk", text)
+
+                        if len(full_content) >= next_repeat_check_at:
+                            next_repeat_check_at = len(full_content) + 150
+                            if self._is_repeating_tail(full_content):
+                                self.emit(
+                                    "log",
+                                    "[系統] 即時偵測到生成內容重複、原地打轉，提前中止本次生成。"
+                                )
+                                self._last_finish_reason = "repetition_detected"
+                                return full_content
                     if getattr(chunk.choices[0], "finish_reason", None):
                         self._last_finish_reason = chunk.choices[0].finish_reason
             return full_content
@@ -168,6 +193,13 @@ class AgentLLMClientMixin:
             result[name] = match.group(1).strip() if match else ""
         return result
 
+    def read_tool_doc(self, name: str) -> str:
+        """讓模型在真的呼叫某個工具之前，可以主動先查它的詳細用法。
+        呼叫過一次之後，_execute_tools 就不會在該工具第一次實際執行時再重複贈送同一份文件。
+        """
+        self._doc_shown_tools.add(name)
+        return get_tool_doc(name)
+
     def _execute_tools(self, content: str):
         pattern = r'<\|tool_call\|>call:(\w+)\(([\s\S]*?)\)\s*</?\|?tool_call\|?>'
         matches = list(re.finditer(pattern, content))
@@ -178,25 +210,35 @@ class AgentLLMClientMixin:
 
         def _execute_and_format(match):
             func_name, args_str = match.group(1), match.group(2)
+            # 懶加載文件：這個工具有額外的詳細用法規則、而且這是本次對話第一次真的呼叫它，
+            # 就自動把說明書夾帶進「回饋給模型」的那份結果裡——不管模型有沒有先自己查過，
+            # 都保證它在第一次用之前一定看得到規則，避免因為不知道格式而白白失敗一次。
+            # 這份文件只塞進模型看到的 combined_result，不混進使用者在聊天視窗看到的
+            # interleaved_content，不然每個工具第一次用都會在畫面上炸出一大段說明書。
+            doc_prefix = ""
+            if func_name in TOOL_DOCS and func_name not in self._doc_shown_tools:
+                self._doc_shown_tools.add(func_name)
+                doc_prefix = f"[系統：這是你本次對話第一次呼叫 {func_name}，以下是完整使用說明]\n{TOOL_DOCS[func_name]}\n\n[執行結果]\n"
+
             if func_name in self.available_functions:
                 try:
                     args, kwargs = self._parse_tool_arguments(func_name, args_str)
                     res = self.available_functions[func_name](*args, **kwargs)
-                    text = f"[{func_name}]: {res}"
+                    disp_text = f"[{func_name}]: {res}"
                     tag = "tool_result"
                 except Exception as e:
-                    text = f"[{func_name} 錯誤]: {e}"
+                    disp_text = f"[{func_name} 錯誤]: {e}"
                     tag = "tool_error"
             else:
-                text = f"未找到函式 '{func_name}'"
+                disp_text = f"未找到函式 '{func_name}'"
                 tag = "tool_error"
 
-            combined_parts.append(text)
-            return text, tag
+            combined_parts.append(f"{doc_prefix}{disp_text}")
+            return disp_text, tag
 
         def _replace(match):
-            text, tag = _execute_and_format(match)
-            return f"{match.group(0)}\n<{tag}>\n{text}\n</{tag}>\n"
+            disp_text, tag = _execute_and_format(match)
+            return f"{match.group(0)}\n<{tag}>\n{disp_text}\n</{tag}>\n"
 
         interleaved_content = re.sub(pattern, _replace, content)
         combined_result = "\n".join(combined_parts)

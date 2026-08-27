@@ -55,6 +55,20 @@ export function useAgentEventHandler({
         });
         break;
 
+      case 'reset_message':
+        // 後端放棄了目前這則還在串流中的內容（例如推理被截斷後改走 Planning，
+        // 結果 Planning 也失敗，準備整個重新生成一次）。把這則清掉，
+        // 讓接下來的 chunk 從一個乾淨的新泡泡開始，不要接在被放棄的內容後面
+        // 造成「同一段話出現兩次」的錯覺。
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.role === 'agent' && last.isStreaming) {
+            return prev.slice(0, -1);
+          }
+          return prev;
+        });
+        break;
+
       case 'finished':
         isStreamingRef.current = false;
         isBusyRef.current = false;

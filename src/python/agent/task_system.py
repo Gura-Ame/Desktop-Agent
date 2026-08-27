@@ -41,12 +41,33 @@ class TaskNode:
         self.think_count: int = 0   # 這個任務目前思考過幾次
         self.retry_count: int = 0   # 這個任務目前驗證失敗過幾次
 
+        # --- 卡住偵測用：不能只看 think_count 累積次數，還要看信心值有沒有真的在動 ---
+        self.confidence_history: List[float] = []  # 每次 set_confidence 都會 append，用來判斷趨勢
+        self.think_limit_override: Optional[int] = None  # 判斷「還在進步」時，臨時放寬的思考上限
+        self.stuck_escalation_level: int = 0  # 卡住時目前升級到哪一階：0=尚未升級 1=已試拆解 2=已試擴大檢索
+
+    def set_confidence(self, value: float):
+        """所有更新信心值的地方都該走這裡，而不是直接寫 self.confidence，
+        這樣 confidence_history 才能完整記錄趨勢，供卡住偵測判斷「是在進步還是真的卡住」。
+        """
+        self.confidence = value
+        self.confidence_history.append(value)
+
+    def reset_stuck_state(self):
+        """任務成功完成、或使用者已經介入排除卡關之後呼叫，把卡住偵測的狀態歸零，
+        避免舊的升級階段/信心值歷史污染到之後全新的一輪。
+        """
+        self.confidence_history = [self.confidence]
+        self.think_limit_override = None
+        self.stuck_escalation_level = 0
+
 
 class TaskEngine:
     def __init__(self, mode: ExecutionMode = ExecutionMode.STEP_BY_STEP):
         self.mode = mode
         self.tasks: List[TaskNode] = []
         self.raw_tree_text: str = ""
+        self.last_parse_error: str = ""  # 最近一次解析失敗的具體原因，給重試流程當回饋用
 
     # ------------------------------------------------------------------
     # 解析
@@ -70,7 +91,12 @@ class TaskEngine:
                 # id 允許英數字/底線/點/連字號組成的任意識別字（例如 "TASK-1"、"TASK-1.1"、
                 # "TASK-1.impact1"），限制字元集合是為了避免誤把「[重要] 做某事」這種
                 # 標題本身就用中括號開頭的一般文字，誤判成任務 id。
-                header_match = re.search(r'- \[(.)\]\s*(?:\[([A-Za-z0-9_.\-]+)\])?\s*(.*)', block)
+                #
+                # 用 re.match 錨定在 block 開頭（容許前導空白），而不是 re.search 掃整個
+                # block ——不然如果模型寫的是散文、只是內容裡剛好提到「- [ ] 之類的格式」，
+                # re.search 會在段落中間抓到這個巧合的片段，誤判成一個合法任務，
+                # 導致真正的格式錯誤被掩蓋掉、不會觸發後續的重試修正機制。
+                header_match = re.match(r'[ \t]*- \[(.)\]\s*(?:\[([A-Za-z0-9_.\-]+)\])?\s*(.*)', block)
                 if not header_match:
                     continue
 
@@ -107,14 +133,23 @@ class TaskEngine:
 
                     conf_str = self._extract_field(block, "信心值")
                     try:
-                        node.confidence = float(conf_str) if conf_str else 0.85
+                        node.set_confidence(float(conf_str) if conf_str else 0.85)
                     except ValueError:
-                        node.confidence = 0.85
+                        node.set_confidence(0.85)
 
                 new_tasks.append(node)
 
-            return new_tasks if new_tasks else None
+            if not new_tasks:
+                self.last_parse_error = (
+                    "找不到任何符合「- [ ] [TASK-n] 標題」格式開頭的任務區塊。"
+                    "輸出裡完全沒有一行是以 '- [ ]'、'- [x]' 或 '- [▾]' 開頭的，"
+                    "很可能是直接寫了散文/推理過程，而不是照 DSL 清單格式輸出。"
+                )
+                return None
+            self.last_parse_error = ""
+            return new_tasks
         except Exception as e:
+            self.last_parse_error = f"解析時發生例外: {e}"
             print(f"[TaskEngine DSL 解析失敗]: {e}")
             return None
 

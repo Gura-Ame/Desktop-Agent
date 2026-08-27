@@ -144,6 +144,14 @@ class JsApi:
         except KeyError:
             return {"status": "error", "msg": f"未知模式: {mode_str}"}
 
+    def set_forgetting_enabled(self, enabled: bool):
+        self.agent.set_forgetting_enabled(bool(enabled))
+        return {"status": "ok", "enabled": bool(enabled)}
+
+    def set_activation_enabled(self, enabled: bool):
+        self.agent.set_activation_enabled(bool(enabled))
+        return {"status": "ok", "enabled": bool(enabled)}
+
     def update_api_config(self, base_url: str, api_key: str, model_name: str):
         self.agent.update_api_config(base_url, api_key, model_name)
         return {"status": "ok"}

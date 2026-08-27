@@ -14,6 +14,11 @@ Attention Manager 的工作：
   +relevance : 節點 id 或 summary 含有 task 關鍵字 → 每個關鍵字命中 +0.3，最多 +0.9
   +confidence: 節點的 confidence 直接作為分數（0~1）
   +recency   : 最近 activate 的 → 線性插值 0~0.5（最新的 0.5，最舊的 0）
+  +activation: 跨 session 累積的「常被想起」分數，套用時間衰減後 * 0.4（見 memory_store.py
+               的 MemoryNode.get_effective_activation）。這一項預設幾乎不影響排序——
+               只有使用者開啟 Activation 功能、節點被讀取過，activation 才會 > 0；
+               關閉時所有節點的 activation 永遠是 0，這一項自然變成沒有作用的 no-op，
+               不需要在這裡另外查一次「功能有沒有開」。
   -uncertainty: has_dynamic_call=True 或 ExternalRef 類型 → -0.2（靜態圖不確定，降展開優先度）
 """
 
@@ -33,6 +38,10 @@ DEFAULT_TOKEN_BUDGET = 650
 
 # 粗略估算：每個字元約 0.45 tokens（中英混合，比純英文低）
 _CHARS_PER_TOKEN = 2.2
+
+# activation 這項訊號的權重。跟 relevance（最高 0.9）、recency（最高 0.5）同量級，
+# 給它足夠份量在關鍵字打平手時能真的影響排序，但又不會蓋過真正的關鍵字相關性。
+ACTIVATION_WEIGHT = 0.4
 
 
 def _estimate_tokens(text: str) -> int:
@@ -147,7 +156,12 @@ class AttentionManager:
             if node.properties.get("has_dynamic_call") or node.type == "ExternalRef":
                 uncertainty = 0.2
 
-            score = recency + relevance + confidence - uncertainty
+            # activation（跨 session 的「常被想起」訊號，關閉時恆為 0，見上方說明）
+            activation = 0.0
+            if hasattr(node, "get_effective_activation"):
+                activation = node.get_effective_activation() * ACTIVATION_WEIGHT
+
+            score = recency + relevance + confidence + activation - uncertainty
             scored.append((node_id, score, node))
 
         scored.sort(key=lambda x: -x[1])

@@ -1,0 +1,9 @@
+# Desktop runtime
+openai
+PyQt6
+PyQt6-WebEngine
+pywebview
+pyautogui
+Pillow
+pywinauto
+pywin32
