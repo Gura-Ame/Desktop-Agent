@@ -1,6 +1,7 @@
 {
   "include": ["src/python"],
   "exclude": ["src/python/tests", "src/python/__pycache__", "**/node_modules", "**/__pycache__", "**/.*"],
+  "extraPaths": ["src/python"],
   "venvPath": ".",
   "venv": ".",
   "typeCheckingMode": "basic"

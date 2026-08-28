@@ -26,6 +26,7 @@ Code Graph：把你原本 a()/b() 的想法具體實作出來。
 
 import ast
 import os
+from typing import Optional, List, Dict, Any, Tuple
 
 from memory.memory_store import MemoryStore
 
@@ -96,7 +97,7 @@ class CodeGraphBuilder:
     # ------------------------------------------------------------------
     # 單一檔案（原本的入口，介面不變）
     # ------------------------------------------------------------------
-    def build_from_file(self, filepath: str, module_name: str = None):
+    def build_from_file(self, filepath: str, module_name: Optional[str] = None):
         """解析一個 .py 檔案，回傳這次建立/更新的函式節點 id 列表。
         只認得同一個檔案內的呼叫關係——跨檔案請用 build_project。
 
@@ -147,7 +148,7 @@ class CodeGraphBuilder:
     # ------------------------------------------------------------------
     # 整個專案（新的入口）：解析 import，支援跨檔案呼叫關係
     # ------------------------------------------------------------------
-    def build_project(self, root_dir: str, file_paths: list = None) -> dict:
+    def build_project(self, root_dir: str, file_paths: Optional[list] = None) -> dict:
         """建立一整個專案（或指定的多個檔案）的呼叫關係圖，包含跨檔案的 import 解析。
         回傳 {filepath: [func_ids...]}，讓呼叫端知道每個檔案分別建出了哪些節點。
 

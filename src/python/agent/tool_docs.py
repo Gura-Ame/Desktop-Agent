@@ -157,6 +157,31 @@ find_callers(func_id) — 查誰呼叫了這個函式。func_id 格式是 "模�
     "find_callees": """
 find_callees(func_id) — 查這個函式呼叫了誰，格式規則同 find_callers。
 """.strip(),
+
+    "analyze_image_visuals": """
+analyze_image_visuals(image_path="", task="<MORE_DETAILED_CAPTION>", text_input="") — 呼叫 Florence-2 視覺模型進行畫面理解、風格分析或物件偵測。
+
+- image_path：本地圖片檔案路徑。若不填或傳空字串 `""`，系統會自動對目前桌面全螢幕截圖並分析。
+- task：視覺任務模式，可選：
+  - "<MORE_DETAILED_CAPTION>"（極詳細描述，預設）
+  - "<DETAILED_CAPTION>"（中等描述）
+  - "<CAPTION>"（簡短摘要）
+  - "<OD>"（物件邊界框偵測）
+  - "<DENSE_REGION_CAPTION>"（全圖區域密集標註）
+  - "<REGION_PROPOSAL>"（候選區塊提議）
+- text_input：可選的額外文字提示詞（例如針對特定物件做 grounding 時使用）。
+- 提醒：分析完成後，若短時間內不需再讀圖，請呼叫 unload_florence_model() 釋放顯存。
+""".strip(),
+
+    "analyze_image_ocr": """
+analyze_image_ocr(image_path="", task="<OCR_RAW>") — 呼叫 PaddleOCR v4 專用文字模型進行無幻覺文字/代碼識別或 UI 座標提取。
+
+- image_path：本地圖片檔案路徑。若不填或傳空字串 `""`，系統會自動對目前桌面全螢幕截圖並辨識。
+- task：OCR 任務模式：
+  - "<OCR_RAW>"：按閱讀順序（由上到下、由左到右）逐行提取純文字與程式碼，無幻覺。
+  - "<OCR_GEOMETRY>"：提取所有文字區塊的中心點像素座標 (pixel_center)、像素邊界框 (pixel_rect) 與 1000x1000 歸一化座標 (norm_1000_box) 的 JSON。需要點擊特定按鈕或分析 UI 位置時請使用此模式。
+- 提醒：分析完成後可呼叫 unload_paddleocr_model() 卸載。
+""".strip(),
 }
 
 

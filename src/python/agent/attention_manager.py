@@ -27,6 +27,7 @@ import time
 from typing import TYPE_CHECKING
 
 from agent.working_memory import WorkingMemory
+from memory.memory_store import MemoryNode
 
 if TYPE_CHECKING:
     from agent.task_system import TaskNode
@@ -52,7 +53,7 @@ class AttentionManager:
     def build_context_block(
         self,
         working_mem: WorkingMemory,
-        task: "TaskNode | None" = None,
+        task: "TaskNode | str | None" = None,
         token_budget: int = DEFAULT_TOKEN_BUDGET,
     ) -> tuple[str, set[str]]:
         """從 WorkingMemory 組出 Context 區塊字串，同時回傳被展開的節點 id 集合。
@@ -129,7 +130,7 @@ class AttentionManager:
     # ------------------------------------------------------------------
     def _score_nodes(
         self, working_mem: WorkingMemory, keywords: set[str]
-    ) -> list[tuple[str, float, object]]:
+    ) -> list[tuple[str, float, MemoryNode]]:
         """回傳 [(node_id, score, node), ...] 按 score 降序排列。
 
         使用 iter_by_recency() 取得按 activation_time 排序的節點列表，
@@ -137,7 +138,7 @@ class AttentionManager:
         """
         items_by_recency = working_mem.iter_by_recency()  # 最新在前
         n = len(items_by_recency)
-        scored: list[tuple[str, float, object]] = []
+        scored: list[tuple[str, float, MemoryNode]] = []
 
         for rank, (node_id, node) in enumerate(items_by_recency):
             # recency score：rank=0 最新 → 0.5，rank=n-1 最舊 → 0

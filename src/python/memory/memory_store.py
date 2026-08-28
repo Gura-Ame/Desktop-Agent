@@ -45,8 +45,8 @@ def _compact_summary(summary: str) -> str:
 
 
 class MemoryNode:
-    def __init__(self, id: str, type: str, properties: dict = None,
-                 summary: str = "", confidence: float = 1.0, version: str = None):
+    def __init__(self, id: str, type: str, properties: Optional[dict] = None,
+                 summary: str = "", confidence: float = 1.0, version: Optional[str] = None):
         self.id = id
         self.type = type
         self.properties: Dict[str, Any] = properties or {}
@@ -74,7 +74,7 @@ class MemoryNode:
         # activation_updated_at：上一次 bump_activation() 的時間點，用來計算衰減經過了多久。
         self.activation_updated_at: float = self.updated_at
 
-    def get_effective_activation(self, now: float = None) -> float:
+    def get_effective_activation(self, now: Optional[float] = None) -> float:
         """算出套用衰減後的即時 activation 分數，純讀取不修改狀態。
         就算 Activation 功能被使用者關閉，這個函式本身仍然可以正常呼叫——
         只是因為從來沒有 bump 過，activation 永遠是 0，效果自然等於沒有這個機制，
@@ -87,7 +87,7 @@ class MemoryNode:
         decay = 0.5 ** (elapsed / ACTIVATION_HALF_LIFE_SECONDS)
         return self.activation * decay
 
-    def bump_activation(self, boost: float = ACTIVATION_BOOST, now: float = None):
+    def bump_activation(self, boost: float = ACTIVATION_BOOST, now: Optional[float] = None):
         """這個節點被想起了一次（被讀取到）：先套用衰減算出目前的真實分數，
         再疊加一次 boost，並把時間基準重設成現在。只有在 MemoryStore.activation_enabled
         為 True 時才會被呼叫到，關閉時這個方法完全不會被觸發，activation 就會一直停在 0。
@@ -186,7 +186,7 @@ class MemoryStore:
     # ------------------------------------------------------------------
     # 基本 CRUD
     # ------------------------------------------------------------------
-    def upsert_node(self, id: str, type: str, properties: dict = None,
+    def upsert_node(self, id: str, type: str, properties: Optional[dict] = None,
                      summary: str = "", confidence: float = 1.0) -> MemoryNode:
         node = self.nodes.get(id)
         if node is None:
@@ -255,13 +255,13 @@ class MemoryStore:
             )
         self.save()
 
-    def get_outgoing(self, id: str, rel: str = None) -> List[str]:
+    def get_outgoing(self, id: str, rel: Optional[str] = None) -> List[str]:
         node = self.nodes.get(id)
         if not node:
             return []
         return [r["target"] for r in node.relations if rel is None or r["rel"] == rel]
 
-    def get_incoming(self, id: str, rel: str = None) -> List[str]:
+    def get_incoming(self, id: str, rel: Optional[str] = None) -> List[str]:
         """誰指向這個節點？—— 直接查反向索引，O(命中筆數)，不用每次都全表掃描。
         索引在 add_relation / delete_node 裡同步維護，_load 時從 nodes 重建一次。
         """

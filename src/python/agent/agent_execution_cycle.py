@@ -1,4 +1,5 @@
 import re
+from typing import TYPE_CHECKING
 from config import (
     SYSTEM_PROMPT, PLANNER_SYSTEM_PROMPT, THINKING_SYSTEM_PROMPT,
     VERIFY_SYSTEM_PROMPT, DECOMPOSE_SYSTEM_PROMPT, REFLECT_SYSTEM_PROMPT
@@ -6,7 +7,12 @@ from config import (
 from agent.agent_state import AgentState, MAX_RETRY_PER_TASK
 from agent.task_system import ExecutionMode, TaskNode, TaskStatus
 
-class AgentExecutionMixin:
+if TYPE_CHECKING:
+    from agent.agent_protocol import AgentWorkerBase as _Base
+else:
+    _Base = object
+
+class AgentExecutionMixin(_Base):
     """提供 AgentWorker 狀態機執行流程（Reasoning, Planning, Task Cycle）。"""
 
     def _run(self):

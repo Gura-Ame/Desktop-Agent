@@ -1,8 +1,12 @@
+import os
 import time
 import threading
+from typing import Any
 from openai import OpenAI
 
+import config
 from config import API_BASE_URL, API_KEY, MODEL_NAME
+from agent.llama_client import LlamaClient
 from agent.task_system import TaskEngine, ExecutionMode
 from memory.memory_store import MemoryStore
 from agent.working_memory import WorkingMemory
@@ -60,9 +64,22 @@ class AgentWorker(AgentMemoryMixin, AgentLLMClientMixin, AgentExecutionMixin, Ag
         self.base_url = API_BASE_URL
         self.api_key = API_KEY
         self.model_name = MODEL_NAME
-        self.client = OpenAI(base_url=self.base_url, api_key=self.api_key, timeout=90.0)
+
+        # 優先以 Llama-cpp 載入本地 GGUF 模型；若路徑不存在或未啟用則退回相容 API Client
+        text_model_path = getattr(config, "TEXT_MODEL_PATH", "")
+        if getattr(config, "USE_LOCAL_LLAMA", False) and text_model_path and os.path.exists(text_model_path):
+            self.client = LlamaClient(
+                model_path=text_model_path,
+                n_ctx=getattr(config, "N_CTX", 8192),
+                n_gpu_layers=getattr(config, "N_GPU_LAYERS", -1),
+            )
+            self.model_name = os.path.basename(text_model_path)
+        else:
+            self.client = OpenAI(base_url=self.base_url, api_key=self.api_key, timeout=90.0)
+
         self.engine = TaskEngine(mode=default_mode)
         self.state = AgentState.IDLE
+
 
         self.current_user_prompt = ""
         self.current_images = []
@@ -75,7 +92,7 @@ class AgentWorker(AgentMemoryMixin, AgentLLMClientMixin, AgentExecutionMixin, Ag
         self._active_stream = None
         self._last_finish_reason = None
 
-    def emit(self, event_type: str, payload: any):
+    def emit(self, event_type: str, payload: Any):
         if self.event_callback:
             self.event_callback(event_type, payload)
 

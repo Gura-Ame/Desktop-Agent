@@ -53,6 +53,11 @@ class JsApi:
             "execute_python": tools.execute_python,
             "read_screen_api": tools.read_screen_api,
             "query_screen_element": tools.query_screen_element,
+            "analyze_image_visuals": tools.analyze_image_visuals,
+            "analyze_image_ocr": tools.analyze_image_ocr,
+            "unload_florence_model": tools.unload_florence_model,
+            "unload_paddleocr_model": tools.unload_paddleocr_model,
+            "unload_all_vision_models": tools.unload_all_vision_models,
         }
 
         self.agent = AgentWorker(
@@ -156,6 +161,11 @@ class JsApi:
         self.agent.update_api_config(base_url, api_key, model_name)
         return {"status": "ok"}
 
+    def load_llama_model(self, model_path: str, n_ctx: int = 8192, n_gpu_layers: int = -1):
+        self.agent.load_llama_model(model_path, n_ctx=n_ctx, n_gpu_layers=n_gpu_layers)
+        self.dispatch_event("log", f"[系統] 已切換本地 Llama 模型: {model_path}")
+        return {"status": "ok"}
+
     def toggle_local_server(self, model_path: str):
         if self.server_mgr.is_running():
             self.server_mgr.stop_server()
@@ -174,6 +184,12 @@ class JsApi:
     def clear_history(self):
         self.agent.clear_conversation_history()
         return {"status": "ok"}
+
+    def unload_vision_models(self):
+        result = tools.unload_all_vision_models()
+        self.dispatch_event("log", f"[系統] {result}")
+        return {"status": "ok", "msg": result}
+
 
 def main():
     try:

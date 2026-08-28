@@ -9,12 +9,13 @@ code_impact.py 的 queue_impact_check_tasks 是這個原則在「程式碼函式
 一樣不需要模型自己想到要問「這個改了誰會受影響」。
 """
 
+from typing import Optional
 from memory.memory_store import MemoryStore
 from agent.task_system import TaskEngine, TaskNode
 
 
 def queue_relation_impact_tasks(engine: TaskEngine, store: MemoryStore,
-                                 changed_id: str, after_task_id: str, rel: str = None) -> int:
+                                 changed_id: str, after_task_id: str, rel: Optional[str] = None) -> int:
     """在 after_task_id 這個任務後面，幫每個「指向 changed_id」的物件插入一個
     「檢查是否受影響」的子任務。rel 不填代表不限定關聯類型，任何關聯都算；
     要只看特定類型的關聯（例如只看 "USED_BY"）可以指定 rel。回傳插入了幾個。

@@ -1,6 +1,17 @@
+# ==================== 本地 Llama 模型設定 ====================
+TEXT_MODEL_PATH = r"C:\Users\Gura Ame\Downloads\21488f08ccd6333d7b55b877fa60c7c0089ecbaa27011610e654747f9069592a.gguf"
+N_CTX = 8192
+N_GPU_LAYERS = -1
+USE_LOCAL_LLAMA = True
+
+# ==================== 遠端 / 相容 API 設定 (備用) ====================
 API_BASE_URL = "http://localhost:12356/v1"
 API_KEY = "lm-studio"
 MODEL_NAME = "local-model"
+
+# ==================== 視覺模型 (Florence-2) 設定 ====================
+FLORENCE_MODEL_ID = "microsoft/Florence-2-large"
+FLORENCE_CACHE_DIR = r"C:\Users\Gura Ame\Downloads\florence2"
 
 PLANNER_SYSTEM_PROMPT = """你是一個 AI 任務規劃器。請將使用者需求拆解為 Markdown 格式的任務樹 (Task Tree)。
 
@@ -194,6 +205,11 @@ SYSTEM_PROMPT = """你是一個具備電腦自動化控制能力的 AI 助手。
 29. find_callers(func_id) 📖 # 查誰呼叫了這個函式
 30. find_callees(func_id) # 查這個函式呼叫了誰
 31. read_tool_doc(name) # 查詢某個工具的完整使用說明（標📖的工具才有）
+32. analyze_image_visuals(image_path="", task="<MORE_DETAILED_CAPTION>", text_input="") 📖 # 呼叫 Florence-2 視覺大模型進行畫面理解、風格分析或物件偵測
+33. analyze_image_ocr(image_path="", task="<OCR_RAW>") 📖 # 呼叫 PaddleOCR v4 進行精準文字辨識或 UI 點擊座標提取
+34. unload_florence_model() # 卸載 Florence-2 視覺模型以釋放顯存
+35. unload_paddleocr_model() # 卸載 PaddleOCR 模型以釋放顯存/記憶體
+36. unload_all_vision_models() # 卸載所有視覺與 OCR 模型完全釋放顯存
 """
 
 COMPRESS_SYSTEM_PROMPT = """你是一個上下文壓縮器。以下是一段對話/執行歷史，內容已經太長了，

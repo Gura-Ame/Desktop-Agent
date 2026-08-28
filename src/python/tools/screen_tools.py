@@ -137,15 +137,16 @@ def read_screen_api(max_elements: int = 60):
     raw_result = read_screen(max_elements=max_elements)
     
     if isinstance(raw_result, dict) and raw_result.get("mode") == "uia":
-        full_elements = raw_result["elements"]
-        snap_id = screen_cache.save_snapshot(full_elements)
-        
-        return {
-            "snapshot_id": snap_id,
-            "total_count": len(full_elements),
-            "summary_interactive_elements": screen_cache._cache[snap_id]["summary"],
-            "note": "若目標不在 summary 中，請呼叫 query_screen_element(snapshot_id, keyword) 查找座標"
-        }
+        full_elements = raw_result.get("elements")
+        if isinstance(full_elements, list):
+            snap_id = screen_cache.save_snapshot(full_elements)
+            
+            return {
+                "snapshot_id": snap_id,
+                "total_count": len(full_elements),
+                "summary_interactive_elements": screen_cache._cache.get(snap_id, {}).get("summary", []),
+                "note": "若目標不在 summary 中，請呼叫 query_screen_element(snapshot_id, keyword) 查找座標"
+            }
     return raw_result
 
 def query_screen_element(snapshot_id: str, keyword: str):

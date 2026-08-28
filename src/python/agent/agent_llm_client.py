@@ -1,7 +1,9 @@
+import os
 import ast
 import re
 import difflib
 import json
+from typing import TYPE_CHECKING, Any, List, Dict
 from openai import OpenAI
 
 from config import (
@@ -13,14 +15,19 @@ from agent.agent_state import (
 )
 from agent.tool_docs import TOOL_DOCS, get_tool_doc
 
-class AgentLLMClientMixin:
+if TYPE_CHECKING:
+    from agent.agent_protocol import AgentWorkerBase as _Base
+else:
+    _Base = object
+
+class AgentLLMClientMixin(_Base):
     """提供 AgentWorker 與 OpenAI client 通訊、History 管理與工具呼叫解析。"""
 
     def _build_user_content(self, text: str, images=None):
         imgs = images if images is not None else []
         if not imgs:
             return text
-        parts = [{
+        parts: List[Dict[str, Any]] = [{
             "type": "text",
             "text": text or "Please describe what you see in the image in detail.",
         }]
@@ -118,6 +125,11 @@ class AgentLLMClientMixin:
         self.model_name = model_name
         self.client = OpenAI(base_url=self.base_url, api_key=self.api_key, timeout=90.0)
 
+    def load_llama_model(self, model_path: str, n_ctx: int = 8192, n_gpu_layers: int = -1):
+        from agent.llama_client import LlamaClient
+        self.client = LlamaClient(model_path=model_path, n_ctx=n_ctx, n_gpu_layers=n_gpu_layers)
+        self.model_name = os.path.basename(model_path)
+
     def _call_and_execute(self, prompt: str) -> str:
         messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}]
         content = self._call_llm_stream(messages)
@@ -133,9 +145,11 @@ class AgentLLMClientMixin:
         return content
 
     def _call_llm(self, system_prompt: str, user_prompt: str, temperature=0.2) -> str:
+        if self.client is None:
+            raise RuntimeError("LLM Client 尚未初始化")
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
         response = self.client.chat.completions.create(
-            model=self.model_name, messages=messages, temperature=temperature,
+            model=self.model_name, messages=messages, temperature=temperature,  # type: ignore[arg-type]
             stop=STOP_SEQUENCES, max_tokens=MAX_RESPONSE_TOKENS,
         )
         return response.choices[0].message.content or ""
@@ -143,8 +157,10 @@ class AgentLLMClientMixin:
     def _call_llm_stream(self, messages: list) -> str:
         if self._should_stop():
             raise InterruptedError("Agent 已由使用者停止")
+        if self.client is None:
+            raise RuntimeError("LLM Client 尚未初始化")
         response = self.client.chat.completions.create(
-            model=self.model_name, messages=messages, temperature=0.1, stream=True,
+            model=self.model_name, messages=messages, temperature=0.1, stream=True,  # type: ignore[arg-type]
             stop=STOP_SEQUENCES, max_tokens=MAX_RESPONSE_TOKENS,
         )
         self._active_stream = response
@@ -284,7 +300,7 @@ class AgentLLMClientMixin:
             expr = ast.parse(f"dummy({args_str})", mode="eval")
             if isinstance(expr.body, ast.Call):
                 args = [ast.literal_eval(a) for a in expr.body.args]
-                kwargs = {kw.arg: ast.literal_eval(kw.value) for kw in expr.body.keywords}
+                kwargs = {str(kw.arg): ast.literal_eval(kw.value) for kw in expr.body.keywords if kw.arg is not None}
                 return args, kwargs
         except Exception:
             pass

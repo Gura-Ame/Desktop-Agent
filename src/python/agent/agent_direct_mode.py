@@ -1,5 +1,11 @@
+from typing import Optional, TYPE_CHECKING
 from agent.agent_state import AgentState
 from config import SYSTEM_PROMPT
+
+if TYPE_CHECKING:
+    from agent.agent_protocol import AgentWorkerBase as _Base
+else:
+    _Base = object
 
 # 單一輪對話裡（使用者送出一次訊息之後）最多允許幾次工具呼叫來回。
 # 這不是「正常操作」的限制——正常對話很少需要超過 2、3 次；這是最後一道安全網，
@@ -7,10 +13,10 @@ from config import SYSTEM_PROMPT
 MAX_DIRECT_MODE_ROUNDS = 6
 
 
-class AgentDirectModeMixin:
+class AgentDirectModeMixin(_Base):
     """提供 AgentWorker 直接對話/工具呼叫迴圈 (Direct Mode)。"""
 
-    def _run_direct_mode(self, initial_content: str = None):
+    def _run_direct_mode(self, initial_content: Optional[str] = None):
         if initial_content is None:
             user_content = self._build_user_content(self.current_user_prompt, self.current_images)
             self.history.append({"role": "user", "content": user_content})

@@ -7,3 +7,14 @@ pyautogui
 Pillow
 pywinauto
 pywin32
+
+# Multi-Model & Local Vision Pipeline
+llama-cpp-python
+transformers
+torch
+torchvision
+paddleocr
+paddlepaddle
+timm
+einops
+

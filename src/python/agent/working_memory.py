@@ -65,7 +65,7 @@ class WorkingMemory:
             reverse=True,  # 最新的在前
         )
 
-    def render_context(self, expand_ids: Iterable[str] = None) -> str:
+    def render_context(self, expand_ids: Optional[Iterable[str]] = None) -> str:
         expand_ids = set(expand_ids or [])
         if not self._active:
             return "### 【Working Memory】\n(目前沒有已啟用的節點)"

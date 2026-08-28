@@ -1,13 +1,19 @@
 import json
 import re
+from typing import Optional, TYPE_CHECKING
 from agent.task_system import TaskNode
 
-class AgentMemoryMixin:
+if TYPE_CHECKING:
+    from agent.agent_protocol import AgentWorkerBase as _Base
+else:
+    _Base = object
+
+class AgentMemoryMixin(_Base):
     """提供 AgentWorker 長期記憶與程式碼關聯圖呼叫介面。"""
 
     _IMPACT_CHECK_EXCLUDED_TYPES = ("History", "Observation")
 
-    def remember(self, id: str, type: str, summary: str = "", properties: dict = None) -> str:
+    def remember(self, id: str, type: str, summary: str = "", properties: Optional[dict] = None) -> str:
         node = self.memory_store.upsert_node(id, type, properties=properties or {}, summary=summary)
         self.working_memory.activate(id)
         self.emit("log", f"🧠 記住了 [{node.type}] {id}: {summary}")
@@ -67,7 +73,7 @@ class AgentMemoryMixin:
         props = self.memory_store.get_properties_with_event_override(id, event_id)
         return f"{id} 在 {event_id} 這個情境下的屬性: {json.dumps(props, ensure_ascii=False)}"
 
-    def recall_related(self, id: str, rel: str = None) -> str:
+    def recall_related(self, id: str, rel: Optional[str] = None) -> str:
         outgoing = self.memory_store.get_outgoing(id, rel)
         incoming = self.memory_store.get_incoming(id, rel)
         related_ids = outgoing + incoming
@@ -93,7 +99,7 @@ class AgentMemoryMixin:
         lines = [f"- [{n.type}] {n.id}: {n.summary}" for n in matches]
         return f"找到 {len(matches)} 筆跟「{keyword}」有關的記憶：\n" + "\n".join(lines)
 
-    def build_code_graph(self, filepath: str, module_name: str = None) -> str:
+    def build_code_graph(self, filepath: str, module_name: Optional[str] = None) -> str:
         try:
             func_ids = self.code_graph.build_from_file(filepath, module_name)
         except Exception as e:

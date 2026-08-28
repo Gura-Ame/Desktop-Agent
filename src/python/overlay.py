@@ -39,8 +39,11 @@ class ScreenOverlay(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
 
-        screen_rect = QApplication.primaryScreen().geometry()
-        self.setGeometry(screen_rect)
+        screen = QApplication.primaryScreen()
+        if screen is not None:
+            self.setGeometry(screen.geometry())
+        else:
+            self.setGeometry(0, 0, 1920, 1080)
         self.shapes = []
 
     def add_shape(self, shape_type, data):
