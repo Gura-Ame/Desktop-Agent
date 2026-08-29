@@ -1,21 +1,27 @@
-import { useCallback, useRef, useState } from 'react';
-import { useChatScroll } from './chat/useChatScroll';
-import { useAgentEventHandler } from './chat/useAgentEventHandler';
-import type { ChatMessage, EditUserPayload, ForkDirection, MessageFork, ServerStatus } from '../types';
+import { useCallback, useRef, useState } from "react";
+import { useChatScroll } from "./chat/useChatScroll";
+import { useAgentEventHandler } from "./chat/useAgentEventHandler";
+import type {
+	ChatMessage,
+	EditUserPayload,
+	ForkDirection,
+	MessageFork,
+	ServerStatus,
+} from "../types";
 
 function nowTs() {
-  return Date.now();
+	return Date.now();
 }
 
 function uid() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+	return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 const WELCOME: ChatMessage = {
-  id: 'welcome',
-  role: 'agent',
-  content: '**你好！** 我是您的 AI 桌面自動化常駐助理。',
-  ts: Date.now(),
+	id: "welcome",
+	role: "agent",
+	content: "**你好！** 我是您的 AI 桌面自動化常駐助理。",
+	ts: Date.now(),
 };
 
 /**
@@ -28,181 +34,196 @@ const WELCOME: ChatMessage = {
  * - 主線 `messages` 永遠是「目前選中的完整路徑」
  */
 export function useAgentChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
-  const [logs, setLogs] = useState<string[]>([]);
-  const [waitingConfirm, setWaitingConfirm] = useState(false);
-  const [waitingUserInput, setWaitingUserInput] = useState<string | null>(null);
-  const [serverStatus, setServerStatus] = useState<ServerStatus>({
-    running: false,
-    msg: '檢查中...',
-  });
+	const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
+	const [logs, setLogs] = useState<string[]>([]);
+	const [waitingConfirm, setWaitingConfirm] = useState(false);
+	const [waitingUserInput, setWaitingUserInput] = useState<string | null>(null);
+	const [serverStatus, setServerStatus] = useState<ServerStatus>({
+		running: false,
+		msg: "檢查中...",
+	});
 
-  const isStreamingRef = useRef(false);
-  const isBusyRef = useRef(false);
+	const isStreamingRef = useRef(false);
+	const isBusyRef = useRef(false);
 
-  const {
-    chatEndRef,
-    scrollContainerRef,
-    stickToBottomRef,
-    handleScroll,
-    pinToBottom,
-  } = useChatScroll(messages, isStreamingRef);
+	const {
+		chatEndRef,
+		scrollContainerRef,
+		stickToBottomRef,
+		handleScroll,
+		pinToBottom,
+	} = useChatScroll(messages, isStreamingRef);
 
-  const { handleAgentEvent } = useAgentEventHandler({
-    setMessages,
-    setLogs,
-    setWaitingConfirm,
-    setWaitingUserInput,
-    setServerStatus,
-    isStreamingRef,
-    isBusyRef,
-  });
+	const { handleAgentEvent } = useAgentEventHandler({
+		setMessages,
+		setLogs,
+		setWaitingConfirm,
+		setWaitingUserInput,
+		setServerStatus,
+		isStreamingRef,
+		isBusyRef,
+	});
 
-  const clearMessages = useCallback(() => {
-    setMessages([]);
-    setWaitingConfirm(false);
-    setWaitingUserInput(null);
-    isBusyRef.current = false;
-    isStreamingRef.current = false;
-    stickToBottomRef.current = true;
-  }, [stickToBottomRef]);
+	const clearMessages = useCallback(() => {
+		setMessages([]);
+		setWaitingConfirm(false);
+		setWaitingUserInput(null);
+		isBusyRef.current = false;
+		isStreamingRef.current = false;
+		stickToBottomRef.current = true;
+	}, [stickToBottomRef]);
 
-  /**
-   * 編輯 user 訊息；resend=true 時建立新分枝並回傳要送給 LLM 的文字與圖片。
-   */
-  const editUserMessage = useCallback((
-    msg: ChatMessage,
-    nextText: string,
-    resend: boolean,
-  ): EditUserPayload | null => {
-    let payload: EditUserPayload | null = null;
+	/**
+	 * 編輯 user 訊息；resend=true 時建立新分枝並回傳要送給 LLM 的文字與圖片。
+	 */
+	const editUserMessage = useCallback(
+		(
+			msg: ChatMessage,
+			nextText: string,
+			resend: boolean,
+		): EditUserPayload | null => {
+			let payload: EditUserPayload | null = null;
 
-    setMessages((prev) => {
-      const idx = prev.findIndex((m) => m.id === msg.id || m === msg);
-      if (idx < 0) return prev;
+			setMessages((prev) => {
+				const idx = prev.findIndex((m) => m.id === msg.id || m === msg);
+				if (idx < 0) return prev;
 
-      if (!resend) {
-        const next = [...prev];
-        next[idx] = { ...next[idx], content: nextText };
-        return next;
-      }
+				if (!resend) {
+					const next = [...prev];
+					next[idx] = { ...next[idx], content: nextText };
+					return next;
+				}
 
-      // --- 建立分枝 ---
-      const head = prev.slice(0, idx);
-      const oldUser = prev[idx];
-      const oldTail = prev.slice(idx + 1);
+				// --- 建立分枝 ---
+				const head = prev.slice(0, idx);
+				const oldUser = prev[idx];
+				const oldTail = prev.slice(idx + 1);
 
-      const oldFork: MessageFork = {
-        id: uid(),
-        content: oldUser.content,
-        images: oldUser.images || [],
-        tail: oldTail,
-      };
+				const oldFork: MessageFork = {
+					id: uid(),
+					content: oldUser.content,
+					images: oldUser.images || [],
+					tail: oldTail,
+				};
 
-      const existingForks: MessageFork[] = oldUser.forks ? [...oldUser.forks] : [];
-      if (existingForks.length === 0 && (oldTail.length > 0 || oldUser.content !== nextText)) {
-        existingForks.push(oldFork);
-      } else if (existingForks.length > 0) {
-        const fi = oldUser.forkIndex ?? existingForks.length - 1;
-        existingForks[fi] = {
-          ...existingForks[fi],
-          content: oldUser.content,
-          images: oldUser.images || [],
-          tail: oldTail,
-        };
-      }
+				const existingForks: MessageFork[] = oldUser.forks
+					? [...oldUser.forks]
+					: [];
+				if (
+					existingForks.length === 0 &&
+					(oldTail.length > 0 || oldUser.content !== nextText)
+				) {
+					existingForks.push(oldFork);
+				} else if (existingForks.length > 0) {
+					const fi = oldUser.forkIndex ?? existingForks.length - 1;
+					existingForks[fi] = {
+						...existingForks[fi],
+						content: oldUser.content,
+						images: oldUser.images || [],
+						tail: oldTail,
+					};
+				}
 
-      const newFork: MessageFork = {
-        id: uid(),
-        content: nextText,
-        images: oldUser.images || [],
-        tail: [],
-      };
-      const forks = [...existingForks, newFork];
-      const forkIndex = forks.length - 1;
+				const newFork: MessageFork = {
+					id: uid(),
+					content: nextText,
+					images: oldUser.images || [],
+					tail: [],
+				};
+				const forks = [...existingForks, newFork];
+				const forkIndex = forks.length - 1;
 
-      const newUser: ChatMessage = {
-        ...oldUser,
-        content: nextText,
-        forks,
-        forkIndex,
-        ts: nowTs(),
-      };
+				const newUser: ChatMessage = {
+					...oldUser,
+					content: nextText,
+					forks,
+					forkIndex,
+					ts: nowTs(),
+				};
 
-      const agentPlaceholder: ChatMessage = {
-        id: uid(),
-        role: 'agent',
-        content: '',
-        isStreaming: true,
-        ts: nowTs(),
-      };
+				const agentPlaceholder: ChatMessage = {
+					id: uid(),
+					role: "agent",
+					content: "",
+					isStreaming: true,
+					ts: nowTs(),
+				};
 
-      payload = {
-        text: nextText,
-        images: (oldUser.images || []).map((img) => img.dataUrl).filter(Boolean),
-      };
+				payload = {
+					text: nextText,
+					images: (oldUser.images || [])
+						.map((img) => img.dataUrl)
+						.filter(Boolean),
+				};
 
-      return [...head, newUser, agentPlaceholder];
-    });
+				return [...head, newUser, agentPlaceholder];
+			});
 
-    return payload;
-  }, []);
+			return payload;
+		},
+		[],
+	);
 
-  /**
-   * 在分枝點切換 fork（◀ ▶）
-   */
-  const switchFork = useCallback((msgId: string, direction: ForkDirection) => {
-    setMessages((prev) => {
-      const idx = prev.findIndex((m) => m.id === msgId);
-      if (idx < 0) return prev;
-      const user = prev[idx];
-      if (!user.forks?.length) return prev;
+	/**
+	 * 在分枝點切換 fork（◀ ▶）
+	 */
+	const switchFork = useCallback((msgId: string, direction: ForkDirection) => {
+		setMessages((prev) => {
+			const idx = prev.findIndex((m) => m.id === msgId);
+			if (idx < 0) return prev;
+			const user = prev[idx];
+			if (!user.forks?.length) return prev;
 
-      const cur = user.forkIndex ?? 0;
-      const currentTail = prev.slice(idx + 1);
-      const forks = user.forks.map((f, i) =>
-        i === cur
-          ? { ...f, content: user.content, images: user.images || [], tail: currentTail }
-          : f,
-      );
+			const cur = user.forkIndex ?? 0;
+			const currentTail = prev.slice(idx + 1);
+			const forks = user.forks.map((f, i) =>
+				i === cur
+					? {
+							...f,
+							content: user.content,
+							images: user.images || [],
+							tail: currentTail,
+						}
+					: f,
+			);
 
-      const nextIdx =
-        direction === 'prev'
-          ? (cur - 1 + forks.length) % forks.length
-          : (cur + 1) % forks.length;
+			const nextIdx =
+				direction === "prev"
+					? (cur - 1 + forks.length) % forks.length
+					: (cur + 1) % forks.length;
 
-      const target = forks[nextIdx];
-      const restoredUser: ChatMessage = {
-        ...user,
-        content: target.content,
-        images: target.images || [],
-        forks,
-        forkIndex: nextIdx,
-      };
+			const target = forks[nextIdx];
+			const restoredUser: ChatMessage = {
+				...user,
+				content: target.content,
+				images: target.images || [],
+				forks,
+				forkIndex: nextIdx,
+			};
 
-      return [...prev.slice(0, idx), restoredUser, ...(target.tail || [])];
-    });
-  }, []);
+			return [...prev.slice(0, idx), restoredUser, ...(target.tail || [])];
+		});
+	}, []);
 
-  return {
-    messages,
-    setMessages,
-    logs,
-    serverStatus,
-    setServerStatus,
-    waitingConfirm,
-    setWaitingConfirm,
-    waitingUserInput,
-    setWaitingUserInput,
-    chatEndRef,
-    scrollContainerRef,
-    handleScroll,
-    pinToBottom,
-    isStreamingRef,
-    isBusyRef,
-    handleAgentEvent,
-    clearMessages,
-    editUserMessage,
-    switchFork,
-  };
+	return {
+		messages,
+		setMessages,
+		logs,
+		serverStatus,
+		setServerStatus,
+		waitingConfirm,
+		setWaitingConfirm,
+		waitingUserInput,
+		setWaitingUserInput,
+		chatEndRef,
+		scrollContainerRef,
+		handleScroll,
+		pinToBottom,
+		isStreamingRef,
+		isBusyRef,
+		handleAgentEvent,
+		clearMessages,
+		editUserMessage,
+		switchFork,
+	};
 }

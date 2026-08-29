@@ -1,0 +1,24 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.11/schema.json",
+	"files": {
+		"includes": [
+			"**",
+			"!**/node_modules",
+			"!**/.git",
+			"!**/Lib",
+			"!**/site-packages",
+			"!**/.venv",
+			"!**/venv",
+			"!**/dist",
+			"!**/build"
+		]
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
+	"formatter": {
+		"enabled": true
+	}
+}

@@ -1,381 +1,472 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
-    Bot, Cpu,
-    Eraser,
-    FolderOpen,
-    ListTree,
-    PanelLeftClose, PanelLeftOpen, RefreshCw,
-    Server,
-    Terminal,
-    Trash2,
-    BrainCog,
-    Zap,
-    Globe,
-} from 'lucide-react';
-import type { ClientMode, ExecutionMode, ServerStatus, Theme } from '../types';
+	Bot,
+	Cpu,
+	Eraser,
+	FolderOpen,
+	ListTree,
+	Moon,
+	PanelLeftClose,
+	PanelLeftOpen,
+	RefreshCw,
+	Server,
+	Sun,
+	Terminal,
+	Trash2,
+	BrainCog,
+	Zap,
+	Globe,
+} from "lucide-react";
+import type { ClientMode, ExecutionMode, ServerStatus, Theme } from "../types";
 
 const MODE_OPTIONS: { value: ExecutionMode; label: string; hint: string }[] = [
-    { value: 'STEP_BY_STEP', label: '逐步確認', hint: '無視任務自己的判斷，每完成一步就暫停，等待你確認才繼續' },
-    { value: 'SMART', label: '智慧確認', hint: '由模型規劃時標的「需要確認」決定：高風險步驟才暫停，其餘自動繼續' },
-    { value: 'AUTO', label: '全自動', hint: '無視任務自己的判斷，中間不再暫停，直到全部完成或需要你介入' },
+	{
+		value: "STEP_BY_STEP",
+		label: "逐步確認",
+		hint: "無視任務自己的判斷，每完成一步就暫停，等待你確認才繼續",
+	},
+	{
+		value: "SMART",
+		label: "智慧確認",
+		hint: "由模型規劃時標的「需要確認」決定：高風險步驟才暫停，其餘自動繼續",
+	},
+	{
+		value: "AUTO",
+		label: "全自動",
+		hint: "無視任務自己的判斷，中間不再暫停，直到全部完成或需要你介入",
+	},
 ];
 
-const CLIENT_MODES: { value: ClientMode; label: string; icon: React.ReactNode; hint: string }[] = [
-    { value: 'local_llama', label: 'Local GGUF', icon: <FolderOpen size={13} />, hint: '直接用 llama-cpp-python 載入 GGUF 模型，無需啟動 HTTP 伺服器' },
-    { value: 'local_server', label: 'Local Server', icon: <Server size={13} />, hint: '啟動 llama-server.exe，透過本地 HTTP 伺服器推論' },
-    { value: 'remote_api', label: 'Remote API', icon: <Globe size={13} />, hint: '連接任意 OpenAI 相容 API（LM Studio、OpenAI、本地 vLLM 等）' },
+const CLIENT_MODES: {
+	value: ClientMode;
+	label: string;
+	icon: React.ReactNode;
+	hint: string;
+}[] = [
+	{
+		value: "local_llama",
+		label: "Local GGUF",
+		icon: <FolderOpen size={13} />,
+		hint: "直接用 llama-cpp-python 載入 GGUF 模型，無需啟動 HTTP 伺服器",
+	},
+	{
+		value: "local_server",
+		label: "Local Server",
+		icon: <Server size={13} />,
+		hint: "啟動 llama-server.exe，透過本地 HTTP 伺服器推論",
+	},
+	{
+		value: "remote_api",
+		label: "Remote API",
+		icon: <Globe size={13} />,
+		hint: "連接任意 OpenAI 相容 API（LM Studio、OpenAI、本地 vLLM 等）",
+	},
 ];
 
 type SidebarProps = {
-    isCollapsed: boolean;
-    setIsCollapsed: (collapsed: boolean) => void;
-    clientMode: ClientMode;
-    setClientMode: (mode: ClientMode) => void;
-    baseUrl: string;
-    setBaseUrl: (url: string) => void;
-    apiKey: string;
-    setApiKey: (key: string) => void;
-    modelName: string;
-    setModelName: (name: string) => void;
-    modelPath: string;
-    setModelPath: (path: string) => void;
-    applyApiConfig: () => void;
-    openChromeIncognito: (query?: string) => void;
-    serverStatus: ServerStatus;
-    checkServerHealth: () => void;
-    executionMode: ExecutionMode;
-    handleModeChange: (mode: ExecutionMode) => void;
-    clearDrawings: () => void;
-    clearHistory: () => void;
-    showLogWindow: boolean;
-    setShowLogWindow: (show: boolean) => void;
-    forgettingEnabled: boolean;
-    handleForgettingToggle: (enabled: boolean) => void;
-    activationEnabled: boolean;
-    handleActivationToggle: (enabled: boolean) => void;
-    theme?: Theme;
-    toggleTheme?: () => void;
+	isCollapsed: boolean;
+	setIsCollapsed: (collapsed: boolean) => void;
+	clientMode: ClientMode;
+	setClientMode: (mode: ClientMode) => void;
+	baseUrl: string;
+	setBaseUrl: (url: string) => void;
+	apiKey: string;
+	setApiKey: (key: string) => void;
+	modelName: string;
+	setModelName: (name: string) => void;
+	modelPath: string;
+	setModelPath: (path: string) => void;
+	applyApiConfig: () => void;
+	openChromeIncognito: (query?: string) => void;
+	serverStatus: ServerStatus;
+	checkServerHealth: () => void;
+	executionMode: ExecutionMode;
+	handleModeChange: (mode: ExecutionMode) => void;
+	clearDrawings: () => void;
+	clearHistory: () => void;
+	showLogWindow: boolean;
+	setShowLogWindow: (show: boolean) => void;
+	forgettingEnabled: boolean;
+	handleForgettingToggle: (enabled: boolean) => void;
+	activationEnabled: boolean;
+	handleActivationToggle: (enabled: boolean) => void;
+	theme?: Theme;
+	toggleTheme?: () => void;
 };
 
 export default function Sidebar({
-    isCollapsed,
-    setIsCollapsed,
-    clientMode,
-    setClientMode,
-    baseUrl,
-    setBaseUrl,
-    apiKey,
-    setApiKey,
-    modelName,
-    setModelName,
-    modelPath,
-    setModelPath,
-    applyApiConfig,
-    openChromeIncognito,
-    serverStatus,
-    checkServerHealth,
-    executionMode,
-    handleModeChange,
-    clearDrawings,
-    clearHistory,
-    showLogWindow,
-    setShowLogWindow,
-    forgettingEnabled,
-    handleForgettingToggle,
-    activationEnabled,
-    handleActivationToggle,
-    theme,
-    toggleTheme,
+	isCollapsed,
+	setIsCollapsed,
+	clientMode,
+	setClientMode,
+	baseUrl,
+	setBaseUrl,
+	apiKey,
+	setApiKey,
+	modelName,
+	setModelName,
+	modelPath,
+	setModelPath,
+	applyApiConfig,
+	openChromeIncognito,
+	serverStatus,
+	checkServerHealth,
+	executionMode,
+	handleModeChange,
+	clearDrawings,
+	clearHistory,
+	showLogWindow,
+	setShowLogWindow,
+	forgettingEnabled,
+	handleForgettingToggle,
+	activationEnabled,
+	handleActivationToggle,
+	theme,
+	toggleTheme,
 }: SidebarProps) {
-    const activeClientMode = CLIENT_MODES.find((m) => m.value === clientMode);
-    const [incognitoQuery, setIncognitoQuery] = useState('');
+	const activeClientMode = CLIENT_MODES.find((m) => m.value === clientMode);
+	const [incognitoQuery, setIncognitoQuery] = useState("");
 
-    return (
-        <aside
-            className={`bg-zinc-900/60 border-r border-zinc-800 flex flex-col shrink-0 transition-all duration-300 ease-in-out relative ${isCollapsed ? 'w-16 p-3 items-center' : 'w-80 p-4'
-                }`}
-        >
-            {/* 收合 / 展開 切換按鈕 */}
-            <div className={`flex items-center justify-between w-full pb-3 border-b border-zinc-800/80 ${isCollapsed ? 'flex-col gap-3' : ''}`}>
-                <div className="flex items-center gap-2 font-semibold text-zinc-100 tracking-tight overflow-hidden whitespace-nowrap">
-                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
-                        <Bot size={18} />
-                    </div>
-                    {!isCollapsed && <span>Desktop Agent</span>}
-                </div>
+	return (
+		<aside
+			className={`bg-zinc-900/60 border-r border-zinc-800 flex flex-col shrink-0 transition-all duration-300 ease-in-out relative ${
+				isCollapsed ? "w-16 p-3 items-center" : "w-80 p-4"
+			}`}
+		>
+			{/* 收合 / 展開 切換按鈕 */}
+			<div
+				className={`flex items-center justify-between w-full pb-3 border-b border-zinc-800/80 ${isCollapsed ? "flex-col gap-3" : ""}`}
+			>
+				<div className="flex items-center gap-2 font-semibold text-zinc-100 tracking-tight overflow-hidden whitespace-nowrap">
+					<div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+						<Bot size={18} />
+					</div>
+					{!isCollapsed && <span>Desktop Agent</span>}
+				</div>
 
-                <button
-                    onClick={() => setIsCollapsed(!isCollapsed)}
-                    className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
-                    title={isCollapsed ? "展開側邊欄" : "收合側邊欄"}
-                >
-                    {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-                </button>
-            </div>
+				<div
+					className={`flex items-center gap-0.5 ${isCollapsed ? "flex-col" : ""}`}
+				>
+					{toggleTheme && (
+						<button
+							type="button"
+							onClick={toggleTheme}
+							className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+							title={theme === "dark" ? "切換淺色" : "切換深色"}
+						>
+							{theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+						</button>
+					)}
+					<button
+						type="button"
+						onClick={() => setIsCollapsed(!isCollapsed)}
+						className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+						title={isCollapsed ? "展開側邊欄" : "收合側邊欄"}
+					>
+						{isCollapsed ? (
+							<PanelLeftOpen size={18} />
+						) : (
+							<PanelLeftClose size={18} />
+						)}
+					</button>
+				</div>
+			</div>
 
-            {!isCollapsed ? (
-                /* 展開模式內容 */
-                <div className="flex-1 overflow-y-auto space-y-5 my-4 pr-1">
-                    {/* LLM 客戶端配置卡片 */}
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-3 shadow-sm">
-                        <div className="flex items-center justify-between text-xs font-medium text-zinc-400">
-                            <span className="flex items-center gap-1.5"><Cpu size={14} /> LLM 客戶端配置</span>
-                            <button
-                                onClick={checkServerHealth}
-                                className="hover:text-zinc-200 transition-colors"
-                                title="重置與檢查連線"
-                            >
-                                <RefreshCw size={12} />
-                            </button>
-                        </div>
+			{!isCollapsed ? (
+				/* 展開模式內容 */
+				<div className="flex-1 overflow-y-auto space-y-5 my-4 pr-1">
+					{/* LLM 客戶端配置卡片 */}
+					<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-3 shadow-sm">
+						<div className="flex items-center justify-between text-xs font-medium text-zinc-400">
+							<span className="flex items-center gap-1.5">
+								<Cpu size={14} /> LLM 客戶端配置
+							</span>
+							<button
+								onClick={checkServerHealth}
+								className="hover:text-zinc-200 transition-colors"
+								title="重置與檢查連線"
+							>
+								<RefreshCw size={12} />
+							</button>
+						</div>
 
-                        {/* 模式切換 */}
-                        <div className="grid grid-cols-3 gap-1">
-                            {CLIENT_MODES.map((m) => (
-                                <button
-                                    key={m.value}
-                                    onClick={() => setClientMode(m.value)}
-                                    title={m.hint}
-                                    className={`flex flex-col items-center gap-1 py-2 px-1 rounded-lg text-[10px] font-medium border transition-all active:scale-[0.97] ${clientMode === m.value
-                                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                                        : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
-                                        }`}
-                                >
-                                    {m.icon}
-                                    {m.label}
-                                </button>
-                            ))}
-                        </div>
+						{/* 模式切換 */}
+						<div className="grid grid-cols-3 gap-1">
+							{CLIENT_MODES.map((m) => (
+								<button
+									key={m.value}
+									onClick={() => setClientMode(m.value)}
+									title={m.hint}
+									className={`flex flex-col items-center gap-1 py-2 px-1 rounded-lg text-[10px] font-medium border transition-all active:scale-[0.97] ${
+										clientMode === m.value
+											? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+											: "bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+									}`}
+								>
+									{m.icon}
+									{m.label}
+								</button>
+							))}
+						</div>
 
-                        {/* 模式說明 */}
-                        <p className="text-[10px] text-zinc-500 leading-relaxed">
-                            {activeClientMode?.hint}
-                        </p>
+						{/* 模式說明 */}
+						<p className="text-[10px] text-zinc-500 leading-relaxed">
+							{activeClientMode?.hint}
+						</p>
 
-                        {/* Local GGUF / Local Server：顯示模型路徑 */}
-                        {(clientMode === 'local_llama' || clientMode === 'local_server') && (
-                            <div className="space-y-1">
-                                <label className="text-[11px] text-zinc-400">
-                                    {clientMode === 'local_llama' ? 'GGUF 模型路徑' : '模型路徑 (供 llama-server 使用)'}
-                                </label>
-                                <input
-                                    type="text"
-                                    value={modelPath}
-                                    onChange={(e) => setModelPath(e.target.value)}
-                                    placeholder="C:\path\to\model.gguf"
-                                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono placeholder:text-zinc-600"
-                                />
-                            </div>
-                        )}
+						{/* Local GGUF / Local Server：顯示模型路徑 */}
+						{(clientMode === "local_llama" ||
+							clientMode === "local_server") && (
+							<div className="space-y-1">
+								<label className="text-[11px] text-zinc-400">
+									{clientMode === "local_llama"
+										? "GGUF 模型路徑"
+										: "模型路徑 (供 llama-server 使用)"}
+								</label>
+								<input
+									type="text"
+									value={modelPath}
+									onChange={(e) => setModelPath(e.target.value)}
+									placeholder="C:\path\to\model.gguf"
+									className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono placeholder:text-zinc-600"
+								/>
+							</div>
+						)}
 
-                        {/* Remote API：顯示 Base URL、API Key、Model Name */}
-                        {clientMode === 'remote_api' && (
-                            <div className="space-y-2">
-                                <div className="space-y-1">
-                                    <label className="text-[11px] text-zinc-400">API Base URL</label>
-                                    <input
-                                        type="text"
-                                        value={baseUrl}
-                                        onChange={(e) => setBaseUrl(e.target.value)}
-                                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono"
-                                    />
-                                </div>
+						{/* Remote API：顯示 Base URL、API Key、Model Name */}
+						{clientMode === "remote_api" && (
+							<div className="space-y-2">
+								<div className="space-y-1">
+									<label className="text-[11px] text-zinc-400">
+										API Base URL
+									</label>
+									<input
+										type="text"
+										value={baseUrl}
+										onChange={(e) => setBaseUrl(e.target.value)}
+										className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono"
+									/>
+								</div>
 
-                                <div className="space-y-1">
-                                    <label className="text-[11px] text-zinc-400">API Key</label>
-                                    <input
-                                        type="password"
-                                        value={apiKey}
-                                        onChange={(e) => setApiKey(e.target.value)}
-                                        placeholder="sk-..."
-                                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono placeholder:text-zinc-600"
-                                    />
-                                </div>
+								<div className="space-y-1">
+									<label className="text-[11px] text-zinc-400">API Key</label>
+									<input
+										type="password"
+										value={apiKey}
+										onChange={(e) => setApiKey(e.target.value)}
+										placeholder="sk-..."
+										className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono placeholder:text-zinc-600"
+									/>
+								</div>
 
-                                <div className="space-y-1">
-                                    <label className="text-[11px] text-zinc-400">Model Name</label>
-                                    <input
-                                        type="text"
-                                        value={modelName}
-                                        onChange={(e) => setModelName(e.target.value)}
-                                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono"
-                                    />
-                                </div>
-                            </div>
-                        )}
+								<div className="space-y-1">
+									<label className="text-[11px] text-zinc-400">
+										Model Name
+									</label>
+									<input
+										type="text"
+										value={modelName}
+										onChange={(e) => setModelName(e.target.value)}
+										className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono"
+									/>
+								</div>
+							</div>
+						)}
 
-                        <button
-                            onClick={applyApiConfig}
-                            className="w-full bg-zinc-100 hover:bg-white text-zinc-950 font-medium py-1.5 rounded-lg text-xs shadow transition-all active:scale-[0.98]"
-                        >
-                            {clientMode === 'local_llama'
-                                ? '載入模型'
-                                : clientMode === 'local_server'
-                                    ? '啟動 / 停止伺服器'
-                                    : '套用連線設定'}
-                        </button>
+						<button
+							onClick={applyApiConfig}
+							className="w-full bg-zinc-100 hover:bg-white text-zinc-950 font-medium py-1.5 rounded-lg text-xs shadow transition-all active:scale-[0.98]"
+						>
+							{clientMode === "local_llama"
+								? "載入模型"
+								: clientMode === "local_server"
+									? "啟動 / 停止伺服器"
+									: "套用連線設定"}
+						</button>
 
-                        <div className="flex items-center justify-between text-xs pt-2 border-t border-zinc-800/80">
-                            <span className="text-zinc-400">狀態</span>
-                            <span className="flex items-center gap-1.5 font-medium">
-                                <span className={`w-2 h-2 rounded-full ${serverStatus.running ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                                <span className={serverStatus.running ? 'text-zinc-200' : 'text-zinc-400'}>
-                                    {serverStatus.msg}
-                                </span>
-                            </span>
-                        </div>
-                    </div>
+						<div className="flex items-center justify-between text-xs pt-2 border-t border-zinc-800/80">
+							<span className="text-zinc-400">狀態</span>
+							<span className="flex items-center gap-1.5 font-medium">
+								<span
+									className={`w-2 h-2 rounded-full ${serverStatus.running ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
+								/>
+								<span
+									className={
+										serverStatus.running ? "text-zinc-200" : "text-zinc-400"
+									}
+								>
+									{serverStatus.msg}
+								</span>
+							</span>
+						</div>
+					</div>
 
-                    {/* 瀏覽器無痕模式卡片*/}
-                    {!isCollapsed && (
-                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-3 shadow-sm">
-                            <div className="flex items-center justify-between text-xs font-medium text-zinc-400">
-                                <span className="flex items-center gap-1.5"><Globe size={14} /> Chrome 無痕模式</span>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[11px] text-zinc-400">Google 搜尋關鍵字（留空則開啟首頁）</label>
-                                <input
-                                    type="text"
-                                    value={incognitoQuery}
-                                    onChange={(e) => setIncognitoQuery(e.target.value)}
-                                    placeholder="例如：ChatGPT 教學"
-                                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono"
-                                />
-                            </div>
-                            <button
-                                onClick={() => openChromeIncognito(incognitoQuery)}
-                                className="w-full bg-zinc-100 hover:bg-white text-zinc-950 font-medium py-1.5 rounded-lg text-xs shadow transition-all active:scale-[0.98]"
-                            >
-                                開啟 Chrome 無痕搜尋
-                            </button>
-                        </div>
-                    )}
+					{/* 瀏覽器無痕模式卡片*/}
+					{!isCollapsed && (
+						<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-3 shadow-sm">
+							<div className="flex items-center justify-between text-xs font-medium text-zinc-400">
+								<span className="flex items-center gap-1.5">
+									<Globe size={14} /> Chrome 無痕模式
+								</span>
+							</div>
+							<div className="space-y-1">
+								<label className="text-[11px] text-zinc-400">
+									Google 搜尋關鍵字（留空則開啟首頁）
+								</label>
+								<input
+									type="text"
+									value={incognitoQuery}
+									onChange={(e) => setIncognitoQuery(e.target.value)}
+									placeholder="例如：ChatGPT 教學"
+									className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono"
+								/>
+							</div>
+							<button
+								onClick={() => openChromeIncognito(incognitoQuery)}
+								className="w-full bg-zinc-100 hover:bg-white text-zinc-950 font-medium py-1.5 rounded-lg text-xs shadow transition-all active:scale-[0.98]"
+							>
+								開啟 Chrome 無痕搜尋
+							</button>
+						</div>
+					)}
 
-                    {/* 任務樹執行模式卡片 */}
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-3 shadow-sm">
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-400">
-                            <ListTree size={14} /> Task Tree 執行模式
-                        </div>
+					{/* 任務樹執行模式卡片 */}
+					<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-3 shadow-sm">
+						<div className="flex items-center gap-1.5 text-xs font-medium text-zinc-400">
+							<ListTree size={14} /> Task Tree 執行模式
+						</div>
 
-                        <div className="grid grid-cols-3 gap-1.5">
-                            {MODE_OPTIONS.map((opt) => (
-                                <button
-                                    key={opt.value}
-                                    onClick={() => handleModeChange(opt.value)}
-                                    title={opt.hint}
-                                    className={`py-2 rounded-lg text-[11px] font-medium border transition-all active:scale-[0.98] ${executionMode === opt.value
-                                        ? 'bg-emerald-500 border-emerald-400 text-zinc-950'
-                                        : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:bg-zinc-800'
-                                        }`}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
-                        <p className="text-[11px] text-zinc-500 leading-relaxed">
-                            {MODE_OPTIONS.find((o) => o.value === executionMode)?.hint || '每完成一步就暫停，等待你確認才繼續'}
-                        </p>
-                    </div>
+						<div className="grid grid-cols-3 gap-1.5">
+							{MODE_OPTIONS.map((opt) => (
+								<button
+									key={opt.value}
+									onClick={() => handleModeChange(opt.value)}
+									title={opt.hint}
+									className={`py-2 rounded-lg text-[11px] font-medium border transition-all active:scale-[0.98] ${
+										executionMode === opt.value
+											? "bg-emerald-500 border-emerald-400 text-zinc-950"
+											: "bg-zinc-950 border-zinc-800 text-zinc-300 hover:bg-zinc-800"
+									}`}
+								>
+									{opt.label}
+								</button>
+							))}
+						</div>
+						<p className="text-[11px] text-zinc-500 leading-relaxed">
+							{MODE_OPTIONS.find((o) => o.value === executionMode)?.hint ||
+								"每完成一步就暫停，等待你確認才繼續"}
+						</p>
+					</div>
 
-                    {/* 漸進式遺忘開關卡片 */}
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-2 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-400">
-                                <BrainCog size={14} /> 漸進式遺忘
-                            </span>
-                            <button
-                                onClick={() => handleForgettingToggle(!forgettingEnabled)}
-                                role="switch"
-                                aria-checked={forgettingEnabled}
-                                title={forgettingEnabled ? '點擊關閉' : '點擊開啟'}
-                                className={`relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0 ${forgettingEnabled ? 'bg-emerald-500' : 'bg-zinc-700'
-                                    }`}
-                            >
-                                <span
-                                    className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${forgettingEnabled ? 'translate-x-4' : 'translate-x-0'
-                                        }`}
-                                />
-                            </button>
-                        </div>
-                        <p className="text-[11px] text-zinc-500 leading-relaxed">
-                            {forgettingEnabled
-                                ? '開啟中：長期沒被存取的記憶會自動降低解析度（先回收局部覆寫，很久之後再精煉成更抽象的摘要），不會直接刪除。'
-                                : '關閉中：所有長期記憶維持原本的細節，不會自動被降低解析度。'}
-                        </p>
-                    </div>
+					{/* 漸進式遺忘開關卡片 */}
+					<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-2 shadow-sm">
+						<div className="flex items-center justify-between">
+							<span className="flex items-center gap-1.5 text-xs font-medium text-zinc-400">
+								<BrainCog size={14} /> 漸進式遺忘
+							</span>
+							<button
+								onClick={() => handleForgettingToggle(!forgettingEnabled)}
+								role="switch"
+								aria-checked={forgettingEnabled}
+								title={forgettingEnabled ? "點擊關閉" : "點擊開啟"}
+								className={`relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0 ${
+									forgettingEnabled ? "bg-emerald-500" : "bg-zinc-700"
+								}`}
+							>
+								<span
+									className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${
+										forgettingEnabled ? "translate-x-4" : "translate-x-0"
+									}`}
+								/>
+							</button>
+						</div>
+						<p className="text-[11px] text-zinc-500 leading-relaxed">
+							{forgettingEnabled
+								? "開啟中：長期沒被存取的記憶會自動降低解析度（先回收局部覆寫，很久之後再精煉成更抽象的摘要），不會直接刪除。"
+								: "關閉中：所有長期記憶維持原本的細節，不會自動被降低解析度。"}
+						</p>
+					</div>
 
-                    {/* Activation 開關卡片 */}
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-2 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-400">
-                                <Zap size={14} /> Activation（跨對話記憶啟用度）
-                            </span>
-                            <button
-                                onClick={() => handleActivationToggle(!activationEnabled)}
-                                role="switch"
-                                aria-checked={activationEnabled}
-                                title={activationEnabled ? '點擊關閉' : '點擊開啟'}
-                                className={`relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0 ${activationEnabled ? 'bg-emerald-500' : 'bg-zinc-700'
-                                    }`}
-                            >
-                                <span
-                                    className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${activationEnabled ? 'translate-x-4' : 'translate-x-0'
-                                        }`}
-                                />
-                            </button>
-                        </div>
-                        <p className="text-[11px] text-zinc-500 leading-relaxed">
-                            {activationEnabled
-                                ? '開啟中：記憶被想起（recall / search）的次數與新鮮度會跨對話累積成分數，之後排序時常被想起的東西會更優先被看到（會隨時間慢慢衰減，不是永久加分）。'
-                                : '關閉中：所有記憶單純依照關聯度與最近使用時間排序，不會有額外的「常被想起」加權。'}
-                        </p>
-                    </div>
-                </div>
-            ) : (
-                /* 收合模式圖示選單 */
-                <div className="flex-1 my-4 space-y-4 flex flex-col items-center">
-                    <div
-                        className={`w-3 h-3 rounded-full mt-2 ${serverStatus.running ? 'bg-emerald-500' : 'bg-rose-500'}`}
-                        title={`狀態: ${serverStatus.msg}`}
-                    />
-                    <div
-                        className="p-1.5 rounded-lg text-zinc-400"
-                        title={`執行模式: ${executionMode}`}
-                    >
-                        <ListTree size={16} />
-                    </div>
-                </div>
-            )}
+					{/* Activation 開關卡片 */}
+					<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-2 shadow-sm">
+						<div className="flex items-center justify-between">
+							<span className="flex items-center gap-1.5 text-xs font-medium text-zinc-400">
+								<Zap size={14} /> Activation（跨對話記憶啟用度）
+							</span>
+							<button
+								onClick={() => handleActivationToggle(!activationEnabled)}
+								role="switch"
+								aria-checked={activationEnabled}
+								title={activationEnabled ? "點擊關閉" : "點擊開啟"}
+								className={`relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0 ${
+									activationEnabled ? "bg-emerald-500" : "bg-zinc-700"
+								}`}
+							>
+								<span
+									className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${
+										activationEnabled ? "translate-x-4" : "translate-x-0"
+									}`}
+								/>
+							</button>
+						</div>
+						<p className="text-[11px] text-zinc-500 leading-relaxed">
+							{activationEnabled
+								? "開啟中：記憶被想起（recall / search）的次數與新鮮度會跨對話累積成分數，之後排序時常被想起的東西會更優先被看到（會隨時間慢慢衰減，不是永久加分）。"
+								: "關閉中：所有記憶單純依照關聯度與最近使用時間排序，不會有額外的「常被想起」加權。"}
+						</p>
+					</div>
+				</div>
+			) : (
+				/* 收合模式圖示選單 */
+				<div className="flex-1 my-4 space-y-4 flex flex-col items-center">
+					<div
+						className={`w-3 h-3 rounded-full mt-2 ${serverStatus.running ? "bg-emerald-500" : "bg-rose-500"}`}
+						title={`狀態: ${serverStatus.msg}`}
+					/>
+					<div
+						className="p-1.5 rounded-lg text-zinc-400"
+						title={`執行模式: ${executionMode}`}
+					>
+						<ListTree size={16} />
+					</div>
+				</div>
+			)}
 
-            {/* 底部功能工具按鈕 */}
-            <div className={`mt-auto space-y-2 w-full pt-2 border-t border-zinc-800/80 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
-                <button
-                    onClick={clearDrawings}
-                    className={`flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg text-xs transition-all active:scale-[0.98] ${isCollapsed ? 'p-2.5 w-10' : 'w-full py-2'
-                        }`}
-                    title="清除螢幕標記"
-                >
-                    <Eraser size={14} /> {!isCollapsed && "清除螢幕標記"}
-                </button>
+			{/* 底部功能工具按鈕 */}
+			<div
+				className={`mt-auto space-y-2 w-full pt-2 border-t border-zinc-800/80 ${isCollapsed ? "flex flex-col items-center" : ""}`}
+			>
+				<button
+					onClick={clearDrawings}
+					className={`flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg text-xs transition-all active:scale-[0.98] ${
+						isCollapsed ? "p-2.5 w-10" : "w-full py-2"
+					}`}
+					title="清除螢幕標記"
+				>
+					<Eraser size={14} /> {!isCollapsed && "清除螢幕標記"}
+				</button>
 
-                <button
-                    onClick={clearHistory}
-                    className={`flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg text-xs transition-all active:scale-[0.98] ${isCollapsed ? 'p-2.5 w-10' : 'w-full py-2'
-                        }`}
-                    title="清空對話紀錄"
-                >
-                    <Trash2 size={14} /> {!isCollapsed && "清空對話紀錄"}
-                </button>
+				<button
+					onClick={clearHistory}
+					className={`flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg text-xs transition-all active:scale-[0.98] ${
+						isCollapsed ? "p-2.5 w-10" : "w-full py-2"
+					}`}
+					title="清空對話紀錄"
+				>
+					<Trash2 size={14} /> {!isCollapsed && "清空對話紀錄"}
+				</button>
 
-                <button
-                    onClick={() => setShowLogWindow(!showLogWindow)}
-                    className={`flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg text-xs transition-all active:scale-[0.98] ${isCollapsed ? 'p-2.5 w-10' : 'w-full py-2'
-                        }`}
-                    title="切換面板 Log"
-                >
-                    <Terminal size={14} /> {!isCollapsed && (showLogWindow ? '關閉面板 Log' : '開啟面板 Log')}
-                </button>
-            </div>
-        </aside>
-    );
+				<button
+					onClick={() => setShowLogWindow(!showLogWindow)}
+					className={`flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg text-xs transition-all active:scale-[0.98] ${
+						isCollapsed ? "p-2.5 w-10" : "w-full py-2"
+					}`}
+					title="切換面板 Log"
+				>
+					<Terminal size={14} />{" "}
+					{!isCollapsed && (showLogWindow ? "關閉面板 Log" : "開啟面板 Log")}
+				</button>
+			</div>
+		</aside>
+	);
 }
