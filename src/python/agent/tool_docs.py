@@ -27,7 +27,7 @@ execute_python(code: str) — 執行 Python 程式碼，回傳 print() 印出的
   再原封不動貼進 draw_stroke 的 points 參數，不要自己手動一個個猜寫座標。
 
 範例：
-<|tool_call|>call:execute_python("w, h = 1920, 1080\\nbox_w, box_h = 300, 300\\nprint(f'x={int(w/2 - box_w/2)}, y={int(h/2 - box_h/2)}')")<|tool_call|>
+<|tool_call|>execute_python("w, h = 1920, 1080\\nbox_w, box_h = 300, 300\\nprint(f'x={int(w/2 - box_w/2)}, y={int(h/2 - box_h/2)}')")<|tool_call|>
 """.strip(),
 
     "draw_box": """
@@ -52,8 +52,8 @@ draw_stroke(points, color="#00FF00", width=3) — 自由塗鴉/連續畫筆，�
 - color 必須是 6 位數 Hex 色碼。
 
 範例（先用 execute_python 算出一圈圓形座標，再連續畫出來）：
-<|tool_call|>call:execute_python("import math\\ncx, cy, r = 960, 540, 100\\npts = [[int(cx + r*math.cos(t)), int(cy + r*math.sin(t))] for t in [i/20*2*math.pi for i in range(21)]]\\nprint(pts)")<|tool_call|>
-<|tool_call|>call:draw_stroke([[1060, 540], [1057, 571], [1048, 601], [1034, 629]], "#00FF00", 3)<|tool_call|>
+<|tool_call|>execute_python("import math\\ncx, cy, r = 960, 540, 100\\npts = [[int(cx + r*math.cos(t)), int(cy + r*math.sin(t))] for t in [i/20*2*math.pi for i in range(21)]]\\nprint(pts)")<|tool_call|>
+<|tool_call|>draw_stroke([[1060, 540], [1057, 571], [1048, 601], [1034, 629]], "#00FF00", 3)<|tool_call|>
 """.strip(),
 
     "erase_at": """
@@ -120,8 +120,8 @@ runtime_action 預設為 "context"，只把結論提供給模型；可明確指�
 "replan"（讓相關 task 進入重新規劃）。只有關聯對象內容沒有變動、結論仍新鮮時才會生效。
 
 範例（先記住一個函式，再記錄對它的分析結論）：
-<|tool_call|>call:remember("parser.parse_expr", "Function", "解析運算式的核心函式")<|tool_call|>
-<|tool_call|>call:record_observation("obs_parse_expr_nullcheck", "parser.parse_expr", "沒有處理空字串輸入，可能會拋出例外", 0.85)<|tool_call|>
+<|tool_call|>remember("parser.parse_expr", "Function", "解析運算式的核心函式")<|tool_call|>
+<|tool_call|>record_observation("obs_parse_expr_nullcheck", "parser.parse_expr", "沒有處理空字串輸入，可能會拋出例外", 0.85)<|tool_call|>
 """.strip(),
 
     "recall_observation": """

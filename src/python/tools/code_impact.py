@@ -26,19 +26,27 @@ def queue_impact_check_tasks(engine: TaskEngine, store: MemoryStore,
     anchor_idx = next((i for i, t in enumerate(engine.tasks) if t.id == after_task_id), None)
     insert_at = anchor_idx + 1 if anchor_idx is not None else len(engine.tasks)
 
+    # 同一個原因：_auto_queue_impact_checks 一個任務生命週期內會被呼叫兩次
+    # （開始前、完成後），id 又是純機械式產生、確定性的，不擋會插入兩份一樣的任務。
+    existing_ids = {t.id for t in engine.tasks}
+
     new_tasks = []
     for i, caller_id in enumerate(callers, start=1):
+        candidate_id = f"{after_task_id}.impact{i}"
+        if candidate_id in existing_ids:
+            continue
         caller_node = store.get_node(caller_id)
         caller_file = caller_node.properties.get("file", "") if caller_node else ""
 
         t = TaskNode(
-            f"{after_task_id}.impact{i}",
+            candidate_id,
             f"檢查 {caller_id} 是否受 {changed_func_id} 的修改影響"
         )
         t.method = f"讀取 {caller_id}（{caller_file}）的原始碼，比對 {changed_func_id} 新的簽名/行為是否仍相容"
         t.condition = f"確認 {caller_id} 呼叫 {changed_func_id} 的地方仍然正確，或已經同步修正"
         t.note = "這個任務是根據 Code Graph 的 CALLS 關聯自動產生的，不是模型猜的"
         t.need_confirm = True  # 會改到別的檔案，保守起見預設要人確認
+        t.is_auto_impact_check = True  # 終點任務：不再對它自己觸發下一輪影響掃描
         new_tasks.append(t)
 
     engine.tasks[insert_at:insert_at] = new_tasks

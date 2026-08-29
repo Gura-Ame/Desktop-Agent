@@ -14,6 +14,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 import webview
 
+os.environ['WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS'] = '--remote-debugging-port=9222'
 os.environ["QT_LOGGING_RULES"] = "qt.qpa.window.warning=false"
 warnings.filterwarnings("ignore", category=UserWarning, module="pywinauto")
 
@@ -208,6 +209,36 @@ class JsApi:
         self.dispatch_event("log", f"[系統] {result}")
         return {"status": "ok", "msg": result}
 
+    def ping(self):
+        """前端用來確認 bridge 是否真的掛上（console 裡 api 常看起來是空物件）。"""
+        return {"status": "ok", "msg": "pong"}
+
+    def copy_to_clipboard(self, text: str):
+        """用 Win32 API 寫剪貼簿，避開 WebEngine COM 問題。"""
+        try:
+            import win32clipboard
+            import win32con
+
+            win32clipboard.OpenClipboard()
+            try:
+                win32clipboard.EmptyClipboard()
+                win32clipboard.SetClipboardData(win32con.CF_UNICODETEXT, str(text))
+            finally:
+                win32clipboard.CloseClipboard()
+            return {"status": "ok"}
+        except Exception as e:
+            try:
+                # 後備：Qt clipboard（需在主執行緒；失敗就回傳錯誤）
+                from PyQt6.QtWidgets import QApplication
+
+                cb = QApplication.clipboard()
+                if cb is not None:
+                    cb.setText(str(text))
+                    return {"status": "ok", "via": "qt"}
+            except Exception:
+                pass
+            return {"status": "error", "msg": str(e)}
+
 
 def main():
     try:
@@ -246,6 +277,55 @@ def main():
     )
     api.set_window(window)
 
+    # main.py 裡 create_window 可保留 js_api=api（無害），但真正生效靠 expose
+    # fuck pywebview 破問題 不知道為啥js_api會被覆蓋掉，導致前端呼叫 api 會變成空物件
+    def _expose_api():
+        method_names = [
+            "ping", "poll_events", "send_prompt", "stop_agent",
+            "confirm_step", "submit_user_input", "set_execution_mode",
+            "set_forgetting_enabled", "set_activation_enabled",
+            "update_api_config", "load_llama_model", "toggle_local_server",
+            "open_chrome_incognito", "clear_drawings", "clear_history",
+            "unload_vision_models", "copy_to_clipboard",
+        ]
+
+        # 用具名 wrapper，避免 bound method / __name__ 在 6.x 出怪問題
+        def _wrap(name):
+            def _fn(*args, **kwargs):
+                return getattr(api, name)(*args, **kwargs)
+            _fn.__name__ = name
+            return _fn
+
+        try:
+            window.expose(*[_wrap(n) for n in method_names if callable(getattr(api, n, None))])
+            print(f"[JsApi] expose 完成")
+        except Exception as e:
+            print(f"[JsApi] expose 失敗: {e}")
+            return
+
+        try:
+            t_poll = window.evaluate_js(
+                "window.pywebview && window.pywebview.api "
+                "? typeof window.pywebview.api.poll_events : 'n/a'"
+            )
+            print(f"[JsApi] after expose poll_events typeof = {t_poll}")
+        except Exception as e:
+            print(f"[JsApi] evaluate_js 失敗: {e}")
+
+    # 每次頁面 loaded 都重掛（Vite 重新整理也會再來一次）
+    window.events.loaded += _expose_api
+
+    # Vite SPA：loaded 後再延遲重掛一次，防止第一次被覆蓋
+    def _delayed_reexpose():
+        import threading
+        def _run():
+            import time
+            time.sleep(1.0)
+            _expose_api()
+        threading.Thread(target=_run, daemon=True).start()
+
+    window.events.loaded += _delayed_reexpose
+    
     webview.start(gui="edgechromium", debug=True)
 
 

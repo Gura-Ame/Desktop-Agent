@@ -3,19 +3,19 @@
 venv/
 env/
 ENV/
-Scripts/
-Lib/
-Include/
-pyvenv.cfg
+/Scripts/
+/Lib/
+/Include/
+/pyvenv.cfg
 __pycache__/
 *.py[cod]
 .pytest_cache/
 
 # Node/Vite generated files
-node_modules/
-dist/
+/node_modules/
+/dist/
 
 # Local application state and editor files
-agent_memory.json
-.vscode/
-.idea/
+/agent_memory.json
+/.vscode/
+/.idea/

@@ -59,7 +59,7 @@ def test_single_tool_call_executes_exactly_once(memory_path):
     agent = make_agent(memory_path)
     agent.available_functions["counted_action"] = counted_action
 
-    content = '呼叫看看：\n<|tool_call|>call:counted_action("hi")<|tool_call|>\n呼叫完了。'
+    content = '呼叫看看：\n<|tool_call|>counted_action("hi")<|tool_call|>\n呼叫完了。'
     is_tool, combined, interleaved = agent._execute_tools(content)
 
     assert is_tool is True
@@ -81,10 +81,10 @@ def test_multiple_tool_calls_each_result_stays_next_to_its_own_call(memory_path)
 
     content = (
         "先做第一步：\n"
-        "<|tool_call|>call:step_a()<|tool_call|>\n"
+        "<|tool_call|>step_a()<|tool_call|>\n"
         "這中間夾了一段說明文字，模型正在解釋接下來要做什麼。\n"
         "再做第二步：\n"
-        "<|tool_call|>call:step_b()<|tool_call|>\n"
+        "<|tool_call|>step_b()<|tool_call|>\n"
         "最後總結。"
     )
     is_tool, combined, interleaved = agent._execute_tools(content)
@@ -118,8 +118,8 @@ def test_failing_call_tagged_as_error_succeeding_call_tagged_as_result(memory_pa
     agent.available_functions["ok_action"] = lambda: "fine"
 
     content = (
-        "<|tool_call|>call:boom()<|tool_call|>\n"
-        "<|tool_call|>call:ok_action()<|tool_call|>"
+        "<|tool_call|>boom()<|tool_call|>\n"
+        "<|tool_call|>ok_action()<|tool_call|>"
     )
     is_tool, combined, interleaved = agent._execute_tools(content)
 
@@ -138,7 +138,7 @@ def test_failing_call_tagged_as_error_succeeding_call_tagged_as_result(memory_pa
 @with_temp_memory
 def test_unknown_function_reported_as_error(memory_path):
     agent = make_agent(memory_path)
-    content = '<|tool_call|>call:does_not_exist("x")<|tool_call|>'
+    content = '<|tool_call|>does_not_exist("x")<|tool_call|>'
     is_tool, combined, interleaved = agent._execute_tools(content)
 
     assert is_tool is True

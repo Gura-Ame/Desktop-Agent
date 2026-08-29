@@ -109,13 +109,13 @@ class TestVisionTools(unittest.TestCase):
         agent = AgentWorker(functions, event_callback=mock_cb, memory_path="test_temp_mem.json")
         try:
             # Test inline tool execution
-            tool_call_str = '<|tool_call|>call:analyze_image_ocr("dummy.png", "<OCR_RAW>")<|tool_call|>'
+            tool_call_str = '<|tool_call|>analyze_image_ocr("dummy.png", "<OCR_RAW>")<|tool_call|>'
             is_tool, combined_result, interleaved = agent._execute_tools(tool_call_str)
             self.assertTrue(is_tool)
             self.assertIn("[OCR result]", combined_result)
 
             # Test unload tool call
-            unload_call_str = '<|tool_call|>call:unload_all_vision_models()<|tool_call|>'
+            unload_call_str = '<|tool_call|>unload_all_vision_models()<|tool_call|>'
             is_tool2, combined_result2, _ = agent._execute_tools(unload_call_str)
             self.assertTrue(is_tool2)
             self.assertIn("[All unloaded]", combined_result2)

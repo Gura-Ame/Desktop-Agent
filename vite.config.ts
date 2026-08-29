@@ -10,4 +10,7 @@ export default defineConfig({
 		babel({ presets: [reactCompilerPreset()] }),
 		tailwindcss(),
 	],
+	build: {
+		sourcemap: true, // 確保產生 sourcemap
+	},
 });

@@ -70,12 +70,29 @@ export function useAgentEventHandler({
 						const patch = data as { old?: string; new?: string } | undefined;
 						const old = patch?.old;
 						const replacement = patch?.new;
-						if (typeof old !== "string" || typeof replacement !== "string")
-							return prev;
-						if (!last.content.endsWith(old)) return prev;
-						const patched =
-							last.content.slice(0, last.content.length - old.length) +
-							replacement;
+						if (typeof old !== "string" || typeof replacement !== "string") return prev;
+
+						let patched: string;
+						if (last.content.endsWith(old)) {
+							patched = last.content.slice(0, -old.length) + replacement;
+						} else {
+							const idx = last.content.lastIndexOf(old);
+							if (idx >= 0) {
+								patched =
+								last.content.slice(0, idx) +
+								replacement +
+								last.content.slice(idx + old.length);
+							} else {
+								// 對不上就至少保證 result 進畫面（可再收成只補 tool 區段）
+								console.warn("[chunk_patch] old not found", {
+									lastLen: last.content.length,
+									oldLen: old.length,
+								});
+								patched = last.content.includes("<|tool_call|>")
+									? replacement
+									: last.content + replacement;
+							}
+						}
 						return [...prev.slice(0, -1), { ...last, content: patched }];
 					});
 					break;

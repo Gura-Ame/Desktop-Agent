@@ -13,10 +13,10 @@ def test_reasoning_escalates_to_planning_with_decompose_and_smart_confirm():
     scripts = {
         "system": [
             ESCALATE_RESPONSE,
-            '<|tool_call|>call:run_action("mkdir docs images")<|tool_call|>',
-            '<|tool_call|>call:run_action("move files")<|tool_call|>',
-            '<|tool_call|>call:run_action("move files carefully, retry")<|tool_call|>',
-            '<|tool_call|>call:run_action("print report")<|tool_call|>',
+            '<|tool_call|>run_action("mkdir docs images")<|tool_call|>',
+            '<|tool_call|>run_action("move files")<|tool_call|>',
+            '<|tool_call|>run_action("move files carefully, retry")<|tool_call|>',
+            '<|tool_call|>run_action("print report")<|tool_call|>',
         ],
         "planner": [PLAN_DSL],
         "decompose": [DECOMPOSE_DSL],
@@ -146,7 +146,7 @@ def test_truncated_without_conclusion_auto_escalates_to_planning():
 def test_truncated_but_has_tool_call_does_not_force_escalate():
     scripts = {
         "system": [
-            ('<|tool_call|>call:run_action("do something long")<|tool_call|>\n後面接了很長的說明文字...', "length"),
+            ('<|tool_call|>run_action("do something long")<|tool_call|>\n後面接了很長的說明文字...', "length"),
             "工具結果我看到了，這是最終回覆。",
         ],
     }

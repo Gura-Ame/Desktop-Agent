@@ -150,7 +150,7 @@ def test_search_memory_registered_as_tool():
         agent = _make_agent(path)
         assert "search_memory" in agent.available_functions
         agent.remember("x", "Fact", "一些內容")
-        content = '<|tool_call|>call:search_memory("內容")<|tool_call|>'
+        content = '<|tool_call|>search_memory("內容")<|tool_call|>'
         is_tool, combined, interleaved = agent._execute_tools(content)
         assert is_tool is True
         assert "找到" in combined

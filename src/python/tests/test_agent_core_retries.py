@@ -9,7 +9,7 @@ from test_agent_core_helpers import make_agent, wait_until
 def test_reasoning_does_not_escalate_reuses_first_call():
     scripts = {
         "system": [
-            '簡單問題，直接查詢時間就好。\n<|tool_call|>call:run_action("get_time")<|tool_call|>',
+            '簡單問題，直接查詢時間就好。\n<|tool_call|>run_action("get_time")<|tool_call|>',
             "現在是下午三點。",
         ],
         "compress": [
@@ -40,7 +40,7 @@ def test_ask_user_triggered_after_max_retries():
             "分析: 持續卡關\n修正方法: retry v3\n修正注意: 小心一點\n拆解: NO\n新信心值: 0.5\n",
             "分析: 使用者回覆後再試一次\n修正方法: retry v4 with user hint\n修正注意: 照使用者指示做\n拆解: NO\n新信心值: 0.9\n",
         ],
-        "system": [f'<|tool_call|>call:run_action("attempt {i}")<|tool_call|>' for i in range(1, 6)],
+        "system": [f'<|tool_call|>run_action("attempt {i}")<|tool_call|>' for i in range(1, 6)],
         "verify": fail_then_pass_verify,
         "reflect": [ECHO_REFLECT],
     }

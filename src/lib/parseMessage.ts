@@ -2,7 +2,7 @@ import type { MessageBlock, ToolStatus } from "../types";
 
 /**
  * 把 agent 回覆拆成 text / tool 區塊。
- * 支援 <|tool_call|>call:fn(...)<|tool_call|> 與後續 <tool_result> / <tool_error>
+ * 支援 <|tool_call|>fn(...)<|tool_call|> 與後續 <tool_result> / <tool_error>
  *
  * 注意：tool_result 可能中間夾空白/換行；finished 後仍無 result 視為失敗，不要永遠「執行中」。
  */
@@ -68,7 +68,7 @@ export function parseMessageContent(
 		}
 
 		const afterHeader = content.slice(toolCallStart + 13);
-		const callMatch = afterHeader.match(/^\s*call:(\w+)\(/);
+		const callMatch = afterHeader.match(/^\s*(\w+)\(/);
 
 		if (!callMatch) {
 			blocks.push({

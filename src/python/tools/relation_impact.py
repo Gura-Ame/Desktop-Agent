@@ -30,20 +30,32 @@ def queue_relation_impact_tasks(engine: TaskEngine, store: MemoryStore,
     anchor_idx = next((i for i, t in enumerate(engine.tasks) if t.id == after_task_id), None)
     insert_at = anchor_idx + 1 if anchor_idx is not None else len(engine.tasks)
 
+    # _auto_queue_impact_checks 在同一個任務生命週期裡會被呼叫兩次（開始前預掃一次、
+    # 完成後再掃一次），兩次掃到的是同一份 related_ids，id 又是純機械式產生
+    # （f"{after_task_id}.rel_impact{i}"）、完全確定性、不含亂數或時間戳，
+    # 如果不檢查就會插入兩份 id 一模一樣的重複任務。這裡用「id 是否已存在」擋掉，
+    # 而不是用某種「這個任務有沒有被掃過」的旗標，這樣不管未來還有沒有其他呼叫點
+    # 會重複觸發，只要 id 相同就一律視為已經插過，天然去重。
+    existing_ids = {t.id for t in engine.tasks}
+
     new_tasks = []
     for i, related_id in enumerate(related_ids, start=1):
+        candidate_id = f"{after_task_id}.rel_impact{i}"
+        if candidate_id in existing_ids:
+            continue
         related_node = store.get_node(related_id)
         related_summary = related_node.summary if related_node else ""
         related_type = related_node.type if related_node else "?"
 
         t = TaskNode(
-            f"{after_task_id}.rel_impact{i}",
+            candidate_id,
             f"檢查 {related_id} 是否受 {changed_id} 的變更影響"
         )
         t.method = f"檢視 {related_id}（{related_type}: {related_summary}）跟 {changed_id} 之間的關聯是否還成立"
         t.condition = f"確認 {related_id} 跟 {changed_id} 的關聯內容仍然正確，或已經同步修正"
         t.note = "這個任務是根據記憶裡的關聯自動產生的，不是模型猜的"
         t.need_confirm = True  # 保守起見預設要人確認
+        t.is_auto_impact_check = True  # 終點任務：不再對它自己觸發下一輪影響掃描
         new_tasks.append(t)
 
     engine.tasks[insert_at:insert_at] = new_tasks

@@ -137,7 +137,7 @@ def test_value_judgment_uses_original_user_prompt_not_tool_result_message(memory
 
     scripts = {
         "system": [
-            '<|tool_call|>call:run_action("do it")<|tool_call|>',
+            '<|tool_call|>run_action("do it")<|tool_call|>',
             "工具跑完了，這是結果。",
         ],
         "compress": [

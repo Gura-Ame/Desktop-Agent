@@ -22,7 +22,7 @@ def test_replan_marker_in_execute_stage_defers_verify_and_resumes_after_reflect(
     scripts = {
         "system": [
             "<|replan|>發現原本的假設整個方向錯了，需要重新規劃",
-            '<|tool_call|>call:run_action("redo with new plan")<|tool_call|>',
+            '<|tool_call|>run_action("redo with new plan")<|tool_call|>',
         ],
         "reflect": [ECHO_REFLECT, ECHO_REFLECT],
         "verify": ["STATUS: PASS\nREASON: 重新規劃後成功"],
@@ -67,7 +67,7 @@ def test_replan_marker_in_thinking_stage_also_triggers():
             "分析: 重新想過，這樣做應該可以了\n修正方法: v2\n修正注意: 無\n拆解: NO\n新信心值: 0.8\n",
         ],
         "reflect": [ECHO_REFLECT, ECHO_REFLECT],
-        "system": ['<|tool_call|>call:run_action("redo")<|tool_call|>'],
+        "system": ['<|tool_call|>run_action("redo")<|tool_call|>'],
         "verify": ["STATUS: PASS\nREASON: ok"],
     }
     agent, events, tool_calls = make_agent(scripts, mode=ExecutionMode.AUTO)
@@ -99,7 +99,7 @@ def test_replan_marker_in_thinking_stage_also_triggers():
 def test_no_replan_marker_behaves_exactly_as_before():
     """完全沒有出現標記的一般情況，行為應該跟原本一模一樣（一次執行、一次驗證、一次 reflect）。"""
     scripts = {
-        "system": ['<|tool_call|>call:run_action("normal task")<|tool_call|>'],
+        "system": ['<|tool_call|>run_action("normal task")<|tool_call|>'],
         "verify": ["STATUS: PASS\nREASON: ok"],
         "reflect": [ECHO_REFLECT],
     }

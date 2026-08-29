@@ -77,8 +77,8 @@ def test_build_code_graph_and_find_callers_via_tool_call(mem_path, src_path):
     clean_src_path = src_path.replace("\\", "/")
     scripts = {
         "system": [
-            f'<|tool_call|>call:build_code_graph("{clean_src_path}", "sample")<|tool_call|>',
-            '<|tool_call|>call:find_callers("sample.helper")<|tool_call|>',
+            f'<|tool_call|>build_code_graph("{clean_src_path}", "sample")<|tool_call|>',
+            '<|tool_call|>find_callers("sample.helper")<|tool_call|>',
             "查完了，helper 被 handle_login 呼叫。",
         ],
     }
@@ -139,7 +139,7 @@ def test_full_task_completion_flow_triggers_impact_checks(mem_path, src_path):
     """端到端：任務走完整個 think/execute/verify 流程正常完成後，
     影響檢查任務有沒有真的被插進 Task Tree 裡（不是只測 _auto_queue_impact_checks 本身）。"""
     scripts = {
-        "system": ['<|tool_call|>call:execute_python("print(1)")<|tool_call|>'],
+        "system": ['<|tool_call|>execute_python("print(1)")<|tool_call|>'],
         "verify": ["STATUS: PASS\nREASON: 已完成修改"],
         "reflect": [ECHO_REFLECT],
     }

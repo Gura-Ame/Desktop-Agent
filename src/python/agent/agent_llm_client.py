@@ -217,7 +217,7 @@ class AgentLLMClientMixin(_Base):
         return get_tool_doc(name)
 
     def _execute_tools(self, content: str):
-        pattern = r'<\|tool_call\|>call:(\w+)\(([\s\S]*?)\)\s*</?\|?tool_call\|?>'
+        pattern = r'<\|tool_call\|>(\w+)\(([\s\S]*?)\)\s*</?\|?tool_call\|?>'
         matches = list(re.finditer(pattern, content))
         if not matches:
             return False, content, content

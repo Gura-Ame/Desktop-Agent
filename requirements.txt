@@ -18,3 +18,4 @@ paddlepaddle
 timm
 einops
 
+qtpy

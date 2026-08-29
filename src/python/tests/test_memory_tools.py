@@ -42,9 +42,9 @@ def test_remember_and_recall_persist_and_surface_in_context():
         scripts = {
             "router": ["DIRECT"],
             "system": [
-                '<|tool_call|>call:remember("lemma1", "Lemma", '
+                '<|tool_call|>remember("lemma1", "Lemma", '
                 '"若 ab+1 整除 a^2+b^2 則商是完全平方數", {"proved": True})<|tool_call|>',
-                '<|tool_call|>call:recall("lemma1")<|tool_call|>',
+                '<|tool_call|>recall("lemma1")<|tool_call|>',
                 "已經記住這個結論了，之後可以直接用。",
             ],
         }
@@ -86,7 +86,7 @@ def test_working_memory_context_reaches_next_prompt():
         scripts = {
             "router": ["DIRECT"],
             "system": [
-                '<|tool_call|>call:remember("steak", "Food", "高蛋白食物")<|tool_call|>',
+                '<|tool_call|>remember("steak", "Food", "高蛋白食物")<|tool_call|>',
                 "好，我看到摘要了。",
             ],
         }

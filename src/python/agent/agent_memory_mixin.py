@@ -131,7 +131,27 @@ class AgentMemoryMixin(_Base):
             return f"{func_id} 沒有呼叫任何已知函式（或這個檔案還沒用 build_code_graph 建立過）。"
         return f"{func_id} 呼叫了: {', '.join(callees)}"
 
+    # 用來判斷一個任務 id 是不是「自動產生的影響檢查任務」——不能只看
+    # TaskNode.is_auto_impact_check 這個 Python 屬性，因為 Reflect 每次都會把
+    # 非 COMPLETED/DECOMPOSED 的任務整個用重新解析出來的新物件取代掉
+    # （apply_reflected_dsl），而這個屬性根本不是 DSL 文字格式的一部分，
+    # 换句話說：只要這個任務還沒執行完就先被 Reflect 摸過一次，屬性就會
+    # 悄悄被重置回預設值 False，導致終點任務的保護形同虛設。id 本身的命名規則
+    # （".impact數字" / ".rel_impact數字" 結尾）才是唯一保證會跨越這種
+    # 物件替換存活下來的訊號，所以用 id pattern 當作判斷的真正依據。
+    _AUTO_IMPACT_CHECK_ID_RE = re.compile(r'\.(?:impact|rel_impact)\d+$')
+
+    def _is_auto_impact_check_task(self, task: TaskNode) -> bool:
+        return bool(self._AUTO_IMPACT_CHECK_ID_RE.search(task.id)) or \
+            getattr(task, "is_auto_impact_check", False)
+
     def _auto_queue_impact_checks(self, task: TaskNode):
+        # 終點任務（本身就是自動產生的影響檢查任務）不再往下觸發新一輪掃描，
+        # 否則它自己的描述文字必然會提到被改動的節點，導致無止盡地連鎖生成
+        # 下一個、再下一個影響檢查任務（見上面 _is_auto_impact_check_task 的說明）。
+        if self._is_auto_impact_check_task(task):
+            return
+
         from tools.code_impact import queue_impact_check_tasks
         from tools.relation_impact import queue_relation_impact_tasks
 

@@ -150,7 +150,7 @@ SYSTEM_PROMPT = """你是一個具備電腦自動化控制能力的 AI 助手。
 <|plan|>這是一個需要嚴謹證明的數學題，需要嘗試不同證明策略並驗算，不是一次就能寫對的
 
 當需要呼叫工具時，嚴格使用位置參數格式：
-<|tool_call|>call:function_name(arg1, arg2, ...)<|tool_call|>
+<|tool_call|>function_name(arg1, arg2, ...)<|tool_call|>
 
 【執行途中發現需要重新規劃：<|replan|>原因】
 這個標記跟上面的 <|plan|> 不一樣：<|plan|> 只用在對話一開始、還沒有任務樹的時候；

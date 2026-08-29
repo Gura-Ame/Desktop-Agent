@@ -98,7 +98,7 @@ def test_lazy_tool_doc_injected_on_first_real_call_only():
     agent, events, _ = make_agent(scripts, mode=ExecutionMode.SMART)
     agent.available_functions["execute_python"] = lambda code: "42"
 
-    content1 = '<|tool_call|>call:execute_python("print(6*7)")<|tool_call|>'
+    content1 = '<|tool_call|>execute_python("print(6*7)")<|tool_call|>'
     is_tool, combined1, interleaved1 = agent._execute_tools(content1)
 
     assert is_tool
@@ -111,7 +111,7 @@ def test_lazy_tool_doc_injected_on_first_real_call_only():
     assert "[execute_python]: 42" in interleaved1
 
     # 第二次呼叫同一個工具，不該再重複夾帶文件
-    content2 = '<|tool_call|>call:execute_python("print(1+1)")<|tool_call|>'
+    content2 = '<|tool_call|>execute_python("print(1+1)")<|tool_call|>'
     agent.available_functions["execute_python"] = lambda code: "2"
     is_tool2, combined2, interleaved2 = agent._execute_tools(content2)
     assert is_tool2
@@ -130,7 +130,7 @@ def test_read_tool_doc_marks_shown_so_first_real_call_does_not_duplicate():
     assert "6 位數 Hex 色碼" in doc_text
     assert "draw_box" in agent._doc_shown_tools
 
-    content = '<|tool_call|>call:draw_box(10, 20, 100, 100, "test", "#FF0000")<|tool_call|>'
+    content = '<|tool_call|>draw_box(10, 20, 100, 100, "test", "#FF0000")<|tool_call|>'
     is_tool, combined, interleaved = agent._execute_tools(content)
     assert is_tool
     assert "這是你本次對話第一次呼叫" not in combined
@@ -143,7 +143,7 @@ def test_tool_without_registered_doc_has_no_injection_overhead():
     scripts = {"system": [("好的", "stop")]}
     agent, events, tool_calls = make_agent(scripts, mode=ExecutionMode.SMART)
 
-    content = '<|tool_call|>call:run_action("do something")<|tool_call|>'
+    content = '<|tool_call|>run_action("do something")<|tool_call|>'
     is_tool, combined, interleaved = agent._execute_tools(content)
     assert is_tool
     assert tool_calls == ["do something"]
