@@ -1,4 +1,6 @@
 import sys
+import subprocess
+import urllib.parse
 import os
 import json
 import warnings
@@ -37,6 +39,7 @@ class JsApi:
         self._events_lock = threading.Lock()
 
         self.available_functions = {
+            "open_chrome_incognito": self.open_chrome_incognito,
             "move_mouse": tools.move_mouse,
             "click_mouse": tools.click_mouse,
             "type_text": tools.type_text,
@@ -150,12 +153,12 @@ class JsApi:
             return {"status": "error", "msg": f"未知模式: {mode_str}"}
 
     def set_forgetting_enabled(self, enabled: bool):
-        self.agent.set_forgetting_enabled(bool(enabled))
-        return {"status": "ok", "enabled": bool(enabled)}
+        self.agent.set_forgetting_enabled(enabled)
+        return {"status": "ok", "enabled": enabled}
 
     def set_activation_enabled(self, enabled: bool):
-        self.agent.set_activation_enabled(bool(enabled))
-        return {"status": "ok", "enabled": bool(enabled)}
+        self.agent.set_activation_enabled(enabled)
+        return {"status": "ok", "enabled": enabled}
 
     def update_api_config(self, base_url: str, api_key: str, model_name: str):
         self.agent.update_api_config(base_url, api_key, model_name)
@@ -176,6 +179,21 @@ class JsApi:
                 "server_status", {"running": True, "msg": "本地伺服器運行中"}
             )
         return {"status": "ok"}
+
+    def open_chrome_incognito(self, query: str = ""):
+        """Open Chrome in incognito mode and perform a Google search.
+        If `query` is empty, just opens the Google homepage.
+        """
+        try:
+            base_url = "https://www.google.com"
+            if query:
+                encoded = urllib.parse.quote_plus(query)
+                base_url = f"https://www.google.com/search?q={encoded}"
+            chrome_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+            subprocess.Popen([chrome_path, "--incognito", base_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return {"status": "ok"}
+        except Exception as e:
+            return {"status": "error", "msg": str(e)}
 
     def clear_drawings(self):
         self.overlay_manager.clear_drawings()

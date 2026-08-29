@@ -84,3 +84,6 @@ export type EditUserPayload = {
 };
 
 export type ForkDirection = 'prev' | 'next';
+
+export type ClientMode = 'local_llama' | 'local_server' | 'remote_api';
+

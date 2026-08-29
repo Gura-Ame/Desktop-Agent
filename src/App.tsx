@@ -6,7 +6,7 @@ import SideBar from './components/SideBar';
 import { useAgentChat } from './hooks/useAgentChat';
 import { usePywebview } from './hooks/usePywebview';
 import { useTheme } from './hooks/useTheme';
-import type { AgentEvent, ChatImage, ExecutionMode } from './types';
+import type { AgentEvent, ChatImage, ClientMode, ExecutionMode } from './types';
 
 /** 視窗寬度低於此值時自動收合側欄 */
 const SIDEBAR_AUTO_COLLAPSE_PX = 900;
@@ -22,8 +22,13 @@ export default function App() {
   const [executionMode, setExecutionMode] = useState<ExecutionMode>('STEP_BY_STEP');
   const [forgettingEnabled, setForgettingEnabled] = useState(false);
   const [activationEnabled, setActivationEnabled] = useState(false);
+  const [clientMode, setClientMode] = useState<ClientMode>('local_llama');
   const [baseUrl, setBaseUrl] = useState('http://localhost:12356/v1');
+  const [apiKey, setApiKey] = useState('lm-studio');
   const [modelName, setModelName] = useState('local-model');
+  const [modelPath, setModelPath] = useState(
+    String(import.meta.env.VITE_DEFAULT_MODEL_PATH ?? ''),
+  );
 
   const executionModeRef = useRef(executionMode);
   executionModeRef.current = executionMode;
@@ -102,14 +107,19 @@ export default function App() {
 
   /**
    * 檢查 LLM 伺服器狀態。
+   * local_llama 模式下不走 HTTP，直接顯示「本地模型載入中」。
    * 嚴禁在 agent / 串流工作中對 server 發請求，否則可能把本地 llama 打掛。
    */
   const checkServerHealth = useCallback(async () => {
-    if (isBusyRef.current || isStreamingRef.current) {
+    if (isBusyRef.current || isStreamingRef.current) return;
+
+    if (clientMode === 'local_llama') {
+      // 無 HTTP server，直接反映本地模型狀態
+      setServerStatus({ running: true, msg: '本地模型' });
       return;
     }
+
     try {
-      // 僅做極輕量探測；timeout 短，避免卡住 UI
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 1500);
       const res = await fetch(`${baseUrl.replace(/\/$/, '')}/models`, {
@@ -123,12 +133,11 @@ export default function App() {
         setServerStatus({ running: false, msg: `異常 (${res.status})` });
       }
     } catch {
-      // 工作中被略過、或離線
       if (!isBusyRef.current && !isStreamingRef.current) {
         setServerStatus({ running: false, msg: '離線' });
       }
     }
-  }, [baseUrl, isBusyRef, isStreamingRef, setServerStatus]);
+  }, [clientMode, baseUrl, isBusyRef, isStreamingRef, setServerStatus]);
 
   useEffect(() => {
     checkServerHealth();
@@ -233,19 +242,37 @@ export default function App() {
     setInput('');
     setPendingImages([]);
   };
+  // Open Chrome incognito search
+  const openChromeIncognito = (query: string) => {
+    callApi('open_chrome_incognito', query);
+  };
+
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#e8e8ea] font-sans text-sm text-zinc-900 antialiased selection:bg-zinc-300 dark:bg-[#1c1c1e] dark:text-zinc-100 dark:selection:bg-zinc-600">
       <SideBar
         isCollapsed={sidebarCollapsed}
         setIsCollapsed={handleSidebarCollapse}
+        clientMode={clientMode}
+        setClientMode={setClientMode}
         baseUrl={baseUrl}
         setBaseUrl={setBaseUrl}
+        apiKey={apiKey}
+        setApiKey={setApiKey}
         modelName={modelName}
         setModelName={setModelName}
+        modelPath={modelPath}
+        setModelPath={setModelPath}
         applyApiConfig={() => {
-          callApi('update_api_config', baseUrl, 'lm-studio', modelName);
+          if (clientMode === 'local_llama') {
+            callApi('load_llama_model', modelPath);
+          } else if (clientMode === 'local_server') {
+            callApi('toggle_local_server', modelPath);
+          } else {
+            callApi('update_api_config', baseUrl, apiKey, modelName);
+          }
         }}
+        openChromeIncognito={openChromeIncognito}
         serverStatus={serverStatus}
         checkServerHealth={checkServerHealth}
         executionMode={executionMode}

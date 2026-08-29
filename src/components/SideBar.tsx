@@ -1,14 +1,18 @@
+import { useState } from 'react';
 import {
     Bot, Cpu,
     Eraser,
+    FolderOpen,
     ListTree,
     PanelLeftClose, PanelLeftOpen, RefreshCw,
+    Server,
     Terminal,
     Trash2,
     BrainCog,
-    Zap
+    Zap,
+    Globe,
 } from 'lucide-react';
-import type { ExecutionMode, ServerStatus, Theme } from '../types';
+import type { ClientMode, ExecutionMode, ServerStatus, Theme } from '../types';
 
 const MODE_OPTIONS: { value: ExecutionMode; label: string; hint: string }[] = [
     { value: 'STEP_BY_STEP', label: '逐步確認', hint: '無視任務自己的判斷，每完成一步就暫停，等待你確認才繼續' },
@@ -16,14 +20,27 @@ const MODE_OPTIONS: { value: ExecutionMode; label: string; hint: string }[] = [
     { value: 'AUTO', label: '全自動', hint: '無視任務自己的判斷，中間不再暫停，直到全部完成或需要你介入' },
 ];
 
+const CLIENT_MODES: { value: ClientMode; label: string; icon: React.ReactNode; hint: string }[] = [
+    { value: 'local_llama', label: 'Local GGUF', icon: <FolderOpen size={13} />, hint: '直接用 llama-cpp-python 載入 GGUF 模型，無需啟動 HTTP 伺服器' },
+    { value: 'local_server', label: 'Local Server', icon: <Server size={13} />, hint: '啟動 llama-server.exe，透過本地 HTTP 伺服器推論' },
+    { value: 'remote_api', label: 'Remote API', icon: <Globe size={13} />, hint: '連接任意 OpenAI 相容 API（LM Studio、OpenAI、本地 vLLM 等）' },
+];
+
 type SidebarProps = {
     isCollapsed: boolean;
     setIsCollapsed: (collapsed: boolean) => void;
+    clientMode: ClientMode;
+    setClientMode: (mode: ClientMode) => void;
     baseUrl: string;
     setBaseUrl: (url: string) => void;
+    apiKey: string;
+    setApiKey: (key: string) => void;
     modelName: string;
     setModelName: (name: string) => void;
+    modelPath: string;
+    setModelPath: (path: string) => void;
     applyApiConfig: () => void;
+    openChromeIncognito: (query?: string) => void;
     serverStatus: ServerStatus;
     checkServerHealth: () => void;
     executionMode: ExecutionMode;
@@ -43,11 +60,18 @@ type SidebarProps = {
 export default function Sidebar({
     isCollapsed,
     setIsCollapsed,
+    clientMode,
+    setClientMode,
     baseUrl,
     setBaseUrl,
+    apiKey,
+    setApiKey,
     modelName,
     setModelName,
+    modelPath,
+    setModelPath,
     applyApiConfig,
+    openChromeIncognito,
     serverStatus,
     checkServerHealth,
     executionMode,
@@ -60,7 +84,12 @@ export default function Sidebar({
     handleForgettingToggle,
     activationEnabled,
     handleActivationToggle,
+    theme,
+    toggleTheme,
 }: SidebarProps) {
+    const activeClientMode = CLIENT_MODES.find((m) => m.value === clientMode);
+    const [incognitoQuery, setIncognitoQuery] = useState('');
+
     return (
         <aside
             className={`bg-zinc-900/60 border-r border-zinc-800 flex flex-col shrink-0 transition-all duration-300 ease-in-out relative ${isCollapsed ? 'w-16 p-3 items-center' : 'w-80 p-4'
@@ -87,10 +116,10 @@ export default function Sidebar({
             {!isCollapsed ? (
                 /* 展開模式內容 */
                 <div className="flex-1 overflow-y-auto space-y-5 my-4 pr-1">
-                    {/* LLM Server 配置卡片 */}
+                    {/* LLM 客戶端配置卡片 */}
                     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-3 shadow-sm">
                         <div className="flex items-center justify-between text-xs font-medium text-zinc-400">
-                            <span className="flex items-center gap-1.5"><Cpu size={14} /> LLM Server 配置</span>
+                            <span className="flex items-center gap-1.5"><Cpu size={14} /> LLM 客戶端配置</span>
                             <button
                                 onClick={checkServerHealth}
                                 className="hover:text-zinc-200 transition-colors"
@@ -100,35 +129,94 @@ export default function Sidebar({
                             </button>
                         </div>
 
-                        <div className="space-y-1">
-                            <label className="text-[11px] text-zinc-400">API Base URL</label>
-                            <input
-                                type="text"
-                                value={baseUrl}
-                                onChange={(e) => setBaseUrl(e.target.value)}
-                                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono"
-                            />
+                        {/* 模式切換 */}
+                        <div className="grid grid-cols-3 gap-1">
+                            {CLIENT_MODES.map((m) => (
+                                <button
+                                    key={m.value}
+                                    onClick={() => setClientMode(m.value)}
+                                    title={m.hint}
+                                    className={`flex flex-col items-center gap-1 py-2 px-1 rounded-lg text-[10px] font-medium border transition-all active:scale-[0.97] ${clientMode === m.value
+                                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                                        : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                                        }`}
+                                >
+                                    {m.icon}
+                                    {m.label}
+                                </button>
+                            ))}
                         </div>
 
-                        <div className="space-y-1">
-                            <label className="text-[11px] text-zinc-400">Model Name</label>
-                            <input
-                                type="text"
-                                value={modelName}
-                                onChange={(e) => setModelName(e.target.value)}
-                                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono"
-                            />
-                        </div>
+                        {/* 模式說明 */}
+                        <p className="text-[10px] text-zinc-500 leading-relaxed">
+                            {activeClientMode?.hint}
+                        </p>
+
+                        {/* Local GGUF / Local Server：顯示模型路徑 */}
+                        {(clientMode === 'local_llama' || clientMode === 'local_server') && (
+                            <div className="space-y-1">
+                                <label className="text-[11px] text-zinc-400">
+                                    {clientMode === 'local_llama' ? 'GGUF 模型路徑' : '模型路徑 (供 llama-server 使用)'}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={modelPath}
+                                    onChange={(e) => setModelPath(e.target.value)}
+                                    placeholder="C:\path\to\model.gguf"
+                                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono placeholder:text-zinc-600"
+                                />
+                            </div>
+                        )}
+
+                        {/* Remote API：顯示 Base URL、API Key、Model Name */}
+                        {clientMode === 'remote_api' && (
+                            <div className="space-y-2">
+                                <div className="space-y-1">
+                                    <label className="text-[11px] text-zinc-400">API Base URL</label>
+                                    <input
+                                        type="text"
+                                        value={baseUrl}
+                                        onChange={(e) => setBaseUrl(e.target.value)}
+                                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[11px] text-zinc-400">API Key</label>
+                                    <input
+                                        type="password"
+                                        value={apiKey}
+                                        onChange={(e) => setApiKey(e.target.value)}
+                                        placeholder="sk-..."
+                                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono placeholder:text-zinc-600"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[11px] text-zinc-400">Model Name</label>
+                                    <input
+                                        type="text"
+                                        value={modelName}
+                                        onChange={(e) => setModelName(e.target.value)}
+                                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono"
+                                    />
+                                </div>
+                            </div>
+                        )}
 
                         <button
                             onClick={applyApiConfig}
                             className="w-full bg-zinc-100 hover:bg-white text-zinc-950 font-medium py-1.5 rounded-lg text-xs shadow transition-all active:scale-[0.98]"
                         >
-                            套用連線設定
+                            {clientMode === 'local_llama'
+                                ? '載入模型'
+                                : clientMode === 'local_server'
+                                    ? '啟動 / 停止伺服器'
+                                    : '套用連線設定'}
                         </button>
 
                         <div className="flex items-center justify-between text-xs pt-2 border-t border-zinc-800/80">
-                            <span className="text-zinc-400">連線狀態</span>
+                            <span className="text-zinc-400">狀態</span>
                             <span className="flex items-center gap-1.5 font-medium">
                                 <span className={`w-2 h-2 rounded-full ${serverStatus.running ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
                                 <span className={serverStatus.running ? 'text-zinc-200' : 'text-zinc-400'}>
@@ -137,6 +225,31 @@ export default function Sidebar({
                             </span>
                         </div>
                     </div>
+
+                    {/* 瀏覽器無痕模式卡片*/}
+                    {!isCollapsed && (
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-3 shadow-sm">
+                            <div className="flex items-center justify-between text-xs font-medium text-zinc-400">
+                                <span className="flex items-center gap-1.5"><Globe size={14} /> Chrome 無痕模式</span>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[11px] text-zinc-400">Google 搜尋關鍵字（留空則開啟首頁）</label>
+                                <input
+                                    type="text"
+                                    value={incognitoQuery}
+                                    onChange={(e) => setIncognitoQuery(e.target.value)}
+                                    placeholder="例如：ChatGPT 教學"
+                                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono"
+                                />
+                            </div>
+                            <button
+                                onClick={() => openChromeIncognito(incognitoQuery)}
+                                className="w-full bg-zinc-100 hover:bg-white text-zinc-950 font-medium py-1.5 rounded-lg text-xs shadow transition-all active:scale-[0.98]"
+                            >
+                                開啟 Chrome 無痕搜尋
+                            </button>
+                        </div>
+                    )}
 
                     {/* 任務樹執行模式卡片 */}
                     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-3 shadow-sm">
@@ -223,7 +336,7 @@ export default function Sidebar({
                 <div className="flex-1 my-4 space-y-4 flex flex-col items-center">
                     <div
                         className={`w-3 h-3 rounded-full mt-2 ${serverStatus.running ? 'bg-emerald-500' : 'bg-rose-500'}`}
-                        title={`伺服器狀態: ${serverStatus.msg}`}
+                        title={`狀態: ${serverStatus.msg}`}
                     />
                     <div
                         className="p-1.5 rounded-lg text-zinc-400"
