@@ -2,12 +2,12 @@ import { Bot, Check, Copy, Pencil, User, X } from "lucide-react";
 import { useState } from "react";
 import { parseMessageContent } from "../lib/parseMessage";
 import { cn } from "../lib/utils";
+import type { ChatMessage as ChatMessageType, ForkDirection } from "../types";
+import MarkdownBody from "./chat/MarkdownBody";
+import MessageForksNav from "./chat/MessageForksNav";
 import TaskTreeCard from "./TaskTreeCard";
 import ToolCallBlock from "./ToolCallBlock";
 import { Button } from "./ui/Button";
-import MarkdownBody from "./chat/MarkdownBody";
-import MessageForksNav from "./chat/MessageForksNav";
-import type { ChatMessage as ChatMessageType, ForkDirection } from "../types";
 
 function plainTextForCopy(content: string | undefined) {
 	if (!content) return "";

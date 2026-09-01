@@ -29,62 +29,8 @@ import os
 from typing import Optional, List, Dict, Any, Tuple
 
 from memory.memory_store import MemoryStore
-
-
-# ---------------------------------------------------------------------------
-# 輔助 visitor：帶 class scope 追蹤的函式收集器
-# ---------------------------------------------------------------------------
-class _FuncCollector(ast.NodeVisitor):
-    """走訪 AST，收集每個函式的完整限定名（含 class 前綴）、裝飾器、AST node。
-
-    對比裸 ast.walk：
-    - 維護 class_stack，讓同一個檔案裡兩個 class 各自的 __init__ 可以正確區分
-      → func_defs key 為 "ClassName.func_name"，而不是單純 "func_name"。
-    - 同時偵測裝飾器，存進 decorators list，供外層標記 has_decorator。
-    """
-
-    def __init__(self):
-        self.func_defs: dict[str, tuple] = {}  # qualified_name -> (func_id_placeholder, node, decorators)
-        self._class_stack: list[str] = []
-
-    def visit_ClassDef(self, node: ast.ClassDef):
-        self._class_stack.append(node.name)
-        self.generic_visit(node)
-        self._class_stack.pop()
-
-    def visit_FunctionDef(self, node: ast.FunctionDef):
-        self._register(node)
-
-    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
-        self._register(node)
-
-    def _register(self, node):
-        parts = self._class_stack + [node.name]
-        qname = ".".join(parts)  # e.g. "MyClass.__init__" or "standalone_func"
-        decorators = [self._decorator_name(d) for d in node.decorator_list]
-        # 若重名（極罕見，但可能），保留先定義的，並在其 decorators 裡記錄衝突資訊
-        if qname not in self.func_defs:
-            self.func_defs[qname] = (None, node, decorators)  # func_id 由外層填入
-        # 進入函式體內（允許有巢狀函式），但巢狀函式也會被收集進來並有自己的完整路徑
-        self.generic_visit(node)
-
-    @staticmethod
-    def _decorator_name(dec_node) -> str:
-        if isinstance(dec_node, ast.Name):
-            return dec_node.id
-        if isinstance(dec_node, ast.Attribute):
-            return f"{_FuncCollector._node_name(dec_node.value)}.{dec_node.attr}"
-        if isinstance(dec_node, ast.Call):
-            return _FuncCollector._decorator_name(dec_node.func)
-        return "<decorator>"
-
-    @staticmethod
-    def _node_name(node) -> str:
-        if isinstance(node, ast.Name):
-            return node.id
-        if isinstance(node, ast.Attribute):
-            return f"{_FuncCollector._node_name(node.value)}.{node.attr}"
-        return "?"
+from tools.code_ast_visitor import FuncCollector
+from tools.code_import_resolver import collect_imports, resolve_relative_import
 
 
 # ---------------------------------------------------------------------------
@@ -109,9 +55,9 @@ class CodeGraphBuilder:
             source = f.read()
         tree = ast.parse(source, filename=filepath)
 
-        collector = _FuncCollector()
+        collector = FuncCollector()
         collector.visit(tree)
-        imports = self._collect_imports(tree, current_module=module_name)
+        imports = collect_imports(tree, current_module=module_name)
 
         func_ids = []
         func_defs: dict[str, tuple] = {}  # qualified_name -> (func_id, node, decorators)
@@ -177,7 +123,7 @@ class CodeGraphBuilder:
                 result[filepath] = []
                 continue
 
-            collector = _FuncCollector()
+            collector = FuncCollector()
             collector.visit(tree)
 
             func_defs: dict[str, tuple] = {}
@@ -203,7 +149,7 @@ class CodeGraphBuilder:
                 func_defs[qname] = (func_id, node, decorators)
                 func_ids.append(func_id)
 
-            imports = self._collect_imports(tree, current_module=module_name)
+            imports = collect_imports(tree, current_module=module_name)
             parsed[filepath] = {"func_defs": func_defs, "imports": imports}
             result[filepath] = func_ids
 
@@ -304,74 +250,6 @@ class CodeGraphBuilder:
         if not parts:
             return os.path.splitext(os.path.basename(filepath))[0]
         return ".".join(parts)
-
-    # ------------------------------------------------------------------
-    # Import 解析（含相對匯入）
-    # ------------------------------------------------------------------
-    def _collect_imports(self, tree: ast.AST, current_module: str = "") -> dict:
-        """回傳 {local_name: {"module": 目標模組, "symbol": 目標符號或 None}}。
-
-        symbol 是 None 代表這是整個模組的 import（例如 `import utils`），
-        之後遇到 `utils.func()` 這種 Attribute 呼叫，要去查 utils 模組底下的 func；
-        symbol 有值代表這是 `from x import y` 這種，local_name 直接呼叫就對應到目標函式。
-
-        相對匯入（from . import x、from ..utils import helper）現在透過
-        _resolve_relative_import 計算出絕對模組名，不再跳過。
-        """
-        imports = {}
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    local = alias.asname or alias.name.split(".")[0]
-                    imports[local] = {"module": alias.name, "symbol": None}
-            elif isinstance(node, ast.ImportFrom):
-                if node.level and not node.module and not current_module:
-                    # 純相對匯入但沒有當前模組資訊，仍然跳過
-                    continue
-                if node.level:
-                    # 相對匯入：用 current_module 推算絕對模組名
-                    abs_module = self._resolve_relative_import(
-                        current_module, node.level, node.module or ""
-                    )
-                elif not node.module:
-                    continue
-                else:
-                    abs_module = node.module
-
-                for alias in node.names:
-                    local = alias.asname or alias.name
-                    imports[local] = {"module": abs_module, "symbol": alias.name}
-        return imports
-
-    @staticmethod
-    def _resolve_relative_import(current_module: str, level: int, relative_module: str) -> str:
-        """把相對匯入轉換成絕對模組名。
-
-        規則（與 Python importlib 的行為一致）：
-        - level=1 表示同層 package（from . import x）→ 去掉 current_module 最後一段
-        - level=2 表示上一層（from .. import x）→ 去掉最後兩段，以此類推
-        - relative_module 若有值，接在算出的 base 後面
-
-        例子：
-          current_module="pkg.sub.foo", level=1, relative_module="utils"
-          → base = "pkg.sub"  → "pkg.sub.utils"
-
-          current_module="pkg.sub.foo", level=2, relative_module=""
-          → base = "pkg"      → "pkg"
-
-          current_module="pkg.sub.foo", level=1, relative_module=""
-          → base = "pkg.sub"  → "pkg.sub"
-        """
-        parts = current_module.split(".") if current_module else []
-        # level=1 → 去掉最後 1 段（即 current file），level=2 → 去掉最後 2 段，以此類推
-        base_parts = parts[: max(0, len(parts) - level + 1 - 1)]
-        # 更精確：level 代表往上幾層「包」。若 current 是 a.b.c（檔案），
-        # 它所在的包是 a.b，level=1 就留 a.b，level=2 就留 a。
-        # 簡化公式：去掉 level 段
-        base_parts = parts[: max(0, len(parts) - level)]
-        if relative_module:
-            base_parts += relative_module.split(".")
-        return ".".join(base_parts) if base_parts else relative_module
 
     # ------------------------------------------------------------------
     # 呼叫目標解析

@@ -2,8 +2,9 @@
  * parseTaskTree.js 的測試。
  * 執行方式：node test_parseTaskTree.mjs
  */
-import { parseTaskTreeMarkdown } from "./parseTaskTree.js";
+
 import assert from "node:assert";
+import { parseTaskTreeMarkdown } from "./parseTaskTree.js";
 
 function test_header_line_does_not_eat_first_task() {
 	// 這是最嚴重的一個 bug：標題行後面緊接著的第一個任務，過去會被 header 清除的正則式一起吃掉。

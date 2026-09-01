@@ -117,6 +117,15 @@ class ForgettingManager:
             del node.properties["override"]
             node.touch_version()
             changed = True
+        # 遺忘只會往上升、不會還原（見 MemoryNode.resolution_level 的註解），
+        # 這裡明確斷言而不是只在註解裡講——呼叫這個方法的兩個判斷條件
+        # (node.resolution_level == 0) 理論上已經保證了這點，但這是那個保證
+        # 唯一真正被落實的地方，之後改動判斷條件時如果不小心破壞了它，
+        # 應該要立刻讓測試爆炸，而不是安靜地產生一個解析度不增反減的節點。
+        assert node.resolution_level < 1, (
+            f"resolution_level 只該往上升，node.resolution_level="
+            f"{node.resolution_level} 不該小於 1 都還沒成立就想升到 1"
+        )
         node.resolution_level = 1
         return True  # 就算沒有 override 可以回收，光是標記進入下一階本身就算一次變動
 
@@ -131,6 +140,10 @@ class ForgettingManager:
             if not new_summary:
                 return False
             node.summary = _compact_summary(new_summary)
+            assert node.resolution_level < 2, (
+                f"resolution_level 只該往上升，node.resolution_level="
+                f"{node.resolution_level} 不該小於 2 都還沒成立就想升到 2"
+            )
             node.resolution_level = 2
             node.touch_version()
             return True

@@ -23,9 +23,7 @@ export function parseTaskTreeMarkdown(
 		// id 允許英數字/底線/點/連字號組成的任意識別字（例如 "TASK-1"、"TASK-1.1"、
 		// "TASK-1.impact1"，跟後端 task_system.py 用同一套規則），限制字元集合是為了
 		// 避免誤把「[重要] 做某事」這種標題本身就用中括號開頭的一般文字，誤判成任務 id。
-		const header = block.match(
-			/- \[(.)\]\s*(?:\[([A-Za-z0-9_.\-]+)\])?\s*(.*)/,
-		);
+		const header = block.match(/- \[(.)\]\s*(?:\[([A-Za-z0-9_.-]+)\])?\s*(.*)/);
 		if (!header) continue;
 
 		const icon = header[1];

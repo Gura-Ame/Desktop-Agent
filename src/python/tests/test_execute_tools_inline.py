@@ -92,10 +92,10 @@ def test_multiple_tool_calls_each_result_stays_next_to_its_own_call(memory_path)
     assert is_tool is True
     assert "RESULT_A" in combined and "RESULT_B" in combined
 
-    pos_call_a = interleaved.find("call:step_a")
+    pos_call_a = interleaved.find("step_a")
     pos_result_a = interleaved.find("RESULT_A")
     pos_middle_text = interleaved.find("這中間夾了一段說明文字")
-    pos_call_b = interleaved.find("call:step_b")
+    pos_call_b = interleaved.find("step_b")
     pos_result_b = interleaved.find("RESULT_B")
     pos_summary = interleaved.find("最後總結")
 
@@ -128,8 +128,8 @@ def test_failing_call_tagged_as_error_succeeding_call_tagged_as_result(memory_pa
     assert "fine" in combined
 
     # boom() 那次呼叫後面應該接 <tool_error>，ok_action() 後面應該接 <tool_result>
-    boom_section = interleaved[interleaved.find("call:boom"):interleaved.find("call:ok_action")]
-    ok_section = interleaved[interleaved.find("call:ok_action"):]
+    boom_section = interleaved[interleaved.find("boom"):interleaved.find("ok_action")]
+    ok_section = interleaved[interleaved.find("ok_action"):]
     assert "<tool_error>" in boom_section
     assert "<tool_result>" in ok_section
     print("[PASS] test_failing_call_tagged_as_error_succeeding_call_tagged_as_result")

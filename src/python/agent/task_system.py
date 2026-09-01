@@ -37,6 +37,14 @@ class TaskNode:
         self.parent_id: Optional[str] = None
         self.is_decomposed: bool = False  # 這個任務是否已經展開過（避免重複拆解）
 
+        # is_auto_impact_check：由 code_impact.py / relation_impact.py 自動產生的
+        # 「檢查是否受影響」任務會標記這個。這種任務的內容必然會提到被改動的節點
+        # （這是它存在的目的），如果讓它自己也去跑一次 _auto_queue_impact_checks，
+        # 會再次偵測到同一個節點、又插入下一個 rel_impact 任務，且新任務一樣會提到
+        # 同一個節點——形成永遠不會停止的連鎖生成。這種任務本身就是「終點」，
+        # 執行完就是這條影響鏈的終點，不該再往下衍生。
+        self.is_auto_impact_check: bool = False
+
         # --- 以下為執行期狀態，純內部追蹤用 ---
         self.think_count: int = 0   # 這個任務目前思考過幾次
         self.retry_count: int = 0   # 這個任務目前驗證失敗過幾次

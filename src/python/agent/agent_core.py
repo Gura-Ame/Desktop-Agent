@@ -1,12 +1,9 @@
-import os
 import time
 import threading
 from typing import Any
 from openai import OpenAI
 
-import config
 from config import API_BASE_URL, API_KEY, MODEL_NAME
-from agent.llama_client import LlamaClient
 from agent.task_system import TaskEngine, ExecutionMode
 from memory.memory_store import MemoryStore
 from agent.working_memory import WorkingMemory
@@ -19,14 +16,24 @@ from agent.agent_state import (
 )
 from agent.agent_memory_mixin import AgentMemoryMixin
 from agent.agent_llm_client import AgentLLMClientMixin
-from agent.agent_execution_cycle import AgentExecutionMixin
+from agent.agent_history import AgentHistoryMixin
+from agent.agent_tool_execution import AgentToolExecutionMixin
+from agent.agent_memory_extraction import AgentMemoryExtractionMixin
+from agent.agent_routing import AgentRoutingMixin
+from agent.agent_task_processor import AgentTaskProcessorMixin
+from agent.agent_reflection import AgentReflectionMixin
 from agent.agent_direct_mode import AgentDirectModeMixin
 from agent.retriever import Retriever
 from agent.attention_manager import AttentionManager
 from agent.forgetting import ForgettingManager
 
 
-class AgentWorker(AgentMemoryMixin, AgentLLMClientMixin, AgentExecutionMixin, AgentDirectModeMixin):
+class AgentWorker(
+    AgentMemoryMixin, AgentLLMClientMixin,
+    AgentHistoryMixin, AgentToolExecutionMixin, AgentMemoryExtractionMixin,
+    AgentRoutingMixin, AgentTaskProcessorMixin, AgentReflectionMixin,
+    AgentDirectModeMixin,
+):
     def __init__(self, available_functions: dict, event_callback, default_mode=ExecutionMode.STEP_BY_STEP,
                  memory_path: str = "agent_memory.json", memory_max_nodes: int = 20):
         self.available_functions = available_functions
@@ -65,17 +72,13 @@ class AgentWorker(AgentMemoryMixin, AgentLLMClientMixin, AgentExecutionMixin, Ag
         self.api_key = API_KEY
         self.model_name = MODEL_NAME
 
-        # 優先以 Llama-cpp 載入本地 GGUF 模型；若路徑不存在或未啟用則退回相容 API Client
-        text_model_path = getattr(config, "TEXT_MODEL_PATH", "")
-        if getattr(config, "USE_LOCAL_LLAMA", False) and text_model_path and os.path.exists(text_model_path):
-            self.client = LlamaClient(
-                model_path=text_model_path,
-                n_ctx=getattr(config, "N_CTX", 8192),
-                n_gpu_layers=getattr(config, "N_GPU_LAYERS", -1),
-            )
-            self.model_name = os.path.basename(text_model_path)
-        else:
-            self.client = OpenAI(base_url=self.base_url, api_key=self.api_key, timeout=90.0)
+        # 一律先用相容 API Client 開機——建構這個物件本身不會真的發送請求、
+        # 不會載入任何模型，很輕量。要不要改用本地 Llama 直接載入 GGUF，
+        # 交給使用者透過 UI 呼叫 load_llama_model() 自己決定，不在啟動時自動載入。
+        # （曾經預設在這裡根據 config.USE_LOCAL_LLAMA / TEXT_MODEL_PATH 自動載入，
+        # 但這代表使用者連介面都還沒看到，程式就已經在背景默默把幾 GB 的模型
+        # 讀進記憶體/顯存了，使用者完全沒有置喙餘地，所以拿掉了。）
+        self.client = OpenAI(base_url=self.base_url, api_key=self.api_key, timeout=90.0)
 
         self.engine = TaskEngine(mode=default_mode)
         self.state = AgentState.IDLE

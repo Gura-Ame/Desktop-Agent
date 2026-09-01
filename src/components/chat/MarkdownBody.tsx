@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { isValidElement } from "react";
-import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
-import remarkMath from "remark-math";
+import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
+import remarkMath from "remark-math";
 import { normalizeMathDelimiters } from "../../lib/normalizeMath";
 import CodeBlock from "../CodeBlock";
 import MathPreview from "../MathPreview";

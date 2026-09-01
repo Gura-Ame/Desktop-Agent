@@ -1,8 +1,8 @@
 import { ImagePlus, Send, Square, X } from "lucide-react";
 import type { ChangeEvent, CSSProperties, KeyboardEvent } from "react";
 import { useRef } from "react";
-import { Button } from "./ui/Button";
 import type { ChatImage } from "../types";
+import { Button } from "./ui/Button";
 
 type ChatInputProps = {
 	value: string;

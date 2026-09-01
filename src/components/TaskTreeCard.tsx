@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import {
 	Brain,
 	CheckCircle2,
@@ -8,12 +7,13 @@ import {
 	ListTree,
 	ShieldAlert,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { parseTaskTreeMarkdown } from "../lib/parseTaskTree";
 import { cn } from "../lib/utils";
+import type { ParsedTask } from "../types";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
-import type { ParsedTask } from "../types";
 
 const STATUS_LABEL: Record<
 	ParsedTask["status"],

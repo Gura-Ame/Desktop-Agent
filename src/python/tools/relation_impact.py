@@ -56,6 +56,16 @@ def queue_relation_impact_tasks(engine: TaskEngine, store: MemoryStore,
         t.note = "這個任務是根據記憶裡的關聯自動產生的，不是模型猜的"
         t.need_confirm = True  # 保守起見預設要人確認
         t.is_auto_impact_check = True  # 終點任務：不再對它自己觸發下一輪影響掃描
+        # 驗證「這種任務的內容必然會提到被改動的節點」這個假設真的成立——這正是
+        # is_auto_impact_check / id 命名規則需要存在的理由：如果 title/method 沒提到
+        # changed_id 的短名稱，_auto_queue_impact_checks 的關鍵字掃描本來就不會命中它，
+        # 也就不會有連鎖生成的風險，那麼 is_auto_impact_check 的保護就無關緊要；
+        # 但只要這裡的字串範本被改動，這個假設就可能悄悄不成立，用 assert 攔住，
+        # 而不是等到真的發生無限連鎖生成才發現。
+        assert changed_id.split(".")[-1] in t.title or changed_id in t.title, (
+            "產生的任務標題沒有提到被改動的節點，_auto_queue_impact_checks 的"
+            "連鎖生成風險假設可能已經不成立，需要重新檢視 is_auto_impact_check 保護是否還有必要"
+        )
         new_tasks.append(t)
 
     engine.tasks[insert_at:insert_at] = new_tasks

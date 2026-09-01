@@ -85,6 +85,10 @@ remember(id, type, summary="", properties=None) — 長期記住一個東西（�
 - summary：一行精簡摘要，不超過 30 字，寫長也會被自動截斷，直接寫關鍵重點就好。
 - properties：放額外細節的 dict，選填。
 - 同一個 id 再呼叫一次會直接更新內容，不會產生重複節點。
+- 如果新的摘要跟某個既有節點很像，回傳結果裡會附上一段 ⚠️ 提醒（附上那個既有節點的
+  id），代表這件事可能已經被記過、只是用了不同的 id。看到提醒時想一下是不是該用
+  recall(既有id) 沿用它、或用 relate() 把兩者關聯起來，而不是任由同一件事分散成
+  好幾個查不齊全的 id；如果確認真的是不同的事，忽略提醒繼續用新 id 即可。
 
 什麼時候該用：解題中途得出關鍵引理、分析程式碼發現某個函式的行為、或任何「以後大概率
 還會重複用到」的結論。不需要每件小事都記。
@@ -181,6 +185,74 @@ analyze_image_ocr(image_path="", task="<OCR_RAW>") — 呼叫 PaddleOCR v4 專�
   - "<OCR_RAW>"：按閱讀順序（由上到下、由左到右）逐行提取純文字與程式碼，無幻覺。
   - "<OCR_GEOMETRY>"：提取所有文字區塊的中心點像素座標 (pixel_center)、像素邊界框 (pixel_rect) 與 1000x1000 歸一化座標 (norm_1000_box) 的 JSON。需要點擊特定按鈕或分析 UI 位置時請使用此模式。
 - 提醒：分析完成後可呼叫 unload_paddleocr_model() 卸載。
+""".strip(),
+
+    "open_chrome_incognito": """
+open_chrome_incognito(query="") — 用無痕模式開啟 Chrome，並可直接帶關鍵字搜尋。
+
+- query：留空只開 Google 首頁；有給文字就直接開該關鍵字的 Google 搜尋結果頁。
+- 注意：目前是用寫死的 Windows 路徑 "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+  去啟動，如果 Chrome 沒裝在這個預設路徑（例如裝在使用者層級 AppData 而不是系統層級），
+  呼叫會失敗並回傳錯誤訊息，不是操作錯誤，是這台電腦的 Chrome 路徑跟預期的不一樣，
+  可以改用 search_installed_apps("chrome") 找到實際路徑後用 launch_app 開啟一般模式，
+  或是如實告知使用者這個工具在這台機器上用不了。
+- 這個工具開的是一般給人看的無痕視窗，不是給你控制用的——如果你需要「自己」讀網頁內容、
+  點擊網頁上的東西，請用 browser_open / browser_read_page / browser_click 那組工具，
+  不要用這個。
+""".strip(),
+
+    "browser_open": """
+browser_open(url="") — 開啟一個獨立、專門給你控制用的 debug 模式 Chrome，並導航到指定網址。
+
+【跟 open_chrome_incognito 的差別】open_chrome_incognito 開的是給人看的一般視窗，
+你自己完全看不到、也控制不了裡面發生什麼事。browser_open 開的是另一個獨立的 Chrome
+（用 --remote-debugging-port 連線控制，獨立的 user-data-dir，不會動到使用者平常用的
+Chrome 視窗或登入狀態），開完之後你可以呼叫 browser_read_page 看到裡面的文字內容、
+呼叫 browser_click / browser_type 操作裡面的元素。要「讀文件、點網頁」一律用這組。
+
+【基本流程】
+1. browser_open("https://...") 開啟並導航到目標網址。
+2. browser_read_page() 讀取目前頁面的文字節錄跟可互動元素清單（每個元素都附一個
+   可以直接拿去用的 CSS 選擇器）。
+3. 如果要點擊/輸入，用上一步拿到的選擇器呼叫 browser_click(selector) 或
+   browser_type(selector, text)。
+4. 頁面內容變了（點擊後跳轉、AJAX 載入新內容...）就重新呼叫 browser_read_page()
+   確認目前狀態，不要憑上一次讀到的內容瞎猜現在畫面長怎樣。
+5. 全部做完呼叫 browser_close() 關閉，釋放資源。
+
+- url 留空的話只會回報目前分頁在哪個網址，不會導航（可以用來確認目前狀態）。
+- 找不到 Chrome、或環境沒裝 websocket-client 套件時會直接回傳錯誤訊息說明原因，
+  如實告知使用者即可，不需要自己猜測解法。
+""".strip(),
+
+    "browser_read_page": """
+browser_read_page(max_elements=60) — 讀取目前 browser_open 開啟的頁面內容。
+
+回傳格式是「標題、網址、頁面文字節錄（最多 3000 字）、可互動元素清單」，
+不是原始 HTML——原始 HTML 對你來說太貴、雜訊也太多，這裡已經先幫你篩選過。
+每個可互動元素都附一個可以直接拿去用在 browser_click / browser_type 的 CSS 選擇器，
+不需要（也不建議）自己憑空編造選擇器。
+
+- max_elements：最多回傳幾個可互動元素，預設 60，頁面元素特別多可以調高，
+  但每多一個都會占用你的 context，非必要不用調太高。
+- 如果回傳「還沒導航到任何網址」，代表要先呼叫 browser_open(url)。
+""".strip(),
+
+    "browser_click": """
+browser_click(selector) — 用 CSS 選擇器點擊網頁上的元素（等同真的點了一下滑鼠）。
+
+- selector 必須是從 browser_read_page() 回傳結果裡拿到的選擇器，不要自己亂猜。
+- 點擊後如果觸發了頁面跳轉，這個工具會等頁面載入完成才回傳，並附上點擊後的網址。
+- 如果回傳「找不到符合選擇器的元素」，代表頁面內容已經變了（例如上一步點擊已經跳轉），
+  重新呼叫 browser_read_page() 確認目前畫面長怎樣，不要對著同一個選擇器重試。
+""".strip(),
+
+    "browser_type": """
+browser_type(selector, text) — 用 CSS 選擇器在輸入框/文字區塊打字。
+
+- selector 一樣建議來自 browser_read_page() 的回傳結果。
+- 這個工具只會設定輸入框的值並觸發 input/change 事件，不會自己按 Enter 或送出表單，
+  如果要送出，通常還需要接著呼叫 browser_click() 點擊送出按鈕。
 """.strip(),
 }
 

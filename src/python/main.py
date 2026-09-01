@@ -6,13 +6,12 @@ import json
 import warnings
 import threading
 import pyautogui
-import ctypes
 
-# 必須在 QApplication 初始化前導入
+# 必須在 QApplication 初始化前導入（實際的 QApplication/視窗建立已經搬到
+# webview_bootstrap.py 的 run_app 裡，這裡 import 只是為了保留這個初始化順序
+# 的前置要求：PyQt6.QtWebEngineWidgets 一定要在任何 QApplication 產生之前
+# import 過一次，不然某些 WebEngine 功能會出問題）。
 import PyQt6.QtWebEngineWidgets
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication
-import webview
 
 os.environ['WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS'] = '--remote-debugging-port=9222'
 os.environ["QT_LOGGING_RULES"] = "qt.qpa.window.warning=false"
@@ -22,7 +21,6 @@ import tools.automation_tools as tools
 from overlay import ScreenOverlay, OverlayManager
 from agent.agent_core import AgentWorker, AgentState
 from agent.task_system import ExecutionMode
-from server_manager import LlamaServerManager
 
 pyautogui.FAILSAFE = True
 pyautogui.PAUSE = 0.5
@@ -62,13 +60,17 @@ class JsApi:
             "unload_florence_model": tools.unload_florence_model,
             "unload_paddleocr_model": tools.unload_paddleocr_model,
             "unload_all_vision_models": tools.unload_all_vision_models,
+            "browser_open": tools.browser_open,
+            "browser_read_page": tools.browser_read_page,
+            "browser_click": tools.browser_click,
+            "browser_type": tools.browser_type,
+            "browser_close": tools.browser_close,
         }
 
         self.agent = AgentWorker(
             self.available_functions,
             event_callback=self.dispatch_event,
         )
-        self.server_mgr = LlamaServerManager(event_callback=self.dispatch_event)
 
     def set_window(self, window):
         self._window = window
@@ -170,17 +172,6 @@ class JsApi:
         self.dispatch_event("log", f"[系統] 已切換本地 Llama 模型: {model_path}")
         return {"status": "ok"}
 
-    def toggle_local_server(self, model_path: str):
-        if self.server_mgr.is_running():
-            self.server_mgr.stop_server()
-            self.dispatch_event("server_status", {"running": False, "msg": "已停止"})
-        else:
-            self.server_mgr.start_server(model_path)
-            self.dispatch_event(
-                "server_status", {"running": True, "msg": "本地伺服器運行中"}
-            )
-        return {"status": "ok"}
-
     def open_chrome_incognito(self, query: str = ""):
         """Open Chrome in incognito mode and perform a Google search.
         If `query` is empty, just opens the Google homepage.
@@ -241,92 +232,8 @@ class JsApi:
 
 
 def main():
-    try:
-        ctypes.windll.shcore.SetProcessDpiAwareness(2)
-    except Exception:
-        try:
-            ctypes.windll.user32.SetProcessDPIAware()
-        except Exception:
-            pass
-
-    # COM 必須用 STA（Apartment-threaded），否則 WebEngine 剪貼簿會 0x800401f0
-    # 我也不知道為啥刪了這個就崩 哈哈
-    COINIT_APARTMENTTHREADED = 0x2
-    try:
-        ctypes.windll.ole32.CoInitializeEx(None, COINIT_APARTMENTTHREADED)
-    except Exception:
-        try:
-            ctypes.windll.ole32.CoInitialize(None)
-        except Exception:
-            pass
-
-    QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
-    app = QApplication(sys.argv)
-
-    overlay = ScreenOverlay()
-    overlay.show()
-
-    api = JsApi(overlay)
-    window = webview.create_window(
-        title="AI UI Desktop Agent",
-        url="http://localhost:5173",
-        js_api=api,
-        width=1280,
-        height=600,
-        resizable=True,
-    )
-    api.set_window(window)
-
-    # main.py 裡 create_window 可保留 js_api=api（無害），但真正生效靠 expose
-    # fuck pywebview 破問題 不知道為啥js_api會被覆蓋掉，導致前端呼叫 api 會變成空物件
-    def _expose_api():
-        method_names = [
-            "ping", "poll_events", "send_prompt", "stop_agent",
-            "confirm_step", "submit_user_input", "set_execution_mode",
-            "set_forgetting_enabled", "set_activation_enabled",
-            "update_api_config", "load_llama_model", "toggle_local_server",
-            "open_chrome_incognito", "clear_drawings", "clear_history",
-            "unload_vision_models", "copy_to_clipboard",
-        ]
-
-        # 用具名 wrapper，避免 bound method / __name__ 在 6.x 出怪問題
-        def _wrap(name):
-            def _fn(*args, **kwargs):
-                return getattr(api, name)(*args, **kwargs)
-            _fn.__name__ = name
-            return _fn
-
-        try:
-            window.expose(*[_wrap(n) for n in method_names if callable(getattr(api, n, None))])
-            print(f"[JsApi] expose 完成")
-        except Exception as e:
-            print(f"[JsApi] expose 失敗: {e}")
-            return
-
-        try:
-            t_poll = window.evaluate_js(
-                "window.pywebview && window.pywebview.api "
-                "? typeof window.pywebview.api.poll_events : 'n/a'"
-            )
-            print(f"[JsApi] after expose poll_events typeof = {t_poll}")
-        except Exception as e:
-            print(f"[JsApi] evaluate_js 失敗: {e}")
-
-    # 每次頁面 loaded 都重掛（Vite 重新整理也會再來一次）
-    window.events.loaded += _expose_api
-
-    # Vite SPA：loaded 後再延遲重掛一次，防止第一次被覆蓋
-    def _delayed_reexpose():
-        import threading
-        def _run():
-            import time
-            time.sleep(1.0)
-            _expose_api()
-        threading.Thread(target=_run, daemon=True).start()
-
-    window.events.loaded += _delayed_reexpose
-    
-    webview.start(gui="edgechromium", debug=True)
+    from webview_bootstrap import run_app
+    run_app(JsApi)
 
 
 if __name__ == "__main__":

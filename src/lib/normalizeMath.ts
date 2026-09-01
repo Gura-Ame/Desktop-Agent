@@ -30,7 +30,7 @@ export function normalizeMathDelimiters(text: string): string {
 	// 避免誤傷「bug-123」「a-to-z」這類一般連字號用法），且後面不能緊跟 '(' （避免誤傷 markdown 連結）。
 	const looksLikeMath = (body: string) =>
 		/\\[a-zA-Z]+|\^|_\{|[a-zA-Z0-9]\s+[-+*/=]\s+[a-zA-Z0-9]/.test(body);
-	s = s.replace(/\[([^\[\]\n]{1,200})\](?!\()/g, (m, body: string) => {
+	s = s.replace(/\[([^[\]\n]{1,200})\](?!\()/g, (m, body: string) => {
 		if (!looksLikeMath(body)) return m;
 		return `$${body.trim()}$`;
 	});

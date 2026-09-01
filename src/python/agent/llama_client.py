@@ -57,13 +57,22 @@ class _LlamaCompletions:
         for m in messages or []:
             content = m.get("content", "")
             if isinstance(content, list):
-                # 處理 multimodal 或結構化 parts
+                # 這個本地文字模型看不懂 image_url parts，只能拿掉。這裡不需要自己
+                # 再把圖存成暫存檔、生一段說明文字——_build_user_content
+                # （agent_llm_client.py）已經統一在組訊息的當下就把「圖存成暫存檔＋
+                # 呼叫視覺工具」的說明寫成一個 type: text 的 part 了，跟哪個 client
+                # 無關，所以這裡只要把 text parts 接起來、把 image_url parts
+                # 丟掉即可，那段說明文字本來就會包含在 text_parts 裡一起被留下來。
                 text_parts = [
                     p.get("text", "")
                     for p in content
                     if isinstance(p, dict) and p.get("type") == "text"
                 ]
-                content = " ".join(text_parts) if text_parts else str(content)
+                # 正常情況下 _build_user_content 一定會給至少一個 text part，這裡只是
+                # 防禦性地處理「萬一真的完全沒有」的情況——絕對不能退回 str(content)，
+                # 那樣會把 image_url part 裡的原始 base64 資料整包字串化、直接洩漏給模型，
+                # 完全違背這裡「本地文字模型看不懂圖片、要安全地把它丟掉」的目的。
+                content = "\n\n".join(t for t in text_parts if t) if text_parts else ""
             clean_messages.append({"role": m.get("role", "user"), "content": content})
 
         if stream:

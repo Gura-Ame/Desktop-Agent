@@ -10,6 +10,13 @@ from tools.vision_tools import (
     unload_paddleocr_model,
     unload_all_vision_models,
 )
+from tools.web_automation import (
+    browser_open,
+    browser_read_page,
+    browser_click,
+    browser_type,
+    browser_close,
+)
 
 __all__ = [
     "search_installed_apps",
@@ -32,4 +39,9 @@ __all__ = [
     "unload_florence_model",
     "unload_paddleocr_model",
     "unload_all_vision_models",
+    "browser_open",
+    "browser_read_page",
+    "browser_click",
+    "browser_type",
+    "browser_close",
 ]

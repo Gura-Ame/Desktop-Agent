@@ -1,6 +1,4 @@
 import { useCallback, useRef, useState } from "react";
-import { useChatScroll } from "./chat/useChatScroll";
-import { useAgentEventHandler } from "./chat/useAgentEventHandler";
 import type {
 	ChatMessage,
 	EditUserPayload,
@@ -8,6 +6,8 @@ import type {
 	MessageFork,
 	ServerStatus,
 } from "../types";
+import { useAgentEventHandler } from "./chat/useAgentEventHandler";
+import { useChatScroll } from "./chat/useChatScroll";
 
 function nowTs() {
 	return Date.now();

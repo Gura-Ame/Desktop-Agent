@@ -47,6 +47,12 @@ def queue_impact_check_tasks(engine: TaskEngine, store: MemoryStore,
         t.note = "這個任務是根據 Code Graph 的 CALLS 關聯自動產生的，不是模型猜的"
         t.need_confirm = True  # 會改到別的檔案，保守起見預設要人確認
         t.is_auto_impact_check = True  # 終點任務：不再對它自己觸發下一輪影響掃描
+        # 同 relation_impact.py：驗證「內容必然提到被改動的節點」這個假設真的成立，
+        # 這正是需要 is_auto_impact_check 保護、避免無限連鎖生成的理由所在。
+        assert changed_func_id.split(".")[-1] in t.title or changed_func_id in t.title, (
+            "產生的任務標題沒有提到被改動的函式，_auto_queue_impact_checks 的"
+            "連鎖生成風險假設可能已經不成立，需要重新檢視 is_auto_impact_check 保護是否還有必要"
+        )
         new_tasks.append(t)
 
     engine.tasks[insert_at:insert_at] = new_tasks

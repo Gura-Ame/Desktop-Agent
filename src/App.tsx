@@ -243,10 +243,6 @@ export default function App() {
 		setInput("");
 		setPendingImages([]);
 	};
-	// Open Chrome incognito search
-	const openChromeIncognito = (query: string) => {
-		callApi("open_chrome_incognito", query);
-	};
 
 	return (
 		<div className="flex h-screen w-screen overflow-hidden bg-[#e8e8ea] font-sans text-sm text-zinc-900 antialiased selection:bg-zinc-300 dark:bg-[#1c1c1e] dark:text-zinc-100 dark:selection:bg-zinc-600">
@@ -266,13 +262,10 @@ export default function App() {
 				applyApiConfig={() => {
 					if (clientMode === "local_llama") {
 						callApi("load_llama_model", modelPath);
-					} else if (clientMode === "local_server") {
-						callApi("toggle_local_server", modelPath);
 					} else {
 						callApi("update_api_config", baseUrl, apiKey, modelName);
 					}
 				}}
-				openChromeIncognito={openChromeIncognito}
 				serverStatus={serverStatus}
 				checkServerHealth={checkServerHealth}
 				executionMode={executionMode}

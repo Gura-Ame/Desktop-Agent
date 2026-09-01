@@ -1,5 +1,6 @@
 import json
 import re
+import difflib
 from typing import Optional, TYPE_CHECKING
 from agent.task_system import TaskNode
 
@@ -8,16 +9,61 @@ if TYPE_CHECKING:
 else:
     _Base = object
 
+# remember() 判斷「摘要跟既有節點很像，可能是重複」的相似度門檻（difflib ratio，0~1）。
+# 設得偏高：只在「幾乎在講同一件事」時才提醒，避免摘要都被壓縮到 60 字內、
+# 用詞略有重疊就一直跳出一堆假警報，反而讓模型學會忽略這個提醒。
+_DUPLICATE_SUMMARY_SIMILARITY_THRESHOLD = 0.72
+
 class AgentMemoryMixin(_Base):
     """提供 AgentWorker 長期記憶與程式碼關聯圖呼叫介面。"""
 
     _IMPACT_CHECK_EXCLUDED_TYPES = ("History", "Observation")
 
     def remember(self, id: str, type: str, summary: str = "", properties: Optional[dict] = None) -> str:
+        is_new = id not in self.memory_store.nodes
         node = self.memory_store.upsert_node(id, type, properties=properties or {}, summary=summary)
         self.working_memory.activate(id)
         self.emit("log", f"🧠 記住了 [{node.type}] {id}: {summary}")
-        return f"已記住 {id}（{type}）: {summary or '(無摘要)'}"
+
+        warning = ""
+        if is_new and summary:
+            duplicate = self._find_likely_duplicate(id, type, summary)
+            if duplicate is not None:
+                warning = (
+                    f"\n⚠️ 注意：這個摘要跟已經存在的 [{duplicate.type}] {duplicate.id}"
+                    f"（摘要: {duplicate.summary}）看起來很相似，有可能是同一件事被存成了"
+                    f"兩個不同的 id。如果真的是同一件事，建議之後改用 recall(\"{duplicate.id}\")"
+                    f"或 relate() 把兩者關聯起來，不要讓同一個概念散落在多個 id 底下，"
+                    f"不然之後查詢時反而容易漏掉一半。如果其實是不同的事，忽略這個提醒即可。"
+                )
+        return f"已記住 {id}（{type}）: {summary or '(無摘要)'}" + warning
+
+    def _find_likely_duplicate(self, new_id: str, new_type: str, new_summary: str):
+        """用摘要文字相似度找『很可能是同一件事、卻被存成不同 id』的既有節點。
+
+        只做提示，不強制擋下——語意相近不代表真的重複（摘要被壓縮到 60 字內，
+        用詞略有出入很正常，例如「Rust 所有權機制」跟「Rust 的所有權系統」講的是
+        同一件事，但完全不相似的兩件事也可能剛好用詞接近）。呼應設計文件裡
+        「只保存唯一事實」的想法：與其在儲存層強制去重（容易誤判、又需要語意
+        embedding 這種目前系統沒有的能力），不如在寫入當下就提醒模型自己判斷，
+        讓模型有機會用 relate() 把同一件事收斂成一個 id，而不是讓重複悄悄發生
+        而沒有人注意到。
+
+        只比對同一個 type 的節點：不同類型（例如一個 Function 跟一個 Fact）
+        就算摘要文字剛好相似，也通常不是「同一件事被存成兩個 id」的情況。
+        """
+        best_match = None
+        best_ratio = 0.0
+        for node in self.memory_store.nodes.values():
+            if node.id == new_id or node.type != new_type or not node.summary:
+                continue
+            ratio = difflib.SequenceMatcher(None, node.summary, new_summary).ratio()
+            if ratio > best_ratio:
+                best_ratio = ratio
+                best_match = node
+        if best_match is not None and best_ratio >= _DUPLICATE_SUMMARY_SIMILARITY_THRESHOLD:
+            return best_match
+        return None
 
     def recall(self, id: str) -> str:
         node = self.working_memory.activate(id)
