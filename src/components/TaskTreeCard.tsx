@@ -52,11 +52,17 @@ function TaskItem({ task }: { task: ParsedTask }) {
 							{task.id}
 						</span>
 						<Badge variant={st.variant}>{st.label}</Badge>
-						{task.needConfirm && (
-							<Badge variant="warning">
-								<ShieldAlert size={10} /> 需確認
-							</Badge>
-						)}
+						{/* needConfirm 是規劃階段就定案的靜態屬性（這個任務執行前該不該暫停確認），
+						    不是即時狀態，一旦任務已經 completed/decomposed/failed，
+						    確認與否這件事本身已經沒有意義了——繼續掛著「需確認」標籤
+						    只會讓使用者誤以為任務同時處於「已完成」又「待確認」兩種矛盾狀態。
+						    只在任務還沒有定論（pending/running）時才顯示這個標籤。 */}
+						{task.needConfirm &&
+							(task.status === "pending" || task.status === "running") && (
+								<Badge variant="warning">
+									<ShieldAlert size={10} /> 需確認
+								</Badge>
+							)}
 						{task.needThinking && (
 							<Badge variant="default">
 								<Brain size={10} /> 深思

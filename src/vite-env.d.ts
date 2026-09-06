@@ -12,6 +12,8 @@ export type PywebviewApi = {
 	copy_to_clipboard?: (text: string) => Promise<unknown> | unknown;
 	send_prompt?: (...args: unknown[]) => unknown;
 	stop_agent?: (...args: unknown[]) => unknown;
+	pick_files?: () => Promise<string[]> | string[];
+	log_from_frontend?: (level: string, message: string) => Promise<unknown> | unknown;
 	[method: string]: PywebviewFn | undefined;
 };
 
@@ -23,5 +25,6 @@ declare global {
 			token?: string;
 		};
 		onAgentEvent?: (event: AgentEvent) => void;
+		__devConsoleBridgeInstalled?: boolean;
 	}
 }

@@ -49,6 +49,8 @@ _EXPOSED_METHOD_NAMES = [
     "update_api_config", "load_llama_model",
     "open_chrome_incognito", "clear_drawings", "clear_history",
     "unload_vision_models", "copy_to_clipboard",
+    "respond_permission", "set_permission_mode",
+    "pick_files", "log_from_frontend",
 ]
 
 

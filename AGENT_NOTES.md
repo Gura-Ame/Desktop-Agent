@@ -30,7 +30,7 @@ Attention Manager（打分+預算）→ Context。細節看 `README.md`，這裡
    cd src/python
    PYTHONPATH=".:tests" python -m pytest tests/ -q
    ```
-   目前應該是全綠（39 個檔案、260+ 案例）。如果 pull 下來就有紅的，
+   目前應該是全綠（43 個檔案、320+ 案例）。如果 pull 下來就有紅的，
    先搞清楚是不是新 commit 帶來的既有問題，不要急著算在自己頭上。
 3. **改完之後一定要重跑全部測試**，不是只跑你新寫的那幾個檔案的測試——
    這個專案好幾次「修 A 壞了 B」都是全套測試才抓到的（見下方「踩過的坑」）。
@@ -73,6 +73,12 @@ class AgentWorker(
 | `agent_memory_extraction.py` | 自動記憶萃取（價值判斷、Reflect 的 `===MEMORY===` 區塊） |
 | `agent_memory_mixin.py` | `remember`/`recall`/`relate`/`record_observation`、影響預掃 |
 
+`agent/tool_permissions.py` 不是 Mixin，是獨立模組（風險分級表 +
+`PermissionManager`），被 `agent_core.py` 組合進 `AgentWorker` 當一個
+屬性（`self.permission_manager`），不是繼承進去的——它管的是「單一工具
+呼叫」層級的安全邊界，跟上面那些管「對話/任務流程」的 Mixin 是不同性質
+的關注點，混進 Mixin 繼承鏈裡反而會讓人搞混兩者的差異。
+
 `agent/agent_protocol.py` 是給 pyright 用的型別 stub（`AgentWorkerBase`，
 方法本體全是 `...`），**改了哪個 Mixin 的方法簽名，記得同步更新這裡**，
 不然型別檢查會失準（但不影響 runtime，pytest 不會抓到這個）。
@@ -80,6 +86,16 @@ class AgentWorker(
 `agent/agent_execution_cycle.py` 現在只是相容 shim（組合
 `AgentRoutingMixin` + `AgentTaskProcessorMixin` + `AgentReflectionMixin`），
 新程式碼不需要再 import 它。
+
+**`AgentWorker.__init__` 本身拆成 4 個私有方法**（`_init_memory_subsystem`
+/ `_register_available_functions` / `_init_llm_client` / `_init_session_state`），
+純粹是把「建構順序」變成「有名字的步驟」，不影響任何屬性名稱或外部行為。
+加新的記憶子系統物件放 `_init_memory_subsystem`；新增 agent 自己擁有、
+要登記進 `available_functions` 的方法（不是 main.py 那種桌面自動化工具）
+放 `_register_available_functions`；只在一次 process 生命週期內有意義的
+執行期狀態（不用跨 session 存活的那種）放 `_init_session_state`。
+`tests/test_agent_worker_bootstrap.py` 專門釘住這四個方法各自該做的事，
+改動時記得跟著看一下。
 
 ---
 
@@ -143,6 +159,56 @@ n-gram + 字串比對沒有語意理解，兩段文字只要剛好共用一個�
 （`memory/memory_node.py`）無條件截斷，這是刻意的設計，不要為了「讓
 摘要更完整」而把這個拿掉或大幅調高。
 
+### 8. `request_stop()` 會讓 `ask_user`/`request_tool_permission` 的「使用者按停止」路徑變成死碼
+`ask_user()`/`request_tool_permission()` 的等待迴圈長這樣：
+```python
+while self.is_paused_for_xxx:
+    if self._stop_event.is_set():
+        raise InterruptedError(...)
+    time.sleep(0.1)
+```
+`request_stop()` 會**同時**設定 `_stop_event` 跟把 `is_paused_for_xxx`
+直接設回 `False`。如果 `is_paused_for_xxx` 被清掉的時機比迴圈下一次檢查
+`_stop_event` 還早（幾乎每次都是這樣，兩行是緊接著執行的），`while`
+條件本身就先變成 `False` 讓迴圈正常結束，迴圈**裡面**那個 `raise` 永遠
+不會被跑到——結果變成使用者按了停止，`ask_user()` 卻回傳一句看起來像
+正常使用者回覆的字串（`"[系統] 使用者已停止 Agent"`），而不是真的中斷。
+這是加權限系統時，測 `request_tool_permission` 才意外發現 `ask_user`
+也有同一個問題（兩邊等待迴圈是同一種寫法）。**修法：迴圈跑完之後，
+在使用迴圈跑出來的結果之前，再補一次一模一樣的 `_stop_event` 檢查**——
+不管迴圈是正常等到回覆結束的，還是被 `request_stop()` 提前清旗標結束的，
+都會被這第二次檢查攔到。以後任何「等一個旗標被清掉」的暫停/恢復模式，
+如果 `request_stop()` 也會去清那個旗標，都要留意同樣的競態，別只在迴圈
+內部檢查停止訊號。見 `tests/test_stop_interrupts_waits.py`。
+
+### 9. 新增一個會被 `<|tool_call|>` 呼叫到的工具，測試要考慮權限系統的暫停
+`agent/tool_permissions.py` 的權限系統上線後，任何**沒有明確分類**的工具
+名稱（`TOOL_RISK_LEVELS` 裡找不到）預設一律當作 `DANGEROUS`，在預設的
+`PermissionMode.ASK` 策略下第一次呼叫都會暫停等待授權。這代表：
+- 舊測試裡任何用假的 LLM 腳本驅動 `<|tool_call|>run_action(...)`（或其他
+  測試用的假工具名稱）的地方，如果那個 agent instance 的權限模式沒有被
+  切成 `PermissionMode.AUTO`，**測試會直接 hang 住**，不是失敗、是卡住
+  等一個永遠不會來的授權回應，pytest 沒有預設逾時的話會一路卡到你自己
+  按 Ctrl+C。上線這個系統的當下，`tests/test_agent_core_helpers.py` 的
+  `make_agent()`、`tests/test_code_graph_integration.py`/
+  `tests/test_memory_tools.py`/`tests/test_execute_tools_inline.py` 各自
+  的本地 `make_agent()`、以及 `test_value_judgment.py` 都因為這樣需要
+  補一行 `agent.permission_manager.set_mode(PermissionMode.AUTO)`。
+- **判斷一個測試會不會中招的方法**：看它會不會透過 `_execute_tools`
+  執行到一個「不是 SAFE 等級」的工具名稱——包含 `AgentWorker.__init__`
+  一定會自動注入的 `remember`/`relate`/`record_observation`/
+  `build_code_graph*`（這幾個是 MODERATE，不是自己傳進建構子的
+  `available_functions` 參數才需要注意，就算建構子傳 `{}` 也一樣會有
+  這幾個方法）。純粹呼叫 Python 方法本身（例如測試直接呼叫
+  `agent.remember(...)`，不透過 `<|tool_call|>` 文字解析）不會經過
+  這道關卡，不受影響。
+- 專案已經裝了 `pytest-timeout`（`pip install pytest-timeout`），用
+  `pytest tests/ --timeout=250` 執行可以讓任何意外的 hang 在合理時間內
+  失敗並印出卡在哪一行，而不是無限期卡住——懷疑新測試可能卡住時，
+  先這樣跑一次縮小範圍，比盯著沒有任何輸出的終端機猜快很多。
+  `tests/test_reverse_index.py` 的規模測試本身就需要 180 秒以上，
+  是正常的慢，不是 hang，用太短的 timeout（例如 20 秒）跑全套件會誤殺它。
+
 ---
 
 ## 測試撰寫慣例
@@ -167,6 +233,10 @@ n-gram + 字串比對沒有語意理解，兩段文字只要剛好共用一個�
   （見 `test_llama_client.py`、`test_web_automation.py`）或純 pytest
   function 都可以，這個專案兩種風格併存，跟著被測目標旁邊已有的檔案
   風格走就好。
+- 任何新的 `AgentWorker(...)` 建構之後，如果測試會透過 `<|tool_call|>`
+  文字驅動工具執行（不是直接呼叫 Python 方法），記得呼叫
+  `agent.permission_manager.set_mode(PermissionMode.AUTO)`——原因見
+  上面「踩過的坑」第 9 條，不然多半會直接 hang 住而不是測試失敗。
 
 ---
 
@@ -183,27 +253,71 @@ n-gram + 字串比對沒有語意理解，兩段文字只要剛好共用一個�
    一行摘要就夠，不要為了「完整」硬寫文件、把 SYSTEM_PROMPT 撐大。
 
 這個機制目前運作得不錯，SYSTEM_PROMPT 沒有隨著工具數量線性膨脹。
+
+`tools/file_search.py` 的 `search_files_by_content`（grep 風格的跨檔案
+文字搜尋）、`find_files_by_name`（依檔名找）跟 `tools/shell_exec.py` 的
+`run_powershell`/`run_cmd`（43-46 號工具）都是照著上面 4 個步驟加進去的
+具體範例：純函式、無狀態，所以直接放進 `tools/automation_tools.py`
+統一匯出，走 `main.py` 的 `available_functions` 註冊，不是掛在
+`AgentWorker` 的 mixin 上（跟 `remember`/`build_code_graph` 這種需要
+`self.memory_store` 的工具是不同類別——會不會用到 agent 自己的狀態，
+決定它該是裸函式還是 mixin 方法）。`run_powershell`/`run_cmd` 額外要記得
+的一步：在 `agent/tool_permissions.py` 的 `TOOL_RISK_LEVELS` 補上風險等級
+（這兩個是 `DANGEROUS`，跟 `execute_python` 同級）——這一步不在上面 4 步
+清單裡，但凡是「能執行任意程式碼/系統指令」等級的新工具都必須補，
+不然會被 `DEFAULT_RISK` 這個安全預設值擋著問一次（那本身不是壞事，
+但明確分類比依賴預設值更清楚，讀程式碼的人不用猜這是不是漏分類了）。
 如果之後真的又開始變長，值得考慮的方向（還沒做，只是筆記）：
 - 把工具清單本身也分類/分層，只在真的可能用到某類工具時才展開該類的
   一行摘要清單（例如「畫面操作類」「記憶類」「瀏覽器類」），而不是
-  一次列出所有 40 幾個工具的一行摘要。
+  一次列出所有 46 個工具的一行摘要。
 - 評估是否要把 `PLANNER_SYSTEM_PROMPT` / `THINKING_SYSTEM_PROMPT` /
   `VERIFY_SYSTEM_PROMPT` 等其他階段的 prompt 也做類似的懶加載——目前
   只有主要的工具清單做了，其他階段的 prompt 本來就比較短，還沒有急迫性。
+- 這次加權限系統時，在工具清單前面多加了一小段「有些工具會先暫停問
+  授權」的說明（見 `config.py` 工具清單前的段落），讓 SYSTEM_PROMPT
+  又長了幾行——這是目前唯一一次為了「非工具本身」的原因而加長它，
+  值得留意這類系統層級說明會不會之後越疊越多，該考慮搬去 `tool_docs.py`
+  用 📖 懶加載（例如放在 `ask_user` 或第一個 DANGEROUS 工具的文件裡），
+  而不是放在所有請求都會看到的固定開頭段落。
 
 ---
 
 ## 已知限制（跟 README 同步，但這裡從「你要不要動手修」的角度寫）
 
 - `web_automation.py`（CDP 瀏覽器自動化）、`llama_client.py`
-  （llama.cpp 直接載入）、`vision_tools.py`（Florence-2/PaddleOCR）
-  只有 mock 測試過，**這個沙盒環境沒有真的 Chrome/GPU/模型權重可以測**，
-  如果使用者回報這幾個模組的實際執行問題，先假設是真實環境跟 mock
-  假設不一致，不要無條件相信 mock 測試全過就代表沒問題。
-- `forgetting_enabled` / `activation_enabled` 開關重啟後會回到關閉，
-  這是刻意的（安全預設），不是忘記做持久化，除非使用者明確要求才需要改。
-- 前端完全沒有測試。如果要開始補，`vitest` + `@testing-library/react`
-  是最順的選擇（專案已經是 Vite，設定成本低）。
+  （llama.cpp 直接載入）、`vision_tools.py`（Florence-2/PaddleOCR）、
+  `shell_exec.py`（PowerShell/cmd）只有 mock 測試過，**這個沙盒環境沒有
+  真的 Chrome/GPU/模型權重/Windows shell 可以測**（`shell_exec.py` 的
+  測試全部用 `unittest.mock` 把 `subprocess.run` 換掉，驗證的是 wrapper
+  自己的行為，不是 PowerShell/cmd 本身），如果使用者回報這幾個模組的
+  實際執行問題，先假設是真實環境跟 mock 假設不一致，不要無條件相信
+  mock 測試全過就代表沒問題。
+- ~~`forgetting_enabled` / `activation_enabled` 開關重啟後會回到關閉~~
+  **已修復**：兩個開關現在存在 `MemoryStore` 的 JSON 檔案裡（`"__settings__"`
+  區塊），重啟會恢復成上次關掉之前的狀態，不再需要使用者每次都重新打開。
+  `permission_mode`（工具授權策略）比照同一套機制，也持久化了。
+- ~~前端完全沒有測試~~ **已補上一部分**：`vitest` + `@testing-library/react`
+  基礎設施在了（`npm run test`），涵蓋 `parseTaskTree`、`TaskTreeCard`
+  的需確認徽章規則、`useAgentEventHandler` 的 chunk/chunk_patch 與
+  `permission_request` 事件、`PermissionRequestMessage` 授權卡片、
+  `ChatMessage` 拆完之後的整體組裝、以及 `useSidebarAutoCollapse` /
+  `useServerHealth` / `useMessageComposer` 這三個從 `App.tsx` 拆出來的
+  hook。還沒覆蓋：`SideBar` 系列（除了 `PermissionModeCard` 沒有獨立
+  測試）、`ChatInput`、Markdown/KaTeX 顯示。
+- Retriever 的關鍵字比對偏簡單（n-gram + 字串比對），沒有語意 embedding——
+  要做真的語意檢索需要額外引入 embedding 模型，對一般使用者機器的安裝
+  體積/記憶體/啟動時間都會有明顯影響，這是需要跟使用者討論過才能動的
+  架構決策，不要自己單方面加進去。
+- 權限系統（`tool_permissions.py`）目前只有「工具名稱」這個維度的分級，
+  沒有依「參數內容」再細分風險（例如 `run_powershell("Get-Date")` 跟
+  `run_powershell("Remove-Item -Recurse C:\\")` 目前被問的方式完全一樣，
+  都是「這個工具本身是 DANGEROUS，問一次、之後這個工作階段都放行」）。
+  這是刻意的取捨，不是漏做：分析參數內容是不是危險，本質上就是黑名單/
+  規則比對，維護成本高又注定有漏洞，見 `tool_permissions.py` 開頭的說明。
+  如果之後要做得更細，方向應該是「授權卡片裡把完整參數內容顯示清楚，
+  讓使用者自己判斷」（目前 `PermissionRequestMessage` 已經有顯示 `args`），
+  而不是程式自己嘗試判斷一段指令字串安不安全。
 
 ---
 

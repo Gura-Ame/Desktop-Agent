@@ -1,7 +1,7 @@
-import { ImagePlus, Send, Square, X } from "lucide-react";
+import { FileText, ImagePlus, Send, Square, X } from "lucide-react";
 import type { ChangeEvent, CSSProperties, KeyboardEvent } from "react";
 import { useRef } from "react";
-import type { ChatImage } from "../types";
+import type { ChatFile, ChatImage } from "../types";
 import { Button } from "./ui/Button";
 
 type ChatInputProps = {
@@ -14,6 +14,9 @@ type ChatInputProps = {
 	images?: ChatImage[];
 	onAddImages?: (list: ChatImage[]) => void;
 	onRemoveImage?: (id: string) => void;
+	files?: ChatFile[];
+	onPickFiles?: () => void;
+	onRemoveFile?: (id: string) => void;
 };
 
 export default function ChatInput({
@@ -26,6 +29,9 @@ export default function ChatInput({
 	images = [],
 	onAddImages,
 	onRemoveImage,
+	files = [],
+	onPickFiles,
+	onRemoveFile,
 }: ChatInputProps) {
 	const fileRef = useRef<HTMLInputElement>(null);
 
@@ -106,6 +112,29 @@ export default function ChatInput({
 					</div>
 				)}
 
+				{files.length > 0 && (
+					<div className="flex flex-wrap gap-1.5">
+						{files.map((file) => (
+							<div
+								key={file.id}
+								title={file.path}
+								className="group flex items-center gap-1.5 rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+							>
+								<FileText size={12} className="shrink-0 text-zinc-400" />
+								<span className="max-w-[160px] truncate">{file.name}</span>
+								<button
+									type="button"
+									onClick={() => onRemoveFile?.(file.id)}
+									className="shrink-0 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-100"
+									title="移除"
+								>
+									<X size={11} />
+								</button>
+							</div>
+						))}
+					</div>
+				)}
+
 				<div className="flex items-end gap-2 rounded-md border border-zinc-200 bg-white px-2 py-1.5 shadow-sm focus-within:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:focus-within:border-zinc-600">
 					<input
 						ref={fileRef}
@@ -125,6 +154,19 @@ export default function ChatInput({
 					>
 						<ImagePlus size={16} />
 					</Button>
+
+					{onPickFiles && (
+						<Button
+							variant="ghost"
+							size="icon"
+							className="mb-0.5 shrink-0"
+							onClick={onPickFiles}
+							title="附加檔案（用路徑提供給 agent，不會上傳檔案內容）"
+							disabled={isBusy && !waitingUserInput}
+						>
+							<FileText size={16} />
+						</Button>
+					)}
 
 					<textarea
 						value={value}
@@ -156,7 +198,7 @@ export default function ChatInput({
 							size="icon"
 							className="mb-0.5 shrink-0"
 							onClick={onSend}
-							disabled={!value.trim() && images.length === 0}
+							disabled={!value.trim() && images.length === 0 && files.length === 0}
 							title="送出"
 						>
 							<Send size={14} />

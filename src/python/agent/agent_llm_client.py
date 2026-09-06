@@ -20,8 +20,34 @@ if TYPE_CHECKING:
 else:
     _Base = object
 
+# <|direct|> / <|plan|>一句話說明 這兩個標記是給系統自己判斷路由用的內部訊號，
+# 不是要給使用者看的內容（見 config.SYSTEM_PROMPT 的路由規則）。只吃掉標記本身
+# （加上 <|direct|> 後面緊接的那個換行，讓畫面不會多一行空白），不吃標記後面的
+# 文字內容——尤其是 <|plan|> 後面緊接著的一句話原因說明，那段文字設計上就是要
+# 讓使用者看到的（既有測試 test_agent_core_escalation.py 就斷言這段推理文字
+# 「應該有串流顯示給使用者看」），只是那個 "<|plan|>" 四個字的標記本身不該露出來。
+# 早期版本這裡誤用 `<\|plan\|>[^\n]*` 整行吃掉，如果模型這輪剛好整段輸出裡
+# 一個換行都沒有（例如很短的一句話回覆），會把整則訊息連原因文字一起清空，
+# 使用者畫面上什麼都看不到，比原本標記外露還糟——只比對標記本身就不會有這個問題。
+_ROUTING_TAG_RE = re.compile(r'^\s*(<\|direct\|>\n?|<\|plan\|>)')
+
+
 class AgentLLMClientMixin(_Base):
     """提供 AgentWorker 與 LLM client（OpenAI SDK 相容介面）通訊的核心方法。"""
+
+    def _strip_routing_tag_for_display(self, content: str):
+        """把這一輪輸出開頭的 <|direct|>/<|plan|>... 路由標記從聊天畫面上拿掉。
+
+        串流當下（_call_llm_stream 裡的 self.emit("chunk", text)）是逐字即時送到
+        前端的，那個當下還不知道這一整行是不是路由標記，沒辦法不送；只能等這一輪
+        完整內容確定之後，用跟工具呼叫互動同一套 chunk_patch 機制（前端
+        useAgentEventHandler.ts 的 "chunk_patch"）事後補一次差異，把畫面上那一行
+        整個換成空字串。呼叫端傳進來的 content 保持原封不動，不影響
+        _diagnose_escalation／_execute_tools 等仍然需要看到原始標記的邏輯。
+        """
+        match = _ROUTING_TAG_RE.match(content)
+        if match:
+            self.emit("chunk_patch", {"old": match.group(0), "new": ""})
 
     def _build_user_content(self, text: str, images=None):
         imgs = images if images is not None else []

@@ -154,7 +154,12 @@ def test_activation_persists_across_store_reload():
 
         # 模擬重啟：開新的 MemoryStore instance 讀同一個檔案
         store2 = MemoryStore(path)
-        assert store2.activation_enabled is False, "開關本身不跨 session 保留，每次重啟預設關閉"
+        # 這裡原本斷言「開關本身不跨 session 保留，每次重啟預設關閉」——
+        # 那正是 README「已知限制」列出的那一項，現在補上持久化了：開關狀態
+        # 跟著同一份 JSON 檔案存進 "__settings__" 區塊，重啟後應該恢復成
+        # 上次關掉之前的狀態（這裡 store1 設成 True 且呼叫過 save()，
+        # store2 讀回來也應該是 True）。
+        assert store2.activation_enabled is True, "開關本身現在應該要跨 session 保留"
         assert store2.nodes["rust"].activation == activation_before, \
             "但已經累積的分數本身要跨 session 保留下來，不能重啟就歸零"
     finally:

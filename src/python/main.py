@@ -6,6 +6,7 @@ import json
 import warnings
 import threading
 import pyautogui
+import webview
 
 # 必須在 QApplication 初始化前導入（實際的 QApplication/視窗建立已經搬到
 # webview_bootstrap.py 的 run_app 裡，這裡 import 只是為了保留這個初始化順序
@@ -21,6 +22,7 @@ import tools.automation_tools as tools
 from overlay import ScreenOverlay, OverlayManager
 from agent.agent_core import AgentWorker, AgentState
 from agent.task_system import ExecutionMode
+from agent.tool_permissions import PermissionMode
 
 pyautogui.FAILSAFE = True
 pyautogui.PAUSE = 0.5
@@ -42,6 +44,14 @@ class JsApi:
             "move_mouse": tools.move_mouse,
             "click_mouse": tools.click_mouse,
             "type_text": tools.type_text,
+            "mouse_down": tools.mouse_down,
+            "mouse_up": tools.mouse_up,
+            "drag_mouse": tools.drag_mouse,
+            "scroll_mouse": tools.scroll_mouse,
+            "press_key": tools.press_key,
+            "key_down": tools.key_down,
+            "key_up": tools.key_up,
+            "release_all_held_inputs": tools.release_all_held_inputs,
             "get_screen_size": tools.get_screen_size,
             "get_mouse_position": tools.get_mouse_position,
             "get_active_window": tools.get_active_window,
@@ -55,6 +65,12 @@ class JsApi:
             "execute_python": tools.execute_python,
             "read_screen_api": tools.read_screen_api,
             "query_screen_element": tools.query_screen_element,
+            "search_files_by_content": tools.search_files_by_content,
+            "find_files_by_name": tools.find_files_by_name,
+            "run_powershell": tools.run_powershell,
+            "run_cmd": tools.run_cmd,
+            "wait": tools.wait,
+            "wait_for_screen_stable": tools.wait_for_screen_stable,
             "analyze_image_visuals": tools.analyze_image_visuals,
             "analyze_image_ocr": tools.analyze_image_ocr,
             "unload_florence_model": tools.unload_florence_model,
@@ -147,6 +163,50 @@ class JsApi:
     def submit_user_input(self, text: str):
         self.agent.resume_with_user_input(text)
 
+    def pick_files(self):
+        """跳出原生的作業系統檔案選擇對話框，回傳使用者選的檔案路徑清單。
+
+        這是「本機 agent」該有的做法：使用者選的檔案本來就已經在這台機器
+        的磁碟上，不需要像網頁應用程式那樣把整個檔案內容讀進瀏覽器記憶體、
+        編碼成 base64、再傳一份過來——那樣不但要另外處理大小上限（本機
+        場景其實不需要這個限制，檔案本來就在硬碟上，agent 隨時可以自己
+        用 execute_python/search_files_by_content 之類的工具直接開檔），
+        還會把同一份內容在記憶體裡複製好幾次。這裡直接回傳路徑字串，
+        agent 之後用自己既有的工具集依路徑存取即可，完全不經過這層 bridge
+        搬運任何檔案內容。取消選擇或沒有視窗可用時回傳空陣列，不拋例外。
+        """
+        window = getattr(self, "_window", None)
+        if window is None:
+            return []
+        try:
+            result = window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True)
+            return list(result) if result else []
+        except Exception as e:
+            print(f"[JsApi] pick_files 失敗: {e}", flush=True)
+            return []
+
+    def log_from_frontend(self, level: str, message: str):
+        """開發時把前端 webview 的 console 輸出轉印到這個 process 的 stdout，
+        讓用 VS Code debugpy 掛 python main.py 偵錯時，Debug Console 能同時
+        看到 Python 這邊跟前端那邊發生的事，不用另外開瀏覽器 DevTools 對照。
+        前端只有在開發模式（import.meta.env.DEV）才會呼叫這個方法，見
+        src/lib/devConsoleBridge.ts。
+        """
+        print(f"[frontend:{level}] {message}", flush=True)
+
+    def respond_permission(self, decision: str):
+        """前端的授權對話框呼叫：decision 必須是 'allow' | 'allow_session' | 'deny'。"""
+        self.agent.resume_with_permission_decision(decision)
+        return {"status": "ok"}
+
+    def set_permission_mode(self, mode_str: str):
+        try:
+            mode = PermissionMode(mode_str)
+            self.agent.set_permission_mode(mode)
+            return {"status": "ok", "mode": mode.value}
+        except ValueError:
+            return {"status": "error", "msg": f"未知的權限模式: {mode_str}"}
+
     def set_execution_mode(self, mode_str: str):
         try:
             mode = ExecutionMode[mode_str.upper()]
@@ -205,29 +265,47 @@ class JsApi:
         return {"status": "ok", "msg": "pong"}
 
     def copy_to_clipboard(self, text: str):
-        """用 Win32 API 寫剪貼簿，避開 WebEngine COM 問題。"""
+        """寫入系統剪貼簿。
+
+        優先用 Qt 的剪貼簿（QApplication.clipboard()）而不是直接呼叫
+        win32clipboard——這個應用程式本身就是跑在 PyQt6 上，一直有一個
+        真實視窗與訊息迴圈在跑，Qt 的剪貼簿是透過那個真實視窗去持有的；
+        Windows 的「剪貼簿記錄」（Win+V）跟雲端剪貼簿同步，依賴的正是
+        由一個有訊息迴圈在跑的真實視窗觸發的剪貼簿變更通知。先前這裡
+        優先呼叫 win32clipboard.OpenClipboard()（沒有傳入視窗代碼，等同
+        OpenClipboard(NULL)），一般的複製貼上都正常（貼上不需要透過
+        通知鏈），但因為不是由一個真的視窗持有剪貼簿，Windows 的剪貼簿
+        記錄有時候抓不到這次變更——這就是「貼上/複製本身正常，但 Win+V
+        歷史記錄裡找不到」這個落差的來源。只有 Qt 這條路徑不可用時
+        （理論上不太會發生）才退回 win32clipboard，而且退回時盡量傳入
+        前景視窗代碼，而不是完全不傳，至少比原本更接近文件建議的用法。
+        """
+        try:
+            from PyQt6.QtWidgets import QApplication
+
+            app = QApplication.instance()
+            if app is not None:
+                cb = app.clipboard()
+                if cb is not None:
+                    cb.setText(str(text))
+                    return {"status": "ok", "via": "qt"}
+        except Exception:
+            pass
+
         try:
             import win32clipboard
             import win32con
+            import win32gui
 
-            win32clipboard.OpenClipboard()
+            hwnd = win32gui.GetForegroundWindow() or None
+            win32clipboard.OpenClipboard(hwnd)
             try:
                 win32clipboard.EmptyClipboard()
                 win32clipboard.SetClipboardData(win32con.CF_UNICODETEXT, str(text))
             finally:
                 win32clipboard.CloseClipboard()
-            return {"status": "ok"}
+            return {"status": "ok", "via": "win32"}
         except Exception as e:
-            try:
-                # 後備：Qt clipboard（需在主執行緒；失敗就回傳錯誤）
-                from PyQt6.QtWidgets import QApplication
-
-                cb = QApplication.clipboard()
-                if cb is not None:
-                    cb.setText(str(text))
-                    return {"status": "ok", "via": "qt"}
-            except Exception:
-                pass
             return {"status": "error", "msg": str(e)}
 
 

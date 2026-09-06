@@ -19,6 +19,7 @@ import tempfile
 
 from agent.agent_core import AgentWorker, AgentState  # noqa: E402
 from agent.task_system import ExecutionMode  # noqa: E402
+from agent.tool_permissions import PermissionMode  # noqa: E402
 from fake_llm import FakeOpenAIClient  # noqa: E402
 from memory.memory_store import MemoryStore  # noqa: E402
 
@@ -65,6 +66,7 @@ def test_compression_triggers_without_any_memory_tool_call():
         agent = AgentWorker({}, event_callback=on_event, default_mode=ExecutionMode.AUTO,
                              memory_path=memory_path)
         agent.client = FakeOpenAIClient(scripts)
+        agent.permission_manager.set_mode(PermissionMode.AUTO)
 
         # --- 前兩輪：純粹是為了讓 history 累積到超過 keep_last_turns，才有東西可壓 ---
         send_turn(agent, "你好")

@@ -10,6 +10,11 @@ import re
 from typing import TYPE_CHECKING
 from agent.tool_docs import TOOL_DOCS, get_tool_doc
 
+try:
+    from pyautogui import FailSafeException
+except ImportError:
+    FailSafeException = None
+
 if TYPE_CHECKING:
     from agent.agent_protocol import AgentWorkerBase as _Base
 else:
@@ -48,11 +53,32 @@ class AgentToolExecutionMixin(_Base):
 
             if func_name in self.available_functions:
                 try:
+                    allowed = self.request_tool_permission(func_name, args_str)
+                except InterruptedError:
+                    raise
+                if not allowed:
+                    disp_text = f"[{func_name} 被拒絕]: 使用者拒絕授權這次工具呼叫，未執行。"
+                    tag = "tool_error"
+                    combined_parts.append(f"{doc_prefix}{disp_text}")
+                    return disp_text, tag
+                try:
                     args, kwargs = self._parse_tool_arguments(func_name, args_str)
                     res = self.available_functions[func_name](*args, **kwargs)
                     disp_text = f"[{func_name}]: {res}"
                     tag = "tool_result"
+                except InterruptedError:
+                    raise
                 except Exception as e:
+                    if FailSafeException is not None and isinstance(e, FailSafeException):
+                        # 使用者把滑鼠甩去螢幕角落——這是 pyautogui 內建的實體緊急
+                        # 停止手勢，代表使用者現在就要 agent 停下來，不是「這次
+                        # 工具呼叫剛好失敗」而已，不能被當成一般錯誤吞掉繼續跑
+                        # 下一步，要讓它真的中斷整個執行迴圈（呼應 request_stop
+                        # 的效果，也一併釋放任何還按著的滑鼠鍵盤）。
+                        self.request_stop()
+                        raise InterruptedError(
+                            "使用者觸發了 pyautogui 的螢幕角落緊急停止（滑鼠移到螢幕角落）"
+                        ) from e
                     disp_text = f"[{func_name} 錯誤]: {e}"
                     tag = "tool_error"
             else:

@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from agent.agent_core import AgentWorker, AgentState
 from agent.task_system import ExecutionMode
+from agent.tool_permissions import PermissionMode
 from fake_llm import FakeOpenAIClient
 from memory.memory_store import MemoryStore
 
@@ -77,6 +78,7 @@ def test_cross_session_fact_retrieval(memory_path):
         memory_path=memory_path,
     )
     agent2.client = FakeOpenAIClient({"system": ["收到，我已參考先前專案資訊。"]})
+    agent2.permission_manager.set_mode(PermissionMode.AUTO)
 
     # 驗證啟動時 WorkingMemory 為空
     assert len(agent2.working_memory.active_ids()) == 0
@@ -110,6 +112,7 @@ def test_cross_session_relation_graph_expansion(memory_path):
         memory_path=memory_path,
     )
     agent.client = FakeOpenAIClient({"system": ["分析完畢。"]})
+    agent.permission_manager.set_mode(PermissionMode.AUTO)
 
     send_turn(agent, "請檢查 module_a 的行為")
 

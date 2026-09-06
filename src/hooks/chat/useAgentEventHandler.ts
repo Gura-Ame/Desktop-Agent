@@ -1,6 +1,12 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useCallback } from "react";
-import type { AgentEvent, ChatMessage, ServerStatus } from "../../types";
+import type {
+	AgentEvent,
+	ChatMessage,
+	PermissionInfo,
+	ServerStatus,
+	ToolRisk,
+} from "../../types";
 
 function nowTs() {
 	return Date.now();
@@ -15,6 +21,7 @@ type UseAgentEventHandlerArgs = {
 	setLogs: Dispatch<SetStateAction<string[]>>;
 	setWaitingConfirm: Dispatch<SetStateAction<boolean>>;
 	setWaitingUserInput: Dispatch<SetStateAction<string | null>>;
+	setWaitingPermission: Dispatch<SetStateAction<PermissionInfo | null>>;
 	setServerStatus: Dispatch<SetStateAction<ServerStatus>>;
 	isStreamingRef: { current: boolean };
 	isBusyRef: { current: boolean };
@@ -25,6 +32,7 @@ export function useAgentEventHandler({
 	setLogs,
 	setWaitingConfirm,
 	setWaitingUserInput,
+	setWaitingPermission,
 	setServerStatus,
 	isStreamingRef,
 	isBusyRef,
@@ -117,6 +125,7 @@ export function useAgentEventHandler({
 					isBusyRef.current = false;
 					setWaitingConfirm(false);
 					setWaitingUserInput(null);
+					setWaitingPermission(null);
 					setMessages((prev) => {
 						const last = prev[prev.length - 1];
 						if (last?.role === "agent") {
@@ -198,6 +207,44 @@ export function useAgentEventHandler({
 					break;
 				}
 
+				case "permission_request": {
+					// 後端 agent/tool_permissions.py 判定這個工具呼叫需要使用者當場做決定
+					// （風險等級 MODERATE/DANGEROUS，且目前的授權策略下還沒被問過/允許過）。
+					// 跟 waiting_input 是同一種「暫停等待」機制，差別只在這裡多了
+					// 結構化的 permissionInfo（工具名稱/參數/風險等級），讓
+					// PermissionRequestMessage 可以畫出三個按鈕而不是純文字問答。
+					isBusyRef.current = true;
+					isStreamingRef.current = false;
+					const info = (data && typeof data === "object" ? data : {}) as Partial<{
+						tool: string;
+						args: string;
+						risk: string;
+					}>;
+					const permissionInfo: PermissionInfo = {
+						tool: String(info.tool ?? "unknown_tool"),
+						args: String(info.args ?? ""),
+						risk: (info.risk as ToolRisk) ?? "dangerous",
+					};
+					setWaitingPermission(permissionInfo);
+					setMessages((prev) => {
+						const next = [...prev];
+						const last = next[next.length - 1];
+						if (last?.role === "agent" && last.isStreaming) {
+							next[next.length - 1] = { ...last, isStreaming: false };
+						}
+						next.push({
+							id: uid(),
+							role: "agent",
+							content: "",
+							isPermissionRequest: true,
+							permissionInfo,
+							ts: nowTs(),
+						});
+						return next;
+					});
+					break;
+				}
+
 				default:
 					break;
 			}
@@ -207,6 +254,7 @@ export function useAgentEventHandler({
 			setLogs,
 			setWaitingConfirm,
 			setWaitingUserInput,
+			setWaitingPermission,
 			setServerStatus,
 			isStreamingRef,
 			isBusyRef,

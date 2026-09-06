@@ -40,7 +40,19 @@ def test_reasoning_escalates_to_planning_with_decompose_and_smart_confirm():
     assert any(e[0] == "ask_confirm" for e in events), "初版計畫一定要送出 ask_confirm，不受執行模式影響"
     chunk_texts = "".join(str(d) for t, d in events if t == "chunk")
     assert "需要拆解成多個步驟" in chunk_texts, "切換前的推理內容應該有串流顯示給使用者看"
-    assert agent.history == [], "切換到 Planning 模式時，推理草稿不應該留在對話歷史裡"
+    # 之前這裡斷言 agent.history == []，理由是「推理草稿不該留在對話歷史裡」——
+    # 但這連使用者這輪真正說了什麼都一起丟掉了：之後使用者在一般對話裡問
+    # 「剛剛叫你做的事」，router 呼叫時帶的 self.history 完全沒有這輪存在過的痕跡，
+    # 這正是這次要修的「該記得的沒記住」問題本身。修正後的行為是：使用者這句話
+    # 一定要留著，但模型那段被放棄的推理草稿本身不留，只留一句簡短的
+    # 「已規劃成 Task Tree」標記（agent_routing._run_idle_routing 裡有詳細說明）。
+    assert agent.history == [
+        {"role": "user", "content": "整理桌面上的檔案並回報"},
+        {
+            "role": "assistant",
+            "content": "（這個請求被規劃成一份待確認的 Task Tree，原因: 需要拆解成多個步驟並逐一驗證是否完成）",
+        },
+    ], "使用者這輪說的話應該留在對話歷史裡，但不該留下被放棄的推理草稿原文"
 
     agent.confirm_and_start()
     wait_until(lambda: not agent.is_running(), timeout=3.0,
@@ -139,7 +151,19 @@ def test_truncated_without_conclusion_auto_escalates_to_planning():
     assert agent.state == AgentState.WAITING_CONFIRM
     assert any(e[0] == "ask_confirm" for e in events), "被截斷又沒收斂，應該自動切換到規劃模式並送出 ask_confirm"
     assert any("被長度上限截斷" in str(d) for t, d in events if t == "log")
-    assert agent.history == [], "自動切換到規劃模式時，這段沒結論的草稿不應該留在對話歷史裡"
+    # 同上一個測試，之前這裡斷言 history == []，改成：使用者這句話該留著、
+    # 模型那段被截斷的草稿本身不留，只留一句簡短標記。
+    assert agent.history == [
+        {"role": "user", "content": "Let a and b be positive integers such that ab+1 divides a^2+b^2..."},
+        {
+            "role": "assistant",
+            "content": (
+                "（這個請求被規劃成一份待確認的 Task Tree，原因: "
+                "回答在還沒有結論之前就用完了長度上限（並非模型自己判斷要切換，"
+                "而是系統觀察到寫了很多卻沒有收攬，判定這題被低估了難度））"
+            ),
+        },
+    ], "使用者這輪說的話應該留在對話歷史裡，但不該留下被截斷的草稿原文"
     assert tool_calls == [], "不應該把這段沒收斂的內容當成正常回答讓它去呼叫工具"
     print("[PASS] test_truncated_without_conclusion_auto_escalates_to_planning")
 

@@ -17,11 +17,19 @@ import tempfile
 
 from agent.agent_core import AgentWorker  # noqa: E402
 from agent.task_system import ExecutionMode  # noqa: E402
+from agent.tool_permissions import PermissionMode  # noqa: E402
 
 
 def make_agent(memory_path):
-    return AgentWorker({}, event_callback=lambda t, d: None,
+    agent = AgentWorker({}, event_callback=lambda t, d: None,
                         default_mode=ExecutionMode.AUTO, memory_path=memory_path)
+    # 這個檔案專門測 _execute_tools 本身的行為（有沒有重複執行、結果有沒有內嵌
+    # 在正確位置），會動態註冊像 counted_action/step_a/boom 這種測試用的假工具名稱，
+    # 這些名字當然不在 TOOL_RISK_LEVELS 裡，會被判定為預設的 DANGEROUS，
+    # 在 ASK 模式下每一個都會卡住等使用者回應——這裡測的不是權限系統，切成
+    # AUTO 讓它跳過確認。
+    agent.permission_manager.set_mode(PermissionMode.AUTO)
+    return agent
 
 
 def with_temp_memory(fn):
@@ -147,6 +155,55 @@ def test_unknown_function_reported_as_error(memory_path):
     print("[PASS] test_unknown_function_reported_as_error")
 
 
+@with_temp_memory
+def test_pyautogui_failsafe_exception_stops_agent_instead_of_being_swallowed(memory_path):
+    """使用者把滑鼠甩去螢幕角落觸發 pyautogui 內建的實體緊急停止手勢時，
+    這代表使用者現在就要 agent 停下來——不能被 _execute_tools 的通用
+    Exception 處理當成一般工具失敗吞掉、讓迴圈繼續跑下一步。
+
+    這台測試機沒有真的裝 pyautogui，agent_tool_execution.py 在 import
+    階段就已經把 FailSafeException 定死成 None 了（見它開頭的
+    try/except ImportError），這裡直接 monkeypatch 那個模組屬性，
+    繞過「需要真的環境才能測到這條路徑」的限制，專注測邏輯本身：
+    真的是這個特定例外類型時，要呼叫 request_stop() 並且往外拋
+    InterruptedError，而不是回傳一句 tool_error 文字。
+    """
+    import agent.agent_tool_execution as tool_execution_module
+
+    class FakeFailSafeException(Exception):
+        pass
+
+    original = tool_execution_module.FailSafeException
+    tool_execution_module.FailSafeException = FakeFailSafeException
+    try:
+        agent = make_agent(memory_path)
+        stop_calls = {"n": 0}
+        original_request_stop = agent.request_stop
+
+        def spy_request_stop():
+            stop_calls["n"] += 1
+            original_request_stop()
+
+        agent.request_stop = spy_request_stop
+
+        def moves_to_corner():
+            raise FakeFailSafeException("mouse moved to a corner of the screen")
+
+        agent.available_functions["moves_to_corner"] = moves_to_corner
+
+        raised = False
+        try:
+            agent._execute_tools('<|tool_call|>moves_to_corner()<|tool_call|>')
+        except InterruptedError:
+            raised = True
+
+        assert raised, "FailSafeException 應該讓 _execute_tools 拋出 InterruptedError，不是回傳一句錯誤文字"
+        assert stop_calls["n"] == 1, "應該要呼叫 request_stop() 讓整個 agent 真的停下來"
+        print("[PASS] test_pyautogui_failsafe_exception_stops_agent_instead_of_being_swallowed")
+    finally:
+        tool_execution_module.FailSafeException = original
+
+
 if __name__ == "__main__":
     tests = [
         test_no_tool_call_returns_content_unchanged,
@@ -154,6 +211,7 @@ if __name__ == "__main__":
         test_multiple_tool_calls_each_result_stays_next_to_its_own_call,
         test_failing_call_tagged_as_error_succeeding_call_tagged_as_result,
         test_unknown_function_reported_as_error,
+        test_pyautogui_failsafe_exception_stops_agent_instead_of_being_swallowed,
     ]
     for t in tests:
         t()

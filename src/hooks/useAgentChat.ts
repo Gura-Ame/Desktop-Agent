@@ -4,6 +4,8 @@ import type {
 	EditUserPayload,
 	ForkDirection,
 	MessageFork,
+	PermissionDecision,
+	PermissionInfo,
 	ServerStatus,
 } from "../types";
 import { useAgentEventHandler } from "./chat/useAgentEventHandler";
@@ -38,6 +40,8 @@ export function useAgentChat() {
 	const [logs, setLogs] = useState<string[]>([]);
 	const [waitingConfirm, setWaitingConfirm] = useState(false);
 	const [waitingUserInput, setWaitingUserInput] = useState<string | null>(null);
+	const [waitingPermission, setWaitingPermission] =
+		useState<PermissionInfo | null>(null);
 	const [serverStatus, setServerStatus] = useState<ServerStatus>({
 		running: false,
 		msg: "檢查中...",
@@ -59,6 +63,7 @@ export function useAgentChat() {
 		setLogs,
 		setWaitingConfirm,
 		setWaitingUserInput,
+		setWaitingPermission,
 		setServerStatus,
 		isStreamingRef,
 		isBusyRef,
@@ -68,10 +73,26 @@ export function useAgentChat() {
 		setMessages([]);
 		setWaitingConfirm(false);
 		setWaitingUserInput(null);
+		setWaitingPermission(null);
 		isBusyRef.current = false;
 		isStreamingRef.current = false;
 		stickToBottomRef.current = true;
 	}, [stickToBottomRef]);
+
+	/** user 在授權卡片上點了允許/拒絕：樂觀地把這則訊息標成已解決，
+	 * 實際送出決定交給呼叫端（App.tsx 會呼叫 callApi("respond_permission", ...)）。
+	 */
+	const resolvePermissionMessage = useCallback(
+		(msgId: string, decision: PermissionDecision) => {
+			setMessages((prev) =>
+				prev.map((m) =>
+					m.id === msgId ? { ...m, permissionResolved: decision } : m,
+				),
+			);
+			setWaitingPermission(null);
+		},
+		[],
+	);
 
 	/**
 	 * 編輯 user 訊息；resend=true 時建立新分枝並回傳要送給 LLM 的文字與圖片。
@@ -215,6 +236,8 @@ export function useAgentChat() {
 		setWaitingConfirm,
 		waitingUserInput,
 		setWaitingUserInput,
+		waitingPermission,
+		resolvePermissionMessage,
 		chatEndRef,
 		scrollContainerRef,
 		handleScroll,

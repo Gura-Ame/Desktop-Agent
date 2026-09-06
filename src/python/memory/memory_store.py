@@ -37,20 +37,47 @@ class MemoryStore:
         # relations 保持同步（在 add_relation / delete_node 裡維護），不會落地存進 JSON——
         # 存了也沒意義，只要有 nodes 的 relations 在，隨時可以重建。
         self._reverse_index: Dict[str, List[Dict[str, str]]] = {}
-        # Activation 開關：預設關閉（跟漸進式遺忘一致），由使用者透過
-        # AgentWorker.set_activation_enabled 決定要不要打開。只在記憶體裡，
-        # 不落地存進 JSON——每次重啟都是關閉的初始狀態，真正的分數（activation 欄位）
-        # 本身才是跨 session 持續存在的東西，「要不要繼續累積新的分數」是每次啟動時的選擇。
+        # Activation / 漸進式遺忘開關：預設關閉，由使用者透過 AgentWorker 的
+        # set_activation_enabled / set_forgetting_enabled 決定要不要打開。
+        # 這兩個布林值本身現在會跟著 nodes 一起存進同一份 JSON 檔（見 save()/_load()
+        # 裡的 "__settings__" 區塊），重開程式會恢復成上次關掉之前的狀態——
+        # 之前這裡完全沒落地，每次重啟都被迫回到關閉，使用者得重新開一次。
+        # 注意：這只是「開關本身」要不要持久化的選擇，跟真正的分數（activation 欄位、
+        # resolution_level）不是同一件事——那些欄位本來就一直是隨 MemoryNode 存進磁碟的。
         self.activation_enabled: bool = False
+        self.forgetting_enabled: bool = False
+        # 權限系統的整體授權策略（"ask" / "ask_dangerous_only" / "auto"）——
+        # 這是使用者對「要不要被煩」的偏好，跟 forgetting/activation 一樣值得
+        # 持久化。注意這裡存的只是「策略」本身，不是「這個工作階段已經允許了
+        # 哪些工具」那份清單——後者屬於安全邊界，刻意不比照持久化，見
+        # agent/tool_permissions.py 的 PermissionManager 說明。
+        # 用純字串存（而不是 import PermissionMode），避免 memory 這一層
+        # 反過來依賴 agent 那一層，維持原本的分層方向。
+        self.permission_mode: str = "ask"
         self._load()
 
     def set_activation_enabled(self, enabled: bool):
         self.activation_enabled = enabled
+        self.save()
+
+    def set_forgetting_enabled(self, enabled: bool):
+        self.forgetting_enabled = enabled
+        self.save()
+
+    def set_permission_mode(self, mode: str):
+        self.permission_mode = mode
+        self.save()
 
     def _load(self):
         if os.path.exists(self.path):
             with open(self.path, "r", encoding="utf-8") as f:
                 raw = json.load(f)
+            # "__settings__" 是保留鍵，不是 MemoryNode，讀取節點時要跳過；
+            # 讀取設定時用 .get 給預設值，相容舊檔案（還沒有這個區塊）。
+            settings = raw.pop("__settings__", {})
+            self.activation_enabled = bool(settings.get("activation_enabled", False))
+            self.forgetting_enabled = bool(settings.get("forgetting_enabled", False))
+            self.permission_mode = str(settings.get("permission_mode", "ask"))
             self.nodes = {nid: MemoryNode.from_dict(nd) for nid, nd in raw.items()}
         self._rebuild_reverse_index()
 
@@ -67,6 +94,11 @@ class MemoryStore:
 
     def save(self):
         raw = {nid: n.to_dict() for nid, n in self.nodes.items()}
+        raw["__settings__"] = {
+            "activation_enabled": self.activation_enabled,
+            "forgetting_enabled": self.forgetting_enabled,
+            "permission_mode": self.permission_mode,
+        }
         with open(self.path, "w", encoding="utf-8") as f:
             json.dump(raw, f, ensure_ascii=False, indent=2)
 

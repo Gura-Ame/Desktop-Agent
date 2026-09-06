@@ -66,6 +66,17 @@ body,
 	cursor: text;
 }
 
+/* --selection 這個變數之前有定義、也在 light/dark 兩組色票裡都給了值，
+   但從來沒有實際的 ::selection 規則去用它——結果就是選取文字時完全
+   沒有反白，只能靠瀏覽器/webview 自己的預設值（在某些嵌入式 webview
+   環境下，預設反白色可能跟背景色太接近甚至根本沒有視覺效果）。
+   這裡補上這條規則，讓選取反白真的套用設計好的顏色，深淺色主題都有
+   對應的前景色搭配，確保被選取的文字本身仍然清楚可讀。 */
+::selection {
+	background-color: var(--selection);
+	color: var(--foreground);
+}
+
 .katex {
 	font-size: 1.05em;
 	color: var(--katex);

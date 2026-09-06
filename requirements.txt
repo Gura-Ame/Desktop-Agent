@@ -4,6 +4,7 @@ PyQt6
 PyQt6-WebEngine
 pywebview
 pyautogui
+keyboard
 Pillow
 pywinauto
 pywin32

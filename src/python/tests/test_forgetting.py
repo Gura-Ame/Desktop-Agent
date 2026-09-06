@@ -348,6 +348,24 @@ def test_agent_set_forgetting_enabled_toggles_and_logs():
     print("[PASS] test_agent_set_forgetting_enabled_toggles_and_logs")
 
 
+def test_agent_forgetting_enabled_persists_across_restart():
+    """README「已知限制」列出的那一項：開關重啟後會回到關閉，尚未持久化——
+    這裡驗證修好之後的行為：set_forgetting_enabled(True) 之後重開一個指向
+    同一個 memory_path 的 AgentWorker，應該直接恢復成 True，不用使用者
+    每次都重新點一次。"""
+    from agent.agent_core import AgentWorker
+    fd, memory_path = tempfile.mkstemp(suffix=".json")
+    os.close(fd)
+    os.remove(memory_path)
+
+    agent1 = AgentWorker({}, event_callback=lambda *a: None, memory_path=memory_path)
+    agent1.set_forgetting_enabled(True)
+
+    agent2 = AgentWorker({}, event_callback=lambda *a: None, memory_path=memory_path)
+    assert agent2.forgetting_manager.enabled is True, "重啟後應該恢復成上次關掉之前的開啟狀態"
+    print("[PASS] test_agent_forgetting_enabled_persists_across_restart")
+
+
 def test_agent_maybe_run_forgetting_pass_noop_when_disabled():
     from agent.agent_core import AgentWorker
     fd, memory_path = tempfile.mkstemp(suffix=".json")

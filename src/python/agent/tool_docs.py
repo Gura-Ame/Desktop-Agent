@@ -254,6 +254,159 @@ browser_type(selector, text) — 用 CSS 選擇器在輸入框/文字區塊打�
 - 這個工具只會設定輸入框的值並觸發 input/change 事件，不會自己按 Enter 或送出表單，
   如果要送出，通常還需要接著呼叫 browser_click() 點擊送出按鈕。
 """.strip(),
+
+    "search_files_by_content": """
+search_files_by_content(pattern, root_dir="~", file_glob="*", max_results=50, case_sensitive=False, context_lines=1, max_scan=50000)
+— 用正則表達式在 root_dir 底下遞迴搜尋文字內容，類似輕量版的 grep。
+
+跟 build_code_graph 是互補關係：build_code_graph 分析「已經知道要看哪個檔案」之後
+函式彼此怎麼呼叫；這個工具負責更前面一步——不知道要看哪個檔案時，先用這個工具
+找出關鍵字/字串/TODO/設定值出現在哪個檔案的哪一行，不侷限於 Python 檔案，
+也不需要先解析語法。
+
+- pattern 是正則表達式（Python re 語法），不是純字面字串比對——如果只是想找
+  一個固定字串，記得先用 re.escape 的邏輯想過特殊字元（. * ( ) 等）會不會被
+  誤判成正則語法；不確定的話可以先用 execute_python 呼叫 re.escape() 處理過
+  再傳進來。
+- file_glob 是檔名的比對樣式，預設 "*" 代表所有檔案。可以寫萬用字元
+  （例如 "*.py"、"config.*"）做精確篩選；如果只給一個關鍵字沒有寫任何
+  萬用字元（例如直接寫 "config"），會自動當成 *config* 做檔名子字串比對，
+  不用先想清楚正確的 glob 語法。
+- root_dir 預設是使用者的家目錄（~），不是這個 App 自己的安裝路徑——
+  適合「幫我找電腦上的某個檔案」這種需求；如果已經知道明確的專案路徑，
+  傳進去可以縮小範圍、加快搜尋。
+- 結果裡每一筆是「相對路徑:行號」加上前後 context_lines 行，命中的那一行會用
+  「→」標出來。
+- 找到的筆數一旦達到 max_results 就會停止並在結果最前面註明「已達上限」，
+  這種情況下不代表沒有更多符合的內容了，是主動被截斷，需要的話可以縮小
+  root_dir/file_glob 範圍或提高 max_results 再查一次，不要誤以為已經找完全部。
+- max_scan 是另一個獨立的上限：「總共實際看過幾個檔案」，避免完全沒找到
+  符合內容時，整個搜尋在龐大的目錄裡（例如整個使用者家目錄）沒有 early
+  exit、跑到很久才回來。回傳結果裡出現「已達單次掃描上限」代表可能還沒
+  掃完就停了，不是「已確認掃過整個 root_dir 都沒有」，建議縮小範圍再查。
+- 自動跳過 .git、node_modules、__pycache__、venv、dist、build、AppData、
+  $RECYCLE.BIN 等目錄，以及看起來像二進位檔的內容，不需要自己在 pattern
+  或 file_glob 裡刻意排除這些。
+""".strip(),
+
+    "find_files_by_name": """
+find_files_by_name(name_pattern, root_dir="~", max_results=100, case_sensitive=False, max_scan=50000)
+— 依檔名找檔案（不看內容），跟 search_files_by_content 是互補關係：那個
+工具找「內容裡有沒有某段文字」，這個工具找「有沒有一個檔案叫這個名字」，
+用來回答「這台電腦上有沒有 XXX.exe」「桌面上是不是有一個叫 report 開頭的
+檔案」這類問題，對圖片、執行檔這類非文字檔也一樣有效（不需要打開內容）。
+
+- name_pattern 可以直接給關鍵字（例如 "report"，會自動當成 *report* 做
+  子字串比對），也可以寫明確的萬用字元樣式（例如 "*.log"、"config.*"）
+  做精確篩選——已經寫了萬用字元的樣式不會被再包一層。
+- root_dir 預設是使用者的家目錄（~），不是這個 App 自己的安裝路徑。
+- max_scan 的意義跟 search_files_by_content 一樣：限制「總共看過幾個
+  檔案」，避免完全沒找到符合的檔名時，在龐大目錄裡跑很久才回來；回傳結果
+  出現「已達單次掃描上限」代表可能還沒掃完，不代表已經確認找遍了整個
+  root_dir，建議縮小範圍再查一次。
+- max_results 限制的是「找到幾筆」，跟 max_scan 是兩件不同的事：一個限制
+  找到的數量，一個限制實際看過的檔案數量。
+""".strip(),
+
+    "run_powershell": """
+run_powershell(command, timeout=30) — 執行一段 PowerShell 指令，回傳 stdout/stderr/結束代碼。
+
+- 這是 DANGEROUS 等級的工具，跟 execute_python 完全同等級——能執行系統指令
+  就等於有這台電腦使用者本人能做到的所有事。系統會在真正執行前暫停，
+  跳出來讓使用者決定要不要授權；如果回傳結果是「使用者拒絕授權」，代表
+  使用者當下不同意，不是指令寫錯或工具壞掉，不要重複用一樣的指令再試一次，
+  換個方法或用 ask_user 直接問使用者想怎麼做。
+- timeout 是秒數，指令跑超過這個時間會被強制終止並回報逾時，不會讓 agent
+  卡住等一個沒有反應的指令，需要跑比較久的指令記得提高這個值。
+- 輸出過長時會被截斷並在結尾註明總長度；如果懷疑重要內容被截斷了，
+  改用更精確的指令縮小輸出範圍（例如加篩選條件、只印需要的欄位），
+  而不是單純調高 timeout（截斷是輸出長度造成的，跟逾時是兩回事）。
+- 這個工具本身不會過濾或封鎖任何指令內容，安全把關完全交給前面提到的
+  使用者授權那一步，不要誤以為工具自己會擋掉危險指令。
+""".strip(),
+
+    "run_cmd": """
+run_cmd(command, timeout=30) — 執行一段 cmd.exe 指令，回傳 stdout/stderr/結束代碼。
+
+跟 run_powershell 是同一個等級、同一套授權機制、同樣的 timeout/輸出截斷規則，
+差別只在直譯器是 cmd.exe 不是 PowerShell——某些舊式 DOS 指令或 .bat 腳本用
+cmd 執行比較直接，其餘規則跟 run_powershell 完全一樣，請一併參考。
+""".strip(),
+
+    "wait_for_screen_stable": """
+wait_for_screen_stable(timeout=30, stable_seconds=1.5, poll_interval=0.5, region=None, change_threshold=0.01)
+— 等到畫面連續 stable_seconds 秒都沒有明顯變化才回傳，適合「不知道確切要
+等多久，但知道畫面安靜下來就代表做完了」的情境（編譯、頁面載入、動畫播完）。
+
+- 用法範例：呼叫 run_action/run_powershell 觸發一個會產生畫面變化的操作
+  （編譯、開啟程式）之後，呼叫這個工具等它安靜下來，再接著呼叫
+  analyze_image_ocr 或 read_screen_api 讀取最終結果——這個工具本身只負責
+  判斷「畫面有沒有變化」，不會幫你判斷「這個變化代表任務完成了沒」，
+  那一步永遠是你自己接下來要做的事。
+- region 是 (x, y, width, height) 四個數字的範圍，只比對畫面裡的一小塊
+  區域（例如編譯輸出視窗的座標範圍），可以避免系統時鐘、游標閃爍這類
+  無關的變動讓它誤以為「還沒穩定」；不確定座標的話可以先用
+  read_screen_api 或 get_screen_size 抓一次再決定要不要縮小範圍，不給
+  的話會比對整個螢幕。
+- 逾時（回傳裡出現「逾時」）不代表任務失敗，只代表 timeout 秒內畫面一直
+  沒有連續安靜滿 stable_seconds 秒——可能只是這個操作本來就需要更久，
+  可以直接用更長的 timeout 再呼叫一次，不需要換別的方法重來。
+- timeout 上限是 120 秒，如果需要等更久，請分成多次呼叫，不要傳一個
+  超過上限的數字（會直接失敗，不會被自動調整成上限值）。
+""".strip(),
+
+    "mouse_down": """
+mouse_down(button="left") — 按住滑鼠按鍵不放，不會自動放開，要自己接著
+在後續某次呼叫呼叫 mouse_up(button) 才會真的放開。
+
+- 這是「即時控制」的基本單位：drag_mouse 就是 mouse_down + 平滑移動 +
+  mouse_up 包成一個方便呼叫的動作；如果只是要拖曳一個東西到某個位置，
+  優先用 drag_mouse，不需要自己手動組這三步。只有在拖曳過程中需要穿插
+  其他判斷（例如邊拖曳邊檢查畫面變化）才需要自己拆開來用 mouse_down。
+- 呼叫過 mouse_down 之後，如果這一輪任務中途結束、或使用者按下停止，
+  系統會自動幫你呼叫 release_all_held_inputs() 放開所有還按著的按鍵，
+  不會讓使用者的滑鼠卡在按住的狀態——但這是最後一道安全網，不代表你
+  可以不管，正常流程還是要自己記得對應呼叫 mouse_up。
+""".strip(),
+
+    "drag_mouse": """
+drag_mouse(x, y, duration=0.3, button="left") — 從目前滑鼠位置拖曳到
+(x, y)，適合拖曳視窗、框選範圍、拖放檔案這類一次到位就能完成的操作。
+
+- duration 是這次拖曳花費的秒數，太快（例如 0.05）某些應用程式的拖放
+  事件處理偵測不到中間的移動路徑，會被當成「瞬間放開」而不是「拖曳」，
+  預設 0.3 秒是折衷值，遇到偵測不到的情況可以調高再試。
+- 如果需要在拖曳途中做其他判斷（不是單純從 A 點拖到 B 點），改用
+  mouse_down + move_mouse + mouse_up 自己分開控制，不要硬塞進一次
+  drag_mouse 呼叫裡。
+""".strip(),
+
+    "press_key": """
+press_key(key: str) — 按一下單一按鍵或組合鍵，例如 "enter"、"esc"、
+"ctrl+c"、"alt+tab"、"ctrl+shift+s"。
+
+- 組合鍵用 + 分隔多個按鍵名稱，效果是同時按下所有鍵、再一起放開
+  （底層對應 pyautogui.hotkey），不是依序個別按下再依序放開。如果需要
+  精細控制先後順序（例如先按住 Ctrl 不放，中間穿插其他動作，最後才
+  放開），改用 key_down/key_up 自己分開控制，不要用 press_key。
+- 按鍵名稱要用 pyautogui 認得的名稱（例如方向鍵是 "up"/"down"/"left"/
+  "right"，不是中文或符號），不確定某個鍵怎麼寫的話，先用簡單常見的名稱
+  試（字母、數字、enter、esc、tab、space、backspace、delete），失敗了
+  再依錯誤訊息調整。
+""".strip(),
+
+    "key_down": """
+key_down(key: str) — 按住一個按鍵不放，不會自動放開，要自己接著在後續
+某次呼叫呼叫 key_up(key) 才會真的放開。
+
+- 用來模擬長按（例如遊戲裡按住方向鍵持續移動），或需要跟滑鼠動作同步的
+  情境（按住 Shift 的同時用滑鼠拖曳做連續多選）。單純「按一下」用
+  press_key 就好，不需要自己組 key_down + key_up。
+- 呼叫過 key_down 之後，如果這一輪任務中途結束、或使用者按下停止，
+  系統會自動幫你呼叫 release_all_held_inputs() 放開所有還按著的按鍵，
+  但這是最後一道安全網，正常流程還是要自己記得對應呼叫 key_up，不要
+  依賴這個安全網當作正常的收尾方式。
+""".strip(),
 }
 
 

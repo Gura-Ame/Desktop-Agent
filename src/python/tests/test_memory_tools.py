@@ -17,6 +17,7 @@ import tempfile
 
 from agent.agent_core import AgentWorker, AgentState  # noqa: E402
 from agent.task_system import ExecutionMode  # noqa: E402
+from agent.tool_permissions import PermissionMode  # noqa: E402
 from fake_llm import FakeOpenAIClient  # noqa: E402
 from memory.memory_store import MemoryStore  # noqa: E402
 
@@ -30,6 +31,7 @@ def make_agent(scripts, memory_path):
     agent = AgentWorker({}, event_callback=on_event, default_mode=ExecutionMode.AUTO,
                          memory_path=memory_path)
     agent.client = FakeOpenAIClient(scripts)
+    agent.permission_manager.set_mode(PermissionMode.AUTO)
     return agent, events
 
 

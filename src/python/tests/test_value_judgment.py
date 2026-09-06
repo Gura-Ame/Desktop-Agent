@@ -17,6 +17,7 @@ import tempfile
 
 from agent.agent_core import AgentWorker, AgentState  # noqa: E402
 from agent.task_system import ExecutionMode  # noqa: E402
+from agent.tool_permissions import PermissionMode  # noqa: E402
 from fake_llm import FakeOpenAIClient  # noqa: E402
 from memory.memory_store import MemoryStore  # noqa: E402
 
@@ -148,6 +149,7 @@ def test_value_judgment_uses_original_user_prompt_not_tool_result_message(memory
     agent = AgentWorker({"run_action": lambda x: "ok"}, event_callback=lambda t, d: None,
                          default_mode=ExecutionMode.AUTO, memory_path=memory_path)
     agent.client = FakeOpenAIClient(scripts)
+    agent.permission_manager.set_mode(PermissionMode.AUTO)
     send_turn(agent, "幫我執行一個動作")
 
     assert len(captured_prompts) == 1

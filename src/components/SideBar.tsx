@@ -8,9 +8,16 @@ import {
 	Sun,
 	Zap,
 } from "lucide-react";
-import type { ClientMode, ExecutionMode, ServerStatus, Theme } from "../types";
+import type {
+	ClientMode,
+	ExecutionMode,
+	PermissionMode,
+	ServerStatus,
+	Theme,
+} from "../types";
 import ExecutionModeCard from "./sidebar/ExecutionModeCard";
 import LlmClientCard from "./sidebar/LlmClientCard";
+import PermissionModeCard from "./sidebar/PermissionModeCard";
 import SidebarFooterActions from "./sidebar/SidebarFooterActions";
 import ToggleFeatureCard from "./sidebar/ToggleFeatureCard";
 
@@ -40,6 +47,8 @@ type SidebarProps = {
 	handleForgettingToggle: (enabled: boolean) => void;
 	activationEnabled: boolean;
 	handleActivationToggle: (enabled: boolean) => void;
+	permissionMode: PermissionMode;
+	handlePermissionModeChange: (mode: PermissionMode) => void;
 	theme?: Theme;
 	toggleTheme?: () => void;
 };
@@ -70,6 +79,8 @@ export default function Sidebar({
 	handleForgettingToggle,
 	activationEnabled,
 	handleActivationToggle,
+	permissionMode,
+	handlePermissionModeChange,
 	theme,
 	toggleTheme,
 }: SidebarProps) {
@@ -134,6 +145,11 @@ export default function Sidebar({
 					<ExecutionModeCard
 						executionMode={executionMode}
 						handleModeChange={handleModeChange}
+					/>
+
+					<PermissionModeCard
+						permissionMode={permissionMode}
+						handlePermissionModeChange={handlePermissionModeChange}
 					/>
 
 					<ToggleFeatureCard

@@ -20,6 +20,7 @@ import textwrap
 
 from agent.agent_core import AgentWorker, AgentState  # noqa: E402
 from agent.task_system import ExecutionMode, TaskNode, TaskStatus  # noqa: E402
+from agent.tool_permissions import PermissionMode  # noqa: E402
 from fake_llm import FakeOpenAIClient, ECHO_REFLECT  # noqa: E402
 
 
@@ -51,6 +52,7 @@ def make_agent(scripts, memory_path, mode=ExecutionMode.AUTO):
 
     agent = AgentWorker({}, event_callback=on_event, default_mode=mode, memory_path=memory_path)
     agent.client = FakeOpenAIClient(scripts)
+    agent.permission_manager.set_mode(PermissionMode.AUTO)
     return agent, events
 
 

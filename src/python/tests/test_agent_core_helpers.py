@@ -9,6 +9,7 @@ import tempfile
 
 from agent.agent_core import AgentWorker, AgentState
 from agent.task_system import ExecutionMode, TaskNode, TaskStatus
+from agent.tool_permissions import PermissionMode
 from fake_llm import FakeOpenAIClient, ECHO_REFLECT
 
 ESCALATE_RESPONSE = "<|plan|>需要拆解成多個步驟並逐一驗證是否完成"
@@ -92,6 +93,13 @@ def make_agent(scripts: dict, mode=ExecutionMode.SMART):
     agent = AgentWorker({"run_action": run_action}, event_callback=on_event, default_mode=mode,
                          memory_path=memory_path)
     agent.client = FakeOpenAIClient(scripts)
+    # 這裡的測試是在驗證路由/Task Tree/Reflection 這些邏輯本身，不是在驗證
+    # 權限系統，把權限模式切成 AUTO 讓 run_action 這類未分類、預設 DANGEROUS
+    # 的工具直接放行，不然每個呼叫都會卡在 request_tool_permission 的等待迴圈——
+    # 沒有任何一支呼叫 make_agent 的測試會去回應那個等待，會直接整個 test hang 住。
+    # 權限系統本身的行為在 test_tool_permissions.py 跟
+    # test_tool_permission_integration.py 裡單獨測，不靠這裡的 fixture。
+    agent.permission_manager.set_mode(PermissionMode.AUTO)
     return agent, events, tool_calls
 
 def send_turn(agent, prompt):

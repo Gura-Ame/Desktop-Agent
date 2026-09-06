@@ -88,6 +88,17 @@ class AgentRoutingMixin(_Base):
             {"role": "system", "content": attn_block},
         ] + self.history + [{"role": "user", "content": attempt_user_content}]
 
+        # 不管接下來這輪會走 Direct Mode 還是升級成完整規劃，這輪使用者真正說了什麼
+        # 都要先進 self.history——這是給「一般對話」用的記憶（跟 Task Tree/WorkingMemory
+        # 是兩回事），之前只有走到後面第 126 行「沒有升級」那條路才會補這一筆，
+        # 一旦這輪被判斷需要升級成完整規劃（escalate=True），使用者這句話就完全不會
+        # 進到 self.history 裡——後面幾輪只要不是又跑一次 Task Tree，router 呼叫時
+        # 帶的 self.history 完全看不到這句話說過，使用者事後隨口問「還記得我剛剛
+        # 說要幹嘛嗎」，模型手上的 messages 真的就是沒有，不是它瞎掰、也不是
+        # Working Memory 的鍋。搬到這裡、兩條路都先記下來，才是真的「該記得的有記住」。
+        self.history.append({"role": "user", "content": attempt_user_content})
+        self.current_images = []
+
         try:
             attempt_content = self._call_llm_stream(messages)
         except InterruptedError:
@@ -96,6 +107,8 @@ class AgentRoutingMixin(_Base):
             self.emit("log", f"[錯誤] 推理呼叫模型失敗: {e}")
             self.emit("finished", f"error: {e}")
             return
+
+        self._strip_routing_tag_for_display(attempt_content)
 
         if self._should_stop():
             raise InterruptedError("Agent 已由使用者停止")
@@ -111,6 +124,13 @@ class AgentRoutingMixin(_Base):
 
             if dsl_plan is not None and self.engine.load_initial_plan(dsl_plan):
                 self.state = AgentState.WAITING_CONFIRM
+                # 讓後續的一般對話至少知道「這輪被規劃成了一棵 Task Tree」，
+                # 而不是完全一片空白——實際執行結果會在整棵樹跑完時
+                # 由 _record_plan_completion_to_history 補上更完整的摘要。
+                self.history.append({
+                    "role": "assistant",
+                    "content": f"（這個請求被規劃成一份待確認的 Task Tree，原因: {reason}）",
+                })
                 self.emit("ask_confirm", self.engine.render_tree_markdown())
                 return
             else:
@@ -118,11 +138,9 @@ class AgentRoutingMixin(_Base):
                 # 這則訊息裡已經有一輪被放棄的推理內容殘留在畫面上，
                 # 通知前端捨棄它、開新的訊息泡泡，避免新一輪內容接在舊內容後面看起來像重複。
                 self.emit("reset_message", None)
-                self._run_direct_mode()
+                self._run_direct_mode(skip_user_append=True)
                 return
 
-        self.history.append({"role": "user", "content": attempt_user_content})
-        self.current_images = []
         self._run_direct_mode(initial_content=attempt_content)
 
     def _diagnose_escalation(self, attempt_content: str):
@@ -198,6 +216,7 @@ class AgentRoutingMixin(_Base):
             task = self.engine.get_next_pending_task()
             if not task:
                 self.emit("log", "\n[系統] 所有任務執行完畢！")
+                self._record_plan_completion_to_history()
                 self.state = AgentState.IDLE
                 self.emit("finished", "All tasks completed.")
                 break
@@ -233,3 +252,26 @@ class AgentRoutingMixin(_Base):
         if self.engine.mode == ExecutionMode.SMART:
             return next_task.need_confirm
         return True
+
+    def _record_plan_completion_to_history(self):
+        """整棵 Task Tree 跑完之後，把結果摘要補進 self.history。
+
+        Task Tree 執行過程中的 retrieve/think/verify 全都是走 _call_llm（不帶
+        self.history 的獨立呼叫），跟一般對話用的 self.history 是兩條平行線；
+        沒有這一步的話，這整輪「使用者請求 -> 規劃 -> 執行」在一般對話記憶裡
+        會是完全空白的一段，之後使用者隨口問「剛剛那個任務做得怎樣了」，
+        router 呼叫時帶的 self.history 根本沒有任何線索。只取頂層任務（沒有
+        parent_id 的），避免拆解出來的子任務把摘要灌得又臭又長。
+        """
+        top_level = [t for t in self.engine.tasks if t.parent_id is None]
+        if not top_level:
+            return
+        lines = []
+        for t in top_level:
+            status_label = t.status.value if hasattr(t.status, "value") else str(t.status)
+            result_snippet = (t.result or "").strip()
+            if len(result_snippet) > 200:
+                result_snippet = result_snippet[:200] + "…"
+            lines.append(f"- [{t.id}] {t.title} ({status_label}): {result_snippet or '（無結果內容）'}")
+        summary = "（這棵 Task Tree 已執行完畢，各頂層步驟結果：）\n" + "\n".join(lines)
+        self.history.append({"role": "assistant", "content": summary})

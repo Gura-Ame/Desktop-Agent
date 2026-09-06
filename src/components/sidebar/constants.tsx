@@ -1,5 +1,5 @@
 import { FolderOpen, Globe } from "lucide-react";
-import type { ClientMode, ExecutionMode } from "../../types";
+import type { ClientMode, ExecutionMode, PermissionMode } from "../../types";
 
 export const MODE_OPTIONS: {
 	value: ExecutionMode;
@@ -20,6 +20,28 @@ export const MODE_OPTIONS: {
 		value: "AUTO",
 		label: "全自動",
 		hint: "無視任務自己的判斷，中間不再暫停，直到全部完成或需要你介入",
+	},
+];
+
+export const PERMISSION_MODE_OPTIONS: {
+	value: PermissionMode;
+	label: string;
+	hint: string;
+}[] = [
+	{
+		value: "ask",
+		label: "一律詢問",
+		hint: "任何有副作用（記憶寫入、網頁互動）或高風險（滑鼠鍵盤、執行程式碼）的工具，第一次使用都要你同意",
+	},
+	{
+		value: "ask_dangerous_only",
+		label: "只問高風險",
+		hint: "記憶寫入、網頁互動這類中風險工具自動放行，滑鼠鍵盤、執行程式碼這類高風險工具還是會問",
+	},
+	{
+		value: "auto",
+		label: "全部信任",
+		hint: "完全不詢問，所有工具都直接執行——只建議進階使用者在完全信任目前設定的模型時使用",
 	},
 ];
 

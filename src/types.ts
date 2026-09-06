@@ -17,7 +17,11 @@ export type ChatMessage = {
 	isStreaming?: boolean;
 	isTree?: boolean;
 	isQuestion?: boolean;
+	isPermissionRequest?: boolean;
+	permissionInfo?: PermissionInfo;
+	permissionResolved?: PermissionDecision;
 	images?: ChatImage[];
+	files?: ChatFile[];
 	forks?: MessageFork[];
 	forkIndex?: number;
 };
@@ -85,4 +89,23 @@ export type EditUserPayload = {
 
 export type ForkDirection = "prev" | "next";
 
+export type ChatFile = {
+	id: string;
+	name: string;
+	path: string;
+};
+
 export type ClientMode = "local_llama" | "remote_api";
+
+export type ToolRisk = "safe" | "moderate" | "dangerous";
+
+export type PermissionDecision = "allow" | "allow_session" | "deny";
+
+/** 跟 agent/tool_permissions.py 的 PermissionMode 一一對應 */
+export type PermissionMode = "ask" | "ask_dangerous_only" | "auto";
+
+export type PermissionInfo = {
+	tool: string;
+	args: string;
+	risk: ToolRisk;
+};

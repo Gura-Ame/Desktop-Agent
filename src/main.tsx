@@ -1,8 +1,11 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
+import { installDevConsoleBridge } from "./lib/devConsoleBridge";
 import "./index.css";
 import "katex/dist/katex.min.css";
+
+installDevConsoleBridge();
 
 // 避免首屏閃爍：在 React 掛載前套用已存主題
 try {

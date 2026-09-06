@@ -16,11 +16,16 @@ MAX_DIRECT_MODE_ROUNDS = 6
 class AgentDirectModeMixin(_Base):
     """提供 AgentWorker 直接對話/工具呼叫迴圈 (Direct Mode)。"""
 
-    def _run_direct_mode(self, initial_content: Optional[str] = None):
+    def _run_direct_mode(self, initial_content: Optional[str] = None, skip_user_append: bool = False):
         if initial_content is None:
-            user_content = self._build_user_content(self.current_user_prompt, self.current_images)
-            self.history.append({"role": "user", "content": user_content})
-            self.current_images = []
+            if not skip_user_append:
+                # skip_user_append=True 是給 agent_routing.py 用的：那邊在決定要不要
+                # 升級成完整規劃之前，已經把這輪使用者訊息記進 self.history 了
+                # （不管有沒有升級都會記，見那邊的說明），這裡就不能再記一次，
+                # 不然同一句話會在 self.history 裡出現兩次。
+                user_content = self._build_user_content(self.current_user_prompt, self.current_images)
+                self.history.append({"role": "user", "content": user_content})
+                self.current_images = []
             self._maybe_compress_history()
 
         content = initial_content
@@ -65,6 +70,11 @@ class AgentDirectModeMixin(_Base):
                         {"role": "system", "content": attn_block},
                     ] + self.history
                     content = self._call_llm_stream(messages)
+                    # 這裡是 Direct Mode 工具呼叫迴圈的第 2 輪(以後)，模型偶爾還是會
+                    # 習慣性地在這種延續回合重新吐一次 <|direct|>/<|plan|>... 標記
+                    # （SYSTEM_PROMPT 的路由規則沒有特別區分「新請求」跟「同一輪的延續」），
+                    # 一樣要濾掉，不然會出現圖三那種「路由標記本身被當成正式回覆」的畫面。
+                    self._strip_routing_tag_for_display(content)
                     if self._should_stop():
                         raise InterruptedError("Agent 已由使用者停止")
 

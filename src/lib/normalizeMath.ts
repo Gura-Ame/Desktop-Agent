@@ -38,6 +38,8 @@ export function normalizeMathDelimiters(text: string): string {
 	// 行內孤立的 a^2、b^2 若已在 $ 內就不動；其餘保持原文
 
 	// 還原 code fence
+	// biome-ignore lint: 這裡故意用 \u0000 當佔位符的定界字元，取的就是「一般文字不可能長這樣」
+	// eslint-disable-next-line no-control-regex -- 同上，NUL 字元是刻意選的、不是不小心打錯的位元組
 	s = s.replace(/\u0000FENCE(\d+)\u0000/g, (_, i: string) => fences[Number(i)]);
 
 	return s;
