@@ -70,7 +70,73 @@ export default function App() {
 		isBusyRef,
 		isStreamingRef,
 		setServerStatus,
+		callApi,
 	});
+
+	const [isModelLoading, setIsModelLoading] = useState(false);
+	const [loadMessage, setLoadMessage] = useState<{
+		type: "success" | "error" | "info";
+		text: string;
+	} | null>(null);
+
+	const handlePickModelFile = async () => {
+		try {
+			const picked = (await callApi("pick_model_file")) as string | undefined;
+			if (picked && typeof picked === "string" && picked.trim()) {
+				settings.setModelPath(picked.trim());
+				settings.addRecentModel(picked.trim());
+			}
+		} catch (e) {
+			console.error("pick_model_file error:", e);
+		}
+	};
+
+	const handleApplyApiConfig = async () => {
+		if (settings.clientMode === "local_llama") {
+			if (!settings.modelPath || !settings.modelPath.trim()) {
+				setLoadMessage({ type: "error", text: "請先指定或選取 GGUF 模型檔案路徑" });
+				return;
+			}
+			setIsModelLoading(true);
+			setLoadMessage(null);
+			try {
+				const res = (await callApi("load_llama_model", settings.modelPath.trim())) as
+					| { status: string; model_name?: string; msg?: string }
+					| undefined;
+				if (res?.status === "ok") {
+					settings.addRecentModel(settings.modelPath.trim());
+					setLoadMessage({
+						type: "success",
+						text: `模型載入成功！(${res.model_name || "已就緒"})`,
+					});
+					await checkServerHealth();
+				} else {
+					setLoadMessage({
+						type: "error",
+						text: `載入失敗: ${res?.msg || "未能初始化模型"}`,
+					});
+					await checkServerHealth();
+				}
+			} catch (e) {
+				setLoadMessage({
+					type: "error",
+					text: `載入失敗: ${e instanceof Error ? e.message : String(e)}`,
+				});
+				await checkServerHealth();
+			} finally {
+				setIsModelLoading(false);
+			}
+		} else {
+			setLoadMessage(null);
+			await callApi(
+				"update_api_config",
+				settings.baseUrl,
+				settings.apiKey,
+				settings.modelName,
+			);
+			await checkServerHealth();
+		}
+	};
 
 	const {
 		input,
@@ -112,18 +178,12 @@ export default function App() {
 				setModelName={settings.setModelName}
 				modelPath={settings.modelPath}
 				setModelPath={settings.setModelPath}
-				applyApiConfig={() => {
-					if (settings.clientMode === "local_llama") {
-						callApi("load_llama_model", settings.modelPath);
-					} else {
-						callApi(
-							"update_api_config",
-							settings.baseUrl,
-							settings.apiKey,
-							settings.modelName,
-						);
-					}
-				}}
+				applyApiConfig={handleApplyApiConfig}
+				recentModels={settings.recentModels}
+				onPickModelFile={handlePickModelFile}
+				isModelLoading={isModelLoading}
+				loadMessage={loadMessage}
+				onClearRecentModels={settings.clearRecentModels}
 				serverStatus={serverStatus}
 				checkServerHealth={checkServerHealth}
 				executionMode={settings.executionMode}
@@ -151,6 +211,8 @@ export default function App() {
 					clearMessages();
 					callApi("clear_history");
 				}}
+				preloadVisionModels={() => callApi("preload_vision_models")}
+				unloadVisionModels={() => callApi("unload_vision_models")}
 				showLogWindow={showLog}
 				setShowLogWindow={setShowLog}
 				theme={theme}
@@ -193,7 +255,7 @@ export default function App() {
 					onSend={handleSend}
 					onStop={handleStop}
 					waitingUserInput={waitingUserInput}
-					isBusy={agentBusy || waitingConfirm || !!waitingPermission}
+					isBusy={agentBusy || !!waitingPermission}
 					images={pendingImages}
 					onAddImages={addPendingImages}
 					onRemoveImage={removePendingImage}

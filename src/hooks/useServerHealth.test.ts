@@ -3,7 +3,11 @@ import { useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useServerHealth } from "./useServerHealth";
 
-function setup(args: { clientMode: "local_llama" | "remote_api"; baseUrl: string }) {
+function setup(args: {
+	clientMode: "local_llama" | "remote_api";
+	baseUrl: string;
+	callApi?: (method: string, ...args: unknown[]) => Promise<any>;
+}) {
 	const setServerStatus = vi.fn();
 	const hook = renderHook(() => {
 		const isBusyRef = useRef(false);
@@ -23,18 +27,42 @@ describe("useServerHealth", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("local_llama 模式不打 HTTP，直接回報本地模型", async () => {
+	it("local_llama 模式若未載入模型回報紅燈未載入，不打 HTTP", async () => {
 		const fetchSpy = vi.spyOn(globalThis, "fetch");
+		const callApi = vi.fn().mockResolvedValue({ status: "ok", model_loaded: false });
 		const { result, setServerStatus } = setup({
 			clientMode: "local_llama",
 			baseUrl: "http://localhost:12356/v1",
+			callApi,
+		});
+		await act(async () => {
+			await result.current.checkServerHealth();
+		});
+		expect(setServerStatus).toHaveBeenCalledWith({
+			running: false,
+			msg: "未載入模型",
+		});
+		expect(fetchSpy).not.toHaveBeenCalled();
+	});
+
+	it("local_llama 模式若已成功載入模型回報綠燈並帶模型名", async () => {
+		const fetchSpy = vi.spyOn(globalThis, "fetch");
+		const callApi = vi.fn().mockResolvedValue({
+			status: "ok",
+			model_loaded: true,
+			model_name: "test-model.gguf",
+		});
+		const { result, setServerStatus } = setup({
+			clientMode: "local_llama",
+			baseUrl: "http://localhost:12356/v1",
+			callApi,
 		});
 		await act(async () => {
 			await result.current.checkServerHealth();
 		});
 		expect(setServerStatus).toHaveBeenCalledWith({
 			running: true,
-			msg: "本地模型",
+			msg: "已載入 (test-model.gguf)",
 		});
 		expect(fetchSpy).not.toHaveBeenCalled();
 	});

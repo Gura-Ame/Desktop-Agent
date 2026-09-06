@@ -91,6 +91,8 @@ class AgentLLMClientMixin(_Base):
                   "並請使用者用文字描述，不要憑空猜測或編造圖片裡有什麼。]"
             )
             parts.append({"type": "text", "text": note})
+            # 記住這輪的暫存路徑，讓後續輪次沒有新附圖時也能知道上一輪的圖在哪
+            self.last_image_paths = list(saved_paths)
 
         self.emit("log", f"[系統] 本輪附圖 {len(imgs)} 張（multimodal）")
         return parts

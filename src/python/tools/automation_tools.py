@@ -23,9 +23,12 @@ from tools.wait_tools import wait, wait_for_screen_stable
 from tools.vision_tools import (
     analyze_image_visuals,
     analyze_image_ocr,
+    load_florence,
+    load_paddleocr,
     unload_florence_model,
     unload_paddleocr_model,
     unload_all_vision_models,
+    set_vision_log_callback,
 )
 from tools.web_automation import (
     browser_open,

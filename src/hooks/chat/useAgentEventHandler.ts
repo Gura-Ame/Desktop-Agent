@@ -152,7 +152,8 @@ export function useAgentEventHandler({
 					break;
 
 				case "ask_confirm":
-					isBusyRef.current = true;
+					// Waiting for user confirmation is not considered busy; clear busy flag.
+					isBusyRef.current = false;
 					isStreamingRef.current = false;
 					setWaitingConfirm(true);
 					setMessages((prev) => {

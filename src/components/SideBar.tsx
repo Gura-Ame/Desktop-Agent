@@ -51,6 +51,13 @@ type SidebarProps = {
 	handlePermissionModeChange: (mode: PermissionMode) => void;
 	theme?: Theme;
 	toggleTheme?: () => void;
+	preloadVisionModels?: () => void;
+	unloadVisionModels?: () => void;
+	recentModels?: string[];
+	onPickModelFile?: () => void;
+	isModelLoading?: boolean;
+	loadMessage?: { type: "success" | "error" | "info"; text: string } | null;
+	onClearRecentModels?: () => void;
 };
 
 export default function Sidebar({
@@ -83,6 +90,13 @@ export default function Sidebar({
 	handlePermissionModeChange,
 	theme,
 	toggleTheme,
+	preloadVisionModels,
+	unloadVisionModels,
+	recentModels,
+	onPickModelFile,
+	isModelLoading,
+	loadMessage,
+	onClearRecentModels,
 }: SidebarProps) {
 	return (
 		<aside
@@ -140,6 +154,11 @@ export default function Sidebar({
 						applyApiConfig={applyApiConfig}
 						serverStatus={serverStatus}
 						checkServerHealth={checkServerHealth}
+						recentModels={recentModels}
+						onPickModelFile={onPickModelFile}
+						isModelLoading={isModelLoading}
+						loadMessage={loadMessage}
+						onClearRecentModels={onClearRecentModels}
 					/>
 
 					<ExecutionModeCard
@@ -189,6 +208,8 @@ export default function Sidebar({
 				clearHistory={clearHistory}
 				showLogWindow={showLogWindow}
 				setShowLogWindow={setShowLogWindow}
+				preloadVisionModels={preloadVisionModels}
+				unloadVisionModels={unloadVisionModels}
 			/>
 		</aside>
 	);

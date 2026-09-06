@@ -1,6 +1,8 @@
 import os
 import gc
 import json
+import threading
+import time
 from PIL import Image
 
 try:
@@ -13,6 +15,25 @@ except ImportError:
 florence_model = None
 florence_processor = None
 paddle_ocr_reader = None
+
+_florence_lock = threading.Lock()
+_paddle_lock = threading.Lock()
+_vision_log_callback = None
+
+
+def set_vision_log_callback(cb):
+    """設定視覺模組日誌回傳函式，即時向前端派發狀態訊息以避免使用者誤以為卡死。"""
+    global _vision_log_callback
+    _vision_log_callback = cb
+
+
+def _log(msg: str):
+    print(msg, flush=True)
+    if _vision_log_callback:
+        try:
+            _vision_log_callback("log", msg)
+        except Exception:
+            pass
 
 
 def get_device_and_dtype():
@@ -44,7 +65,13 @@ def free_vram():
 # ==============================================================================
 def load_florence():
     global florence_model, florence_processor
-    if florence_model is None:
+    if florence_model is not None and florence_processor is not None:
+        return
+
+    with _florence_lock:
+        if florence_model is not None and florence_processor is not None:
+            return
+
         try:
             import torch
             from transformers.models.auto.modeling_auto import AutoModelForCausalLM
@@ -56,34 +83,55 @@ def load_florence():
             )
 
         dev, dtype = get_device_and_dtype()
-        print("\n[系統] 正在將 Florence-2 載入 VRAM...")
-        florence_model = AutoModelForCausalLM.from_pretrained(
-            FLORENCE_MODEL_ID,
-            torch_dtype=dtype,
-            trust_remote_code=True,
-            ignore_mismatched_sizes=True,
-            cache_dir=FLORENCE_CACHE_DIR,
-        ).to(dev)
+        _log("\n[系統] 正在將 Florence-2 載入 VRAM（初次需載入權重，請稍候）...")
 
-        florence_processor = AutoProcessor.from_pretrained(
-            FLORENCE_MODEL_ID,
-            trust_remote_code=True,
-            cache_dir=FLORENCE_CACHE_DIR,
-        )
-        print("[系統] Florence-2 載入完成。\n")
+        load_error = []
+
+        def _do_load():
+            global florence_model, florence_processor
+            try:
+                model = AutoModelForCausalLM.from_pretrained(
+                    FLORENCE_MODEL_ID,
+                    torch_dtype=dtype,
+                    trust_remote_code=True,
+                    ignore_mismatched_sizes=True,
+                    cache_dir=FLORENCE_CACHE_DIR,
+                ).to(dev)
+
+                proc = AutoProcessor.from_pretrained(
+                    FLORENCE_MODEL_ID,
+                    trust_remote_code=True,
+                    cache_dir=FLORENCE_CACHE_DIR,
+                )
+                florence_model = model
+                florence_processor = proc
+            except Exception as ex:
+                load_error.append(ex)
+
+        loader = threading.Thread(target=_do_load, daemon=True)
+        loader.start()
+
+        # 等待載入完成，期間透過 time.sleep 主動釋放 GIL，讓前端與 pywebview bridge 可以正常處理 poll_events
+        while loader.is_alive():
+            time.sleep(0.05)
+
+        if load_error:
+            raise load_error[0]
+
+        _log("[系統] Florence-2 載入完成。\n")
 
 
 
 def unload_florence():
     global florence_model, florence_processor
     if florence_model is not None:
-        print("\n[系統] 正在將 Florence-2 從 VRAM 卸載...")
+        _log("\n[系統] 正在將 Florence-2 從 VRAM 卸載...")
         del florence_model
         del florence_processor
         florence_model = None
         florence_processor = None
         free_vram()
-        print("[系統] Florence-2 卸載完成。\n")
+        _log("[系統] Florence-2 卸載完成。\n")
         return "已成功將 Florence-2 從顯存 (VRAM) 卸載。"
     return "Florence-2 目前未處於載入狀態，無需卸載。"
 
@@ -93,7 +141,13 @@ def unload_florence():
 # ==============================================================================
 def load_paddleocr():
     global paddle_ocr_reader
-    if paddle_ocr_reader is None:
+    if paddle_ocr_reader is not None:
+        return
+
+    with _paddle_lock:
+        if paddle_ocr_reader is not None:
+            return
+
         try:
             from paddleocr import PaddleOCR  # type: ignore[import-untyped,import-not-found]
         except ImportError as e:
@@ -102,23 +156,42 @@ def load_paddleocr():
                 "請先執行: pip install paddleocr"
             )
 
-        paddle_ocr_reader = PaddleOCR(
-            use_angle_cls=True,
-            lang="ch",  # 支援繁體中文、簡體中文與英文
-            ocr_version="PP-OCRv4",
-            show_log=False,
-        )
-        print("[系統] PaddleOCR v4 初始化完成。\n")
+        _log("\n[系統] 正在初始化 PaddleOCR v4 辨識引擎...")
+        load_error = []
+
+        def _do_load():
+            global paddle_ocr_reader
+            try:
+                reader = PaddleOCR(
+                    use_angle_cls=True,
+                    lang="ch",  # 支援繁體中文、簡體中文與英文
+                    ocr_version="PP-OCRv4",
+                    show_log=False,
+                )
+                paddle_ocr_reader = reader
+            except Exception as ex:
+                load_error.append(ex)
+
+        loader = threading.Thread(target=_do_load, daemon=True)
+        loader.start()
+
+        while loader.is_alive():
+            time.sleep(0.05)
+
+        if load_error:
+            raise load_error[0]
+
+        _log("[系統] PaddleOCR v4 初始化完成。\n")
 
 
 def unload_paddleocr():
     global paddle_ocr_reader
     if paddle_ocr_reader is not None:
-        print("\n[系統] 正在將 PaddleOCR 從記憶體/顯存卸載...")
+        _log("\n[系統] 正在將 PaddleOCR 從記憶體/顯存卸載...")
         del paddle_ocr_reader
         paddle_ocr_reader = None
         free_vram()
-        print("[系統] PaddleOCR 卸載完成。\n")
+        _log("[系統] PaddleOCR 卸載完成。\n")
         return "已成功將 PaddleOCR 從記憶體/顯存卸載。"
     return "PaddleOCR 目前未處於載入狀態，無需卸載。"
 
@@ -161,39 +234,58 @@ def analyze_image_visuals(
         return "錯誤：Florence-2 模型未能正常初始化"
 
     try:
-        import torch
+        _log(f"[系統] 正在執行 Florence-2 視覺任務 [{task}] 影像推理...")
         dev, dtype = get_device_and_dtype()
         image = Image.open(image_path).convert("RGB")
         prompt = task if not text_input else f"{task} {text_input}"
 
-        inputs = florence_processor(
-            text=prompt,
-            images=image,
-            return_tensors="pt",
-        ).to(dev, dtype)
+        infer_error = []
+        infer_result = []
 
-        with torch.no_grad():
-            generated_ids = florence_model.generate(
-                input_ids=inputs["input_ids"],
-                pixel_values=inputs["pixel_values"],
-                max_new_tokens=1024,
-                num_beams=3,
-                do_sample=False,
-            )
+        def _do_infer():
+            try:
+                import torch
+                inputs = florence_processor(
+                    text=prompt,
+                    images=image,
+                    return_tensors="pt",
+                ).to(dev, dtype)
 
-        generated_text = florence_processor.batch_decode(
-            generated_ids, skip_special_tokens=False
-        )[0]
-        parsed = florence_processor.post_process_generation(
-            generated_text, task=task, image_size=(image.width, image.height)
-        )
+                with torch.no_grad():
+                    generated_ids = florence_model.generate(
+                        input_ids=inputs["input_ids"],
+                        pixel_values=inputs["pixel_values"],
+                        max_new_tokens=1024,
+                        num_beams=3,
+                        do_sample=False,
+                    )
 
+                generated_text = florence_processor.batch_decode(
+                    generated_ids, skip_special_tokens=False
+                )[0]
+                parsed = florence_processor.post_process_generation(
+                    generated_text, task=task, image_size=(image.width, image.height)
+                )
+                infer_result.append(parsed)
+            except Exception as ex:
+                infer_error.append(ex)
+
+        thread = threading.Thread(target=_do_infer, daemon=True)
+        thread.start()
+        while thread.is_alive():
+            time.sleep(0.05)
+
+        if infer_error:
+            raise infer_error[0]
+
+        parsed = infer_result[0]
         result_content = parsed.get(task, parsed)
         if isinstance(result_content, (dict, list)):
             result_str = json.dumps(result_content, ensure_ascii=False, indent=2)
         else:
             result_str = str(result_content)
 
+        _log(f"[系統] Florence-2 視覺任務 [{task}] 分析完成。")
         return f"【Florence-2 任務 [{task}] 分析結果】\n{result_str.strip()}"
     except Exception as e:
         return f"Florence-2 執行失敗: {str(e)}"
@@ -224,9 +316,30 @@ def analyze_image_ocr(image_path: str = "", task: str = "<OCR_RAW>") -> str:
         return "錯誤：PaddleOCR 未能正常初始化"
 
     try:
+        _log("[系統] 正在執行 PaddleOCR 文字辨識...")
         image = Image.open(image_path)
         img_w, img_h = image.size
-        ocr_result = paddle_ocr_reader.ocr(image_path, cls=True)
+
+        ocr_error = []
+        ocr_result_holder = []
+
+        def _do_ocr():
+            try:
+                res = paddle_ocr_reader.ocr(image_path, cls=True)
+                ocr_result_holder.append(res)
+            except Exception as ex:
+                ocr_error.append(ex)
+
+        thread = threading.Thread(target=_do_ocr, daemon=True)
+        thread.start()
+        while thread.is_alive():
+            time.sleep(0.05)
+
+        if ocr_error:
+            raise ocr_error[0]
+
+        ocr_result = ocr_result_holder[0]
+        _log("[系統] PaddleOCR 文字辨識完成。")
 
         if not ocr_result or not ocr_result[0]:
             return "【PaddleOCR v4 結果】：畫面上未偵測到任何文字。"

@@ -46,11 +46,11 @@ _EXPOSED_METHOD_NAMES = [
     "ping", "poll_events", "send_prompt", "stop_agent",
     "confirm_step", "submit_user_input", "set_execution_mode",
     "set_forgetting_enabled", "set_activation_enabled",
-    "update_api_config", "load_llama_model",
+    "update_api_config", "load_llama_model", "get_llm_status",
     "open_chrome_incognito", "clear_drawings", "clear_history",
-    "unload_vision_models", "copy_to_clipboard",
+    "preload_vision_models", "unload_vision_models", "copy_to_clipboard",
     "respond_permission", "set_permission_mode",
-    "pick_files", "log_from_frontend",
+    "pick_files", "pick_model_file", "log_from_frontend",
 ]
 
 
@@ -133,5 +133,19 @@ def run_app(js_api_cls):
     # Vite SPA：loaded 後再延遲重掛一次，防止第一次被覆蓋
     delayed_reexpose_fn = _make_delayed_reexpose_fn(expose_fn)
     window.events.loaded += delayed_reexpose_fn
+
+    # 啟動 WinForms 主執行緒定時器，定期驅動 Qt 事件循環，防止 ScreenOverlay 視窗被 Windows 判定為卡死/無回應
+    try:
+        import clr
+        clr.AddReference('System.Windows.Forms')
+        import System.Windows.Forms as WinForms
+        qt_pump_timer = WinForms.Timer()
+        qt_pump_timer.Interval = 50
+        def _pump_qt_events(sender, args):
+            QApplication.processEvents()
+        qt_pump_timer.Tick += _pump_qt_events
+        qt_pump_timer.Start()
+    except Exception as e:
+        print(f"[系統] 啟動 Qt 事件循環定時器失敗: {e}")
 
     webview.start(gui="edgechromium", debug=True)

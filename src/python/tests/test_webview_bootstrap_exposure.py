@@ -67,10 +67,10 @@ def test_known_frontend_facing_methods_are_exposed():
         "ping", "poll_events", "send_prompt", "stop_agent",
         "confirm_step", "submit_user_input", "set_execution_mode",
         "set_forgetting_enabled", "set_activation_enabled",
-        "update_api_config", "load_llama_model",
+        "update_api_config", "load_llama_model", "get_llm_status",
         "clear_drawings", "clear_history", "copy_to_clipboard",
         "respond_permission", "set_permission_mode",
-        "pick_files", "log_from_frontend",
+        "pick_files", "pick_model_file", "log_from_frontend",
     }
     exposed = _get_exposed_method_names()
     missing = known_frontend_facing_methods - exposed
@@ -89,10 +89,10 @@ def test_all_known_frontend_facing_methods_actually_exist_on_jsapi():
         "ping", "poll_events", "send_prompt", "stop_agent",
         "confirm_step", "submit_user_input", "set_execution_mode",
         "set_forgetting_enabled", "set_activation_enabled",
-        "update_api_config", "load_llama_model",
+        "update_api_config", "load_llama_model", "get_llm_status",
         "clear_drawings", "clear_history", "copy_to_clipboard",
         "respond_permission", "set_permission_mode",
-        "pick_files", "log_from_frontend",
+        "pick_files", "pick_model_file", "log_from_frontend",
     }
     public_methods = _get_jsapi_public_methods()
     missing = known_frontend_facing_methods - public_methods

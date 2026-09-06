@@ -151,8 +151,11 @@ export function usePywebview({ onEvent, executionModeRef }: UsePywebviewArgs) {
 		if (!apiReady || !onEvent) return undefined;
 
 		let cancelled = false;
+		let isPolling = false;
+
 		const poll = async () => {
-			if (cancelled) return;
+			if (cancelled || isPolling) return;
+			isPolling = true;
 			try {
 				const events = await window.pywebview?.api?.poll_events?.();
 				if (events?.length) {
@@ -160,10 +163,12 @@ export function usePywebview({ onEvent, executionModeRef }: UsePywebviewArgs) {
 				}
 			} catch {
 				/* bridge 短暫不可用 */
+			} finally {
+				isPolling = false;
 			}
 		};
 
-		const id = setInterval(poll, 50);
+		const id = setInterval(poll, 80);
 		return () => {
 			cancelled = true;
 			clearInterval(id);

@@ -10,16 +10,18 @@ type UseServerHealthArgs = {
 	isBusyRef: MutableRefObject<boolean>;
 	isStreamingRef: MutableRefObject<boolean>;
 	setServerStatus: (status: ServerStatus) => void;
+	callApi?: (method: string, ...args: unknown[]) => unknown;
 };
 
 /**
  * 檢查 LLM 伺服器狀態，並每 15 秒輪詢一次。
- * local_llama 模式下不走 HTTP，直接顯示「本地模型載入中」。
+ * local_llama 模式下不走 HTTP，而是透過 callApi("get_llm_status") 檢查本機模型是否已真正載入。
+ * 啟動且未載入模型時如實顯示「未載入模型」（紅燈），載入成功後才顯示「已載入 (模型名)」（綠燈）。
  * 嚴禁在 agent / 串流工作中對 server 發請求，否則可能把本地 llama 打掛——
  * 這正是 isBusyRef / isStreamingRef 存在的原因。
  *
  * 從 App.tsx 拆出來：這塊輪詢邏輯不需要知道聊天室其他任何狀態，
- * 只需要 clientMode/baseUrl 當輸入、setServerStatus 當輸出。
+ * 只需要 clientMode/baseUrl/callApi 當輸入、setServerStatus 當輸出。
  */
 export function useServerHealth({
 	clientMode,
@@ -27,12 +29,34 @@ export function useServerHealth({
 	isBusyRef,
 	isStreamingRef,
 	setServerStatus,
+	callApi,
 }: UseServerHealthArgs) {
 	const checkServerHealth = useCallback(async () => {
 		if (isBusyRef.current || isStreamingRef.current) return;
 
 		if (clientMode === "local_llama") {
-			setServerStatus({ running: true, msg: "本地模型" });
+			if (callApi) {
+				try {
+					const res = (await callApi("get_llm_status")) as
+						| {
+								status: string;
+								is_llama: boolean;
+								model_loaded: boolean;
+								model_name?: string;
+						  }
+						| undefined;
+					if (res && res.model_loaded) {
+						setServerStatus({
+							running: true,
+							msg: res.model_name ? `已載入 (${res.model_name})` : "已載入模型",
+						});
+						return;
+					}
+				} catch {
+					// fallback to offline/unloaded
+				}
+			}
+			setServerStatus({ running: false, msg: "未載入模型" });
 			return;
 		}
 
@@ -54,7 +78,7 @@ export function useServerHealth({
 				setServerStatus({ running: false, msg: "離線" });
 			}
 		}
-	}, [clientMode, baseUrl, isBusyRef, isStreamingRef, setServerStatus]);
+	}, [clientMode, baseUrl, isBusyRef, isStreamingRef, setServerStatus, callApi]);
 
 	useEffect(() => {
 		checkServerHealth();

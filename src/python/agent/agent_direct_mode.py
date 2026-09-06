@@ -68,7 +68,18 @@ class AgentDirectModeMixin(_Base):
                     messages = [
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "system", "content": attn_block},
-                    ] + self.history
+                    ]
+                    # 在 direct mode 的後續回合，如果沒有新附圖但上一輪有圖片暫存檔，完整提醒模型
+                    if not self.current_images and getattr(self, "last_image_paths", []):
+                        existing = self.last_image_paths
+                        img_hint = (
+                            f"[系統：上一輪對話有 {len(existing)} 張圖片，暫存路徑如下：\n"
+                            + "\n".join(f"- {p}" for p in existing)
+                            + "\n如果用戶現在的討問跟圖片有關，請呼叫 analyze_image_visuals 或 analyze_image_ocr"
+                              " 來完成任務，不要以「沒有圖片」為由拒絕回答。]"
+                        )
+                        messages.append({"role": "system", "content": img_hint})
+                    messages += self.history
                     content = self._call_llm_stream(messages)
                     # 這裡是 Direct Mode 工具呼叫迴圈的第 2 輪(以後)，模型偶爾還是會
                     # 習慣性地在這種延續回合重新吐一次 <|direct|>/<|plan|>... 標記

@@ -129,6 +129,7 @@ class AgentWorker(
 
         self.current_user_prompt = ""
         self.current_images = []
+        self.last_image_paths: list = []   # 最近一次附圖的暫存路徑，供後續輪次參考
         self.history = self._load_history()
         self.is_paused_for_input = False
         self.user_reply_content = ""

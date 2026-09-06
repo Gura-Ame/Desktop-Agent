@@ -86,7 +86,21 @@ class AgentRoutingMixin(_Base):
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "system", "content": attn_block},
-        ] + self.history + [{"role": "user", "content": attempt_user_content}]
+        ]
+
+        # 如果這輪沒有新附圖，但上一輪有存暫存圖片，就在 system message 裡輕輕提醒模型圖在哪。
+        # 這樣下一輪用戶說「這張圖片的 OCR」時，模型才能知道圖片在哪而不是誎稱「我需要您提供圖片」。
+        if not self.current_images and getattr(self, "last_image_paths", []):
+            existing = self.last_image_paths
+            img_hint = (
+                f"[系統：上一輪對話有 {len(existing)} 張圖片，暫存路徑如下：\n"
+                + "\n".join(f"- {p}" for p in existing)
+                + "\n如果用戶現在的討問跟圖片有關，請呼叫 analyze_image_visuals 或 analyze_image_ocr"
+                  " 來完成任務，不要以「沒有圖片」为由拒絕回答。]"
+            )
+            messages.append({"role": "system", "content": img_hint})
+
+        messages += self.history + [{"role": "user", "content": attempt_user_content}]
 
         # 不管接下來這輪會走 Direct Mode 還是升級成完整規劃，這輪使用者真正說了什麼
         # 都要先進 self.history——這是給「一般對話」用的記憶（跟 Task Tree/WorkingMemory

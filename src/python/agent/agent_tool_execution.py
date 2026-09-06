@@ -63,6 +63,7 @@ class AgentToolExecutionMixin(_Base):
                     return disp_text, tag
                 try:
                     args, kwargs = self._parse_tool_arguments(func_name, args_str)
+                    self.emit("log", f"[工具呼叫] 開始執行: {func_name}")
                     res = self.available_functions[func_name](*args, **kwargs)
                     disp_text = f"[{func_name}]: {res}"
                     tag = "tool_result"

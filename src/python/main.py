@@ -83,6 +83,8 @@ class JsApi:
             "browser_close": tools.browser_close,
         }
 
+        tools.set_vision_log_callback(self.dispatch_event)
+
         self.agent = AgentWorker(
             self.available_functions,
             event_callback=self.dispatch_event,
@@ -227,10 +229,64 @@ class JsApi:
         self.agent.update_api_config(base_url, api_key, model_name)
         return {"status": "ok"}
 
+    def pick_model_file(self):
+        """跳出原生的檔案選擇對話框，專門選取單一 .gguf 模型檔案。"""
+        window = getattr(self, "_window", None)
+        if window is None:
+            return ""
+        try:
+            result = window.create_file_dialog(
+                webview.OPEN_DIALOG,
+                allow_multiple=False,
+                file_types=('GGUF Model (*.gguf)', 'All Files (*.*)')
+            )
+            if result and len(result) > 0:
+                return result[0]
+            return ""
+        except Exception as e:
+            print(f"[JsApi] pick_model_file 失敗: {e}", flush=True)
+            return ""
+
+    def get_llm_status(self):
+        """回傳目前 LLM client 的載入狀態與模型名稱。"""
+        is_llama = False
+        model_loaded = False
+        model_name = getattr(self.agent, "model_name", "")
+        try:
+            from agent.llama_client import LlamaClient
+            client = getattr(self.agent, "client", None)
+            if isinstance(client, LlamaClient):
+                is_llama = True
+                model_loaded = client.llama is not None
+        except Exception:
+            pass
+        return {
+            "status": "ok",
+            "is_llama": is_llama,
+            "model_loaded": model_loaded,
+            "model_name": model_name,
+        }
+
     def load_llama_model(self, model_path: str, n_ctx: int = 8192, n_gpu_layers: int = -1):
-        self.agent.load_llama_model(model_path, n_ctx=n_ctx, n_gpu_layers=n_gpu_layers)
-        self.dispatch_event("log", f"[系統] 已切換本地 Llama 模型: {model_path}")
-        return {"status": "ok"}
+        if not model_path or not os.path.exists(model_path):
+            msg = f"模型檔案不存在: {model_path}"
+            self.dispatch_event("log", f"[錯誤] {msg}")
+            return {"status": "error", "msg": msg}
+
+        model_filename = os.path.basename(model_path)
+        self.dispatch_event("log", f"[系統] 正在載入本地模型: {model_filename} ... 請稍候")
+        try:
+            self.agent.load_llama_model(model_path, n_ctx=n_ctx, n_gpu_layers=n_gpu_layers)
+            from agent.llama_client import LlamaClient
+            client = getattr(self.agent, "client", None)
+            if isinstance(client, LlamaClient) and client.llama is None:
+                raise RuntimeError("llama 實例未能成功初始化（請檢查 GGUF 相容性或 CUDA 顯存）")
+            self.dispatch_event("log", f"[系統] 本地模型載入成功: {model_filename}")
+            return {"status": "ok", "model_name": model_filename}
+        except Exception as e:
+            err_msg = str(e)
+            self.dispatch_event("log", f"[錯誤] 本地模型載入失敗: {err_msg}")
+            return {"status": "error", "msg": err_msg}
 
     def open_chrome_incognito(self, query: str = ""):
         """Open Chrome in incognito mode and perform a Google search.
@@ -254,6 +310,20 @@ class JsApi:
     def clear_history(self):
         self.agent.clear_conversation_history()
         return {"status": "ok"}
+
+    def preload_vision_models(self):
+        """在背景執行緒預先載入視覺與 OCR 模型，避免在對話中分析圖片時等待卡頓"""
+        def _bg_preload():
+            try:
+                self.dispatch_event("log", "[系統] 開始背景預先載入視覺模型 (Florence-2 / PaddleOCR)...")
+                tools.load_florence()
+                tools.load_paddleocr()
+                self.dispatch_event("log", "[系統] 視覺模型預載完成！後續圖片分析即可即時回應。")
+            except Exception as e:
+                self.dispatch_event("log", f"[系統] 預載視覺模型失敗: {e}")
+
+        threading.Thread(target=_bg_preload, daemon=True).start()
+        return {"status": "ok", "msg": "已開始背景預載"}
 
     def unload_vision_models(self):
         result = tools.unload_all_vision_models()

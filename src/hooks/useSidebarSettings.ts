@@ -25,6 +25,40 @@ export function useSidebarSettings() {
 	const [modelPath, setModelPath] = useState(
 		String(import.meta.env.VITE_DEFAULT_MODEL_PATH ?? ""),
 	);
+	const [recentModels, setRecentModels] = useState<string[]>(() => {
+		try {
+			const saved = localStorage.getItem("desktop_agent_recent_models");
+			if (saved) {
+				const parsed = JSON.parse(saved);
+				if (Array.isArray(parsed)) return parsed;
+			}
+		} catch {
+			// ignore json error
+		}
+		return [];
+	});
+
+	const addRecentModel = (path: string) => {
+		if (!path || !path.trim()) return;
+		setRecentModels((prev) => {
+			const next = [path.trim(), ...prev.filter((p) => p !== path.trim())].slice(0, 8);
+			try {
+				localStorage.setItem("desktop_agent_recent_models", JSON.stringify(next));
+			} catch {
+				// ignore
+			}
+			return next;
+		});
+	};
+
+	const clearRecentModels = () => {
+		setRecentModels([]);
+		try {
+			localStorage.removeItem("desktop_agent_recent_models");
+		} catch {
+			// ignore
+		}
+	};
 
 	// usePywebview 需要隨時讀得到「目前」的執行模式（給收到事件時的 callback 用），
 	// 但又不希望每次 executionMode 變動都重新訂閱事件——用 ref 讓它讀最新值即可。
@@ -59,5 +93,8 @@ export function useSidebarSettings() {
 		setModelName,
 		modelPath,
 		setModelPath,
+		recentModels,
+		addRecentModel,
+		clearRecentModels,
 	};
 }
