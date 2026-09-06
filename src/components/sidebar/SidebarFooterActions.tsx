@@ -30,12 +30,8 @@ export default function SidebarFooterActions({
 }: SidebarFooterActionsProps) {
 	const [open, setOpen] = useState(false);
 	const [busy, setBusy] = useState<"preload" | "unload" | null>(null);
-	const [status, setStatus] = useState<{
-		type: "info" | "success" | "error";
-		text: string;
-	} | null>(null);
 
-	// 側欄收合時一併關掉工具選單，避免窄欄仍佔一堆高度
+	// 側欄收合時一併關掉工具選單
 	useEffect(() => {
 		if (isCollapsed) setOpen(false);
 	}, [isCollapsed]);
@@ -44,27 +40,11 @@ export default function SidebarFooterActions({
 		isCollapsed ? "p-2.5 w-10" : "w-full py-2"
 	}`;
 
-	const showStatus = (
-		type: "info" | "success" | "error",
-		text: string,
-		ms = 3500,
-	) => {
-		setStatus({ type, text });
-		window.setTimeout(() => setStatus(null), ms);
-	};
-
 	const handlePreload = async () => {
 		if (!preloadVisionModels || busy) return;
 		setBusy("preload");
-		showStatus("info", "正在背景預載視覺模型…", 8000);
 		try {
 			await Promise.resolve(preloadVisionModels());
-			showStatus("success", "已開始預載，完成後可即時分析圖片");
-		} catch (e) {
-			showStatus(
-				"error",
-				`預載失敗：${e instanceof Error ? e.message : String(e)}`,
-			);
 		} finally {
 			setBusy(null);
 		}
@@ -73,33 +53,12 @@ export default function SidebarFooterActions({
 	const handleUnload = async () => {
 		if (!unloadVisionModels || busy) return;
 		setBusy("unload");
-		showStatus("info", "正在釋放視覺模型顯存…", 8000);
 		try {
-			const result = await Promise.resolve(unloadVisionModels());
-			const msg =
-				result &&
-				typeof result === "object" &&
-				"msg" in result &&
-				typeof (result as { msg: unknown }).msg === "string"
-					? (result as { msg: string }).msg
-					: "視覺模型顯存已釋放";
-			showStatus("success", msg);
-		} catch (e) {
-			showStatus(
-				"error",
-				`釋放失敗：${e instanceof Error ? e.message : String(e)}`,
-			);
+			await Promise.resolve(unloadVisionModels());
 		} finally {
 			setBusy(null);
 		}
 	};
-
-	const statusClass =
-		status?.type === "success"
-			? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-			: status?.type === "error"
-				? "bg-rose-50 dark:bg-rose-950/40 border-rose-500/30 text-rose-700 dark:text-rose-300"
-				: "bg-zinc-100 dark:bg-zinc-800/60 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300";
 
 	const expanded = open;
 
@@ -107,7 +66,6 @@ export default function SidebarFooterActions({
 		<div
 			className={`mt-auto w-full pt-2 border-t border-zinc-200/80 dark:border-zinc-800/80 ${isCollapsed ? "flex flex-col items-center" : ""}`}
 		>
-			{/* 收合標題列：展開側欄時顯示文字；收合側欄時只顯示 chevron */}
 			{!isCollapsed ? (
 				<button
 					type="button"
@@ -128,15 +86,6 @@ export default function SidebarFooterActions({
 				</button>
 			)}
 
-			{status && !isCollapsed && expanded && (
-				<div
-					className={`mb-2 text-[10px] px-2.5 py-1.5 rounded-xl border leading-tight ${statusClass}`}
-				>
-					{status.text}
-				</div>
-			)}
-
-			{/* 只有 open 時展開；側欄收合不會強制展開 */}
 			<div
 				className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
 					expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
