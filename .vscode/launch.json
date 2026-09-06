@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: 啟動 pywebview",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/python/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "preLaunchTask": "啟動 Vite 服務"   // ← 關鍵：先啟動 Vite
+    },
+    {
+      "name": "Attach: 附加到 pywebview 前端",
+      "type": "msedge",
+      "request": "attach",
+      "port": 9222,
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "timeout": 30000
+    }
+  ],
+  "compounds": [
+    {
+      "name": "全端調試",
+      "configurations": [
+        "Python: 啟動 pywebview",
+        "Attach: 附加到 pywebview 前端"
+      ],
+      "stopAll": true
+    }
+  ]
+}
