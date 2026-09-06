@@ -3,6 +3,7 @@ import ChatInput from "./components/ChatInput";
 import ChatMessageList from "./components/ChatMessageList";
 import LogPanel from "./components/LogPanel";
 import SideBar from "./components/SideBar";
+import { ToastHost } from "./components/ui/Toast";
 import { useAgentChat } from "./hooks/useAgentChat";
 import { useMessageComposer } from "./hooks/useMessageComposer";
 import { usePywebview } from "./hooks/usePywebview";
@@ -10,6 +11,7 @@ import { useServerHealth } from "./hooks/useServerHealth";
 import { useSidebarAutoCollapse } from "./hooks/useSidebarAutoCollapse";
 import { useSidebarSettings } from "./hooks/useSidebarSettings";
 import { useTheme } from "./hooks/useTheme";
+import { useToast } from "./hooks/useToast";
 import type { AgentEvent } from "./types";
 
 export default function App() {
@@ -17,6 +19,7 @@ export default function App() {
 	const [showLog, setShowLog] = useState(false);
 
 	const { theme, toggleTheme } = useTheme();
+	const { toasts, pushToast, dismissToast } = useToast();
 	const { collapsed: sidebarCollapsed, setCollapsedByUser } =
 		useSidebarAutoCollapse();
 	const settings = useSidebarSettings();
@@ -94,7 +97,7 @@ export default function App() {
 	const handleApplyApiConfig = async () => {
 		if (settings.clientMode === "local_llama") {
 			if (!settings.modelPath || !settings.modelPath.trim()) {
-				setLoadMessage({ type: "error", text: "請先指定或選取 GGUF 模型檔案路徑" });
+				pushToast("error", "請先指定或選取 GGUF 模型檔案路徑");
 				return;
 			}
 			setIsModelLoading(true);
@@ -105,36 +108,39 @@ export default function App() {
 					| undefined;
 				if (res?.status === "ok") {
 					settings.addRecentModel(settings.modelPath.trim());
-					setLoadMessage({
-						type: "success",
-						text: `模型載入成功！(${res.model_name || "已就緒"})`,
-					});
+					const name = res.model_name || "已就緒";
+					pushToast("success", `模型載入成功！(${name})`);
 					await checkServerHealth();
 				} else {
-					setLoadMessage({
-						type: "error",
-						text: `載入失敗: ${res?.msg || "未能初始化模型"}`,
-					});
+					pushToast("error", `載入失敗: ${res?.msg || "未能初始化模型"}`);
 					await checkServerHealth();
 				}
 			} catch (e) {
-				setLoadMessage({
-					type: "error",
-					text: `載入失敗: ${e instanceof Error ? e.message : String(e)}`,
-				});
+				pushToast(
+					"error",
+					`載入失敗: ${e instanceof Error ? e.message : String(e)}`,
+				);
 				await checkServerHealth();
 			} finally {
 				setIsModelLoading(false);
 			}
 		} else {
 			setLoadMessage(null);
-			await callApi(
-				"update_api_config",
-				settings.baseUrl,
-				settings.apiKey,
-				settings.modelName,
-			);
-			await checkServerHealth();
+			try {
+				await callApi(
+					"update_api_config",
+					settings.baseUrl,
+					settings.apiKey,
+					settings.modelName,
+				);
+				await checkServerHealth();
+				pushToast("success", "已套用 Remote API 連線設定");
+			} catch (e) {
+				pushToast(
+					"error",
+					`套用失敗: ${e instanceof Error ? e.message : String(e)}`,
+				);
+			}
 		}
 	};
 
@@ -165,11 +171,16 @@ export default function App() {
 
 	return (
 		<div className="flex h-screen w-screen overflow-hidden bg-[#e8e8ea] font-sans text-sm text-zinc-900 antialiased dark:bg-[#1c1c1e] dark:text-zinc-100">
+			<ToastHost toasts={toasts} onDismiss={dismissToast} />
 			<SideBar
 				isCollapsed={sidebarCollapsed}
 				setIsCollapsed={setCollapsedByUser}
 				clientMode={settings.clientMode}
-				setClientMode={settings.setClientMode}
+				setClientMode={(mode) => {
+					settings.setClientMode(mode);
+					// 切換模式時先標示檢查中，避免沿用上一模式的綠/紅燈造成誤解
+					setServerStatus({ running: false, msg: "檢查中…" });
+				}}
 				baseUrl={settings.baseUrl}
 				setBaseUrl={settings.setBaseUrl}
 				apiKey={settings.apiKey}
@@ -212,7 +223,7 @@ export default function App() {
 					callApi("clear_history");
 				}}
 				preloadVisionModels={() => callApi("preload_vision_models")}
-				unloadVisionModels={() => callApi("unload_vision_models")}
+				unloadVisionModels={() => callApi("unload_vision_models") as Promise<unknown>}
 				showLogWindow={showLog}
 				setShowLogWindow={setShowLog}
 				theme={theme}

@@ -38,6 +38,28 @@ def _init_com_apartment_threaded():
             pass
 
 
+def _init_winforms_text_rendering():
+    """在任何 IWin32Window 建立之前呼叫 SetCompatibleTextRenderingDefault。
+
+    pywebview 的 edgechromium 後端會在 webview.start() → setup_app() 裡再呼叫一次；
+    若此時已經有視窗（例如過早 show 的 ScreenOverlay，或過早建立的 WinForms 元件），
+    會丟出 InvalidOperationException。這裡先呼叫一次，並把 Overlay / Timer 延後到
+    start 之後，讓 setup_app 那次呼叫仍然發生在「尚無 WinForms 視窗」的狀態。
+    """
+    try:
+        import clr
+
+        clr.AddReference("System.Windows.Forms")
+        import System.Windows.Forms as WinForms
+
+        WinForms.Application.EnableVisualStyles()
+        WinForms.Application.SetCompatibleTextRenderingDefault(False)
+        return WinForms
+    except Exception as e:
+        print(f"[系統] 預先初始化 WinForms 文字渲染失敗: {e}")
+        return None
+
+
 # 需要掛上 JS bridge 的 JsApi 方法名稱清單。用具名 wrapper 逐一掛，而不是直接把
 # api 物件整個丟給 pywebview 的 js_api=，是因為 pywebview 6.x 曾經遇到
 # js_api 被覆蓋成空物件的問題（見 _make_expose_fn 內的註解），只能用
@@ -46,7 +68,7 @@ _EXPOSED_METHOD_NAMES = [
     "ping", "poll_events", "send_prompt", "stop_agent",
     "confirm_step", "submit_user_input", "set_execution_mode",
     "set_forgetting_enabled", "set_activation_enabled",
-    "update_api_config", "load_llama_model", "get_llm_status",
+    "update_api_config", "load_llama_model", "get_llm_status", "check_remote_api",
     "open_chrome_incognito", "clear_drawings", "clear_history",
     "preload_vision_models", "unload_vision_models", "copy_to_clipboard",
     "respond_permission", "set_permission_mode",
@@ -97,6 +119,35 @@ def _make_delayed_reexpose_fn(expose_fn):
     return _delayed_reexpose
 
 
+def _start_qt_pump_timer(WinForms):
+    """在 WinForms 訊息迴圈已跑起來之後，用 Timer 定期 processEvents，
+    避免 ScreenOverlay 被 Windows 判定為無回應。
+    """
+    if WinForms is None:
+        try:
+            import clr
+
+            clr.AddReference("System.Windows.Forms")
+            import System.Windows.Forms as WinForms
+        except Exception as e:
+            print(f"[系統] 啟動 Qt 事件循環定時器失敗（無法載入 WinForms）: {e}")
+            return None
+
+    try:
+        qt_pump_timer = WinForms.Timer()
+        qt_pump_timer.Interval = 50
+
+        def _pump_qt_events(sender, args):
+            QApplication.processEvents()
+
+        qt_pump_timer.Tick += _pump_qt_events
+        qt_pump_timer.Start()
+        return qt_pump_timer
+    except Exception as e:
+        print(f"[系統] 啟動 Qt 事件循環定時器失敗: {e}")
+        return None
+
+
 def run_app(js_api_cls):
     """啟動整個桌面應用：DPI/COM 初始化 → 開 overlay → 建立主視窗 → 掛上 JS bridge。
 
@@ -108,11 +159,15 @@ def run_app(js_api_cls):
     _init_dpi_awareness()
     _init_com_apartment_threaded()
 
+    # 必須在任何視窗 / WinForms 控制項建立之前呼叫，否則 webview.start()
+    # 內部的 SetCompatibleTextRenderingDefault 會丟 InvalidOperationException。
+    WinForms = _init_winforms_text_rendering()
+
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
     app = QApplication(sys.argv)
 
+    # 先建構、先不 show：避免在 webview.start() → setup_app() 之前就出現原生視窗
     overlay = ScreenOverlay()
-    overlay.show()
 
     api = js_api_cls(overlay)
     window = webview.create_window(
@@ -134,18 +189,25 @@ def run_app(js_api_cls):
     delayed_reexpose_fn = _make_delayed_reexpose_fn(expose_fn)
     window.events.loaded += delayed_reexpose_fn
 
-    # 啟動 WinForms 主執行緒定時器，定期驅動 Qt 事件循環，防止 ScreenOverlay 視窗被 Windows 判定為卡死/無回應
+    # 主視窗真正出現後再 show overlay、再啟動 Qt pump timer
+    # （此時 setup_app 已跑完，SetCompatibleTextRenderingDefault 不會再被踩雷）
+    _qt_pump_timer_ref = {"timer": None}
+
+    def _on_shown():
+        try:
+            if not overlay.isVisible():
+                overlay.show()
+                QApplication.processEvents()
+        except Exception as e:
+            print(f"[系統] 顯示 ScreenOverlay 失敗: {e}")
+        if _qt_pump_timer_ref["timer"] is None:
+            _qt_pump_timer_ref["timer"] = _start_qt_pump_timer(WinForms)
+
+    # shown 在部分後端較晚才觸發；loaded 也掛一份當保險
     try:
-        import clr
-        clr.AddReference('System.Windows.Forms')
-        import System.Windows.Forms as WinForms
-        qt_pump_timer = WinForms.Timer()
-        qt_pump_timer.Interval = 50
-        def _pump_qt_events(sender, args):
-            QApplication.processEvents()
-        qt_pump_timer.Tick += _pump_qt_events
-        qt_pump_timer.Start()
-    except Exception as e:
-        print(f"[系統] 啟動 Qt 事件循環定時器失敗: {e}")
+        window.events.shown += _on_shown
+    except Exception:
+        pass
+    window.events.loaded += _on_shown
 
     webview.start(gui="edgechromium", debug=True)

@@ -146,7 +146,12 @@ export default function TaskTreeCard({
 
 			{waitingConfirm && onConfirmStep && (
 				<div className="border-t border-zinc-200 px-3 py-2.5 dark:border-zinc-800">
-					<Button variant="primary" size="sm" onClick={onConfirmStep}>
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={onConfirmStep}
+						className="border border-emerald-700/40 dark:border-emerald-300/40"
+					>
 						<CheckCircle2 size={14} />
 						確認執行此步驟
 					</Button>

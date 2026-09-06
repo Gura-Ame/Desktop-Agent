@@ -74,7 +74,7 @@ export default function ChatInput({
 		<div className="shrink-0 border-t border-zinc-300 bg-[#e0e0e2]/90 px-4 py-3 backdrop-blur dark:border-[#3a3a3c] dark:bg-[#242426]/95">
 			<div className="mx-auto max-w-3xl space-y-2">
 				{waitingUserInput && (
-					<div className="flex items-start gap-2 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-400">
+					<div className="flex items-start gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-400">
 						<span className="mt-1.5 h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-amber-500" />
 						<div className="min-w-0 flex-1 space-y-0.5">
 							<div className="font-medium text-amber-900 dark:text-amber-300">
@@ -92,7 +92,7 @@ export default function ChatInput({
 						{images.map((img) => (
 							<div
 								key={img.id}
-								className="group relative h-16 w-16 overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700"
+								className="group relative h-16 w-16 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700"
 							>
 								<img
 									src={img.dataUrl}
@@ -118,7 +118,7 @@ export default function ChatInput({
 							<div
 								key={file.id}
 								title={file.path}
-								className="group flex items-center gap-1.5 rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+								className="group flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
 							>
 								<FileText size={12} className="shrink-0 text-zinc-400" />
 								<span className="max-w-[160px] truncate">{file.name}</span>
@@ -135,7 +135,7 @@ export default function ChatInput({
 					</div>
 				)}
 
-				<div className="flex items-end gap-2 rounded-md border border-zinc-200 bg-white px-2 py-1.5 shadow-sm focus-within:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:focus-within:border-zinc-600">
+				<div className="flex items-end gap-2 rounded-2xl border border-zinc-200 bg-white px-2 py-1.5 shadow-sm transition-all duration-200 focus-within:border-emerald-500/40 focus-within:shadow-md focus-within:shadow-emerald-500/5 dark:border-zinc-800 dark:bg-zinc-900 dark:focus-within:border-emerald-400/30">
 					<input
 						ref={fileRef}
 						type="file"

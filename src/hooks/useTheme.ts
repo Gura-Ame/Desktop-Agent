@@ -18,8 +18,14 @@ function getInitialTheme(): Theme {
 	return "dark";
 }
 
-function applyTheme(theme: Theme) {
+function applyTheme(theme: Theme, withTransition: boolean) {
 	const root = document.documentElement;
+	if (withTransition) {
+		root.classList.add("theme-animating");
+		window.setTimeout(() => {
+			root.classList.remove("theme-animating");
+		}, 400);
+	}
 	if (theme === "dark") {
 		root.classList.add("dark");
 	} else {
@@ -28,26 +34,43 @@ function applyTheme(theme: Theme) {
 }
 
 /**
- * 深淺色模式，持久化到 localStorage。
+ * 深淺色模式，持久化到 localStorage；切換時加上短暫 transition class。
  */
 export function useTheme() {
 	const [theme, setThemeState] = useState<Theme>(getInitialTheme);
 
 	useEffect(() => {
-		applyTheme(theme);
+		// 初次掛載不播動畫，避免整頁閃一下
+		applyTheme(theme, false);
 		try {
 			localStorage.setItem(STORAGE_KEY, theme);
 		} catch {
 			/* ignore */
 		}
-	}, [theme]);
+	}, []);
 
 	const setTheme = useCallback((next: Theme) => {
-		setThemeState(next === "light" ? "light" : "dark");
+		const t = next === "light" ? "light" : "dark";
+		applyTheme(t, true);
+		setThemeState(t);
+		try {
+			localStorage.setItem(STORAGE_KEY, t);
+		} catch {
+			/* ignore */
+		}
 	}, []);
 
 	const toggleTheme = useCallback(() => {
-		setThemeState((t) => (t === "dark" ? "light" : "dark"));
+		setThemeState((prev) => {
+			const next = prev === "dark" ? "light" : "dark";
+			applyTheme(next, true);
+			try {
+				localStorage.setItem(STORAGE_KEY, next);
+			} catch {
+				/* ignore */
+			}
+			return next;
+		});
 	}, []);
 
 	return { theme, setTheme, toggleTheme, isDark: theme === "dark" };

@@ -67,29 +67,36 @@ describe("useServerHealth", () => {
 		expect(fetchSpy).not.toHaveBeenCalled();
 	});
 
-	it("remote_api 模式打 /models 成功時回報在線", async () => {
-		vi.spyOn(globalThis, "fetch").mockResolvedValue({
-			ok: true,
-			status: 200,
-		} as Response);
+	it("remote_api 模式經後端 check_remote_api 成功時回報在線", async () => {
+		const fetchSpy = vi.spyOn(globalThis, "fetch");
+		const callApi = vi.fn().mockResolvedValue({
+			status: "ok",
+			running: true,
+			msg: "在線",
+		});
 		const { result, setServerStatus } = setup({
 			clientMode: "remote_api",
 			baseUrl: "http://example.com/v1/",
+			callApi,
 		});
 		await act(async () => {
 			await result.current.checkServerHealth();
 		});
+		expect(callApi).toHaveBeenCalledWith("check_remote_api", "http://example.com/v1/");
 		expect(setServerStatus).toHaveBeenCalledWith({
 			running: true,
 			msg: "在線",
 		});
+		expect(fetchSpy).not.toHaveBeenCalled();
 	});
 
-	it("remote_api 模式 fetch 失敗時回報離線", async () => {
+	it("remote_api 模式後端失敗時 fallback fetch 失敗回報離線", async () => {
+		const callApi = vi.fn().mockRejectedValue(new Error("bridge down"));
 		vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network down"));
 		const { result, setServerStatus } = setup({
 			clientMode: "remote_api",
 			baseUrl: "http://example.com/v1",
+			callApi,
 		});
 		await act(async () => {
 			await result.current.checkServerHealth();

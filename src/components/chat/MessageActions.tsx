@@ -12,10 +12,7 @@ type MessageActionsProps = {
 	onStartEdit: () => void;
 };
 
-/** 滑鼠移過訊息時浮現在右上角的操作列：agent 訊息顯示複製、user 訊息顯示編輯。
- * 兩種按鈕互斥（同一則訊息不可能同時是 user 又是 agent），拆成一個元件用條件式
- * 決定要不要渲染，比原本兩段各自內嵌的 JSX 更容易一眼看出「這裡到底有什麼按鈕」。
- */
+/** 訊息泡泡下方的操作列：複製／編輯（hover 才展開文字） */
 export default function MessageActions({
 	isUser,
 	isStreaming,
@@ -31,18 +28,37 @@ export default function MessageActions({
 	if (!showCopy && !showEdit) return null;
 
 	return (
-		<div className="absolute right-2 top-2 flex gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+		<div
+			className={cn(
+				"flex items-center gap-0.5 px-0.5",
+				isUser ? "justify-end" : "justify-start",
+			)}
+		>
 			{showCopy && (
 				<button
 					type="button"
 					onClick={onCopyClick}
 					title={copied ? "已複製" : "複製內容"}
 					className={cn(
-						"rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200",
+						"group/copy inline-flex items-center gap-0 overflow-hidden rounded-lg px-1.5 py-1 text-[11px] text-zinc-400 transition-all duration-200",
+						"hover:bg-zinc-200/70 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200",
 						copied && "text-emerald-600 dark:text-emerald-400",
 					)}
 				>
-					{copied ? <Check size={13} /> : <Copy size={13} />}
+					{copied ? (
+						<Check size={12} className="shrink-0" />
+					) : (
+						<Copy size={12} className="shrink-0" />
+					)}
+					<span
+						className={cn(
+							"max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200",
+							"group-hover/copy:ms-1 group-hover/copy:max-w-[3.5rem] group-hover/copy:opacity-100",
+							copied && "ms-1 max-w-[3.5rem] opacity-100",
+						)}
+					>
+						{copied ? "已複製" : "複製"}
+					</span>
 				</button>
 			)}
 			{showEdit && (
@@ -50,9 +66,15 @@ export default function MessageActions({
 					type="button"
 					onClick={onStartEdit}
 					title="編輯"
-					className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 dark:text-zinc-500 dark:hover:bg-zinc-200 dark:hover:text-zinc-900"
+					className={cn(
+						"group/edit inline-flex items-center gap-0 overflow-hidden rounded-lg px-1.5 py-1 text-[11px] text-zinc-400 transition-all duration-200",
+						"hover:bg-zinc-200/70 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200",
+					)}
 				>
-					<Pencil size={13} />
+					<Pencil size={12} className="shrink-0" />
+					<span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/edit:ms-1 group-hover/edit:max-w-[3rem] group-hover/edit:opacity-100">
+						編輯
+					</span>
 				</button>
 			)}
 		</div>

@@ -51,8 +51,8 @@ type SidebarProps = {
 	handlePermissionModeChange: (mode: PermissionMode) => void;
 	theme?: Theme;
 	toggleTheme?: () => void;
-	preloadVisionModels?: () => void;
-	unloadVisionModels?: () => void;
+	preloadVisionModels?: () => void | Promise<unknown>;
+	unloadVisionModels?: () => void | Promise<unknown>;
 	recentModels?: string[];
 	onPickModelFile?: () => void;
 	isModelLoading?: boolean;
@@ -100,16 +100,16 @@ export default function Sidebar({
 }: SidebarProps) {
 	return (
 		<aside
-			className={`bg-zinc-900/60 border-r border-zinc-800 flex flex-col shrink-0 transition-all duration-300 ease-in-out relative ${
+			className={`bg-zinc-100/90 dark:bg-zinc-900/60 border-r border-zinc-200/80 dark:border-zinc-800 flex flex-col shrink-0 transition-[width,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] relative overflow-x-hidden ${
 				isCollapsed ? "w-16 p-3 items-center" : "w-80 p-4"
 			}`}
 		>
 			{/* 收合 / 展開 切換按鈕 */}
 			<div
-				className={`flex items-center justify-between w-full pb-3 border-b border-zinc-800/80 ${isCollapsed ? "flex-col gap-3" : ""}`}
+				className={`flex items-center justify-between w-full pb-3 border-b border-zinc-200/80 dark:border-zinc-800/80 ${isCollapsed ? "flex-col gap-3" : ""}`}
 			>
-				<div className="flex items-center gap-2 font-semibold text-zinc-100 tracking-tight overflow-hidden whitespace-nowrap">
-					<div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+				<div className="flex items-center gap-2 font-semibold text-zinc-800 dark:text-zinc-100 tracking-tight overflow-hidden whitespace-nowrap">
+					<div className="p-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
 						<Bot size={18} />
 					</div>
 					{!isCollapsed && <span>Desktop Agent</span>}
@@ -120,7 +120,7 @@ export default function Sidebar({
 						<button
 							type="button"
 							onClick={toggleTheme}
-							className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+							className="p-1.5 rounded-xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-100 hover:bg-zinc-200/80 dark:hover:bg-zinc-800 transition-colors"
 							title={theme === "dark" ? "切換淺色" : "切換深色"}
 						>
 							{theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
@@ -129,7 +129,7 @@ export default function Sidebar({
 					<button
 						type="button"
 						onClick={() => setIsCollapsed(!isCollapsed)}
-						className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+						className="p-1.5 rounded-xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-100 hover:bg-zinc-200/80 dark:hover:bg-zinc-800 transition-colors"
 						title={isCollapsed ? "展開側邊欄" : "收合側邊欄"}
 					>
 						{isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
@@ -139,7 +139,7 @@ export default function Sidebar({
 
 			{!isCollapsed ? (
 				/* 展開模式內容 */
-				<div className="flex-1 overflow-y-auto space-y-5 my-4 pr-1">
+				<div className="flex-1 overflow-y-auto overflow-x-hidden space-y-4 my-4 pr-1 min-w-0">
 					<LlmClientCard
 						clientMode={clientMode}
 						setClientMode={setClientMode}
@@ -196,7 +196,10 @@ export default function Sidebar({
 						className={`w-3 h-3 rounded-full mt-2 ${serverStatus.running ? "bg-emerald-500" : "bg-rose-500"}`}
 						title={`狀態: ${serverStatus.msg}`}
 					/>
-					<div className="p-1.5 rounded-lg text-zinc-400" title={`執行模式: ${executionMode}`}>
+					<div
+						className="p-1.5 rounded-xl text-zinc-500 dark:text-zinc-400"
+						title={`執行模式: ${executionMode}`}
+					>
 						<ListTree size={16} />
 					</div>
 				</div>

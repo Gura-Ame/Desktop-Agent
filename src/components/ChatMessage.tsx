@@ -107,24 +107,18 @@ export default function ChatMessage({
 	return (
 		<div
 			className={cn(
-				"group mx-auto flex max-w-3xl min-w-0 gap-3",
+				"group mx-auto flex max-w-3xl min-w-0 gap-3 animate-[msg-in_0.28s_ease-out]",
 				isUser ? "justify-end" : "justify-start",
 			)}
 		>
 			{!isUser && <MessageAvatar role="agent" />}
 
-			<div className="flex min-w-0 max-w-[min(85%,42rem)] flex-col gap-1">
-				{timeLabel && (
-					<span
-						className={cn(
-							"px-1 text-[10px] tabular-nums text-zinc-400",
-							isUser ? "text-right" : "text-left",
-						)}
-					>
-						{timeLabel}
-					</span>
+			<div
+				className={cn(
+					"flex min-w-0 max-w-[min(85%,42rem)] flex-col gap-1",
+					isUser && "items-end",
 				)}
-
+			>
 				{isUser && (
 					<MessageForksNav
 						msgId={msg.id}
@@ -134,47 +128,33 @@ export default function ChatMessage({
 					/>
 				)}
 
-				<div
-					className={cn(
-						"relative chat-selectable min-w-0 rounded-lg px-3.5 py-2.5 text-sm leading-relaxed",
-						isUser
-							? "rounded-br-sm bg-zinc-700 text-zinc-50 dark:bg-zinc-600 dark:text-zinc-50"
-							: "rounded-bl-sm border border-zinc-300 bg-[#f0f0f2] text-zinc-800 dark:border-[#3a3a3c] dark:bg-[#242426] dark:text-zinc-200",
-					)}
-				>
-					<MessageActions
-						isUser={isUser}
-						isStreaming={msg.isStreaming}
-						hasContent={!!msg.content}
-						copied={copied}
-						onCopyClick={handleCopyClick}
-						editing={editing}
-						canEdit={!!onEditUser}
-						onStartEdit={() => {
+				{editing ? (
+					/* 編輯時整塊換成獨立表單，不要嵌在深色泡泡裡 */
+					<MessageEditForm
+						draft={draft}
+						onDraftChange={setDraft}
+						onSave={saveEdit}
+						onCancel={() => {
+							setEditing(false);
 							setDraft(msg.content || "");
-							setEditing(true);
 						}}
 					/>
+				) : (
+					<div
+						className={cn(
+							"relative chat-selectable min-w-0 rounded-2xl text-sm leading-relaxed transition-shadow duration-200",
+							isUser
+								? "rounded-br-md bg-zinc-700 px-3.5 py-2 text-zinc-50 dark:bg-zinc-600 dark:text-zinc-50"
+								: "rounded-bl-md border border-zinc-300 bg-[#f0f0f2] px-3.5 py-2.5 text-zinc-800 dark:border-[#3a3a3c] dark:bg-[#242426] dark:text-zinc-200",
+						)}
+					>
+						<MessageImageAttachments images={msg.images} />
+						<MessageFileAttachments files={msg.files} />
 
-					<MessageImageAttachments images={msg.images} />
-					<MessageFileAttachments files={msg.files} />
-
-					{editing ? (
-						<MessageEditForm
-							draft={draft}
-							onDraftChange={setDraft}
-							onSave={saveEdit}
-							onCancel={() => {
-								setEditing(false);
-								setDraft(msg.content || "");
-							}}
-						/>
-					) : (
 						<div
 							className={cn(
 								"chat-selectable min-w-0 space-y-1.5 overflow-x-auto break-words",
-								!isUser && "pr-7",
-								isUser && "pr-7 whitespace-pre-wrap",
+								isUser && "whitespace-pre-wrap",
 							)}
 						>
 							<MessageBody
@@ -184,6 +164,35 @@ export default function ChatMessage({
 								isStreaming={msg.isStreaming}
 							/>
 						</div>
+					</div>
+				)}
+
+				{/* 時間戳 + 複製／編輯 都在訊息下方 */}
+				<div
+					className={cn(
+						"flex items-center gap-1.5",
+						isUser ? "flex-row-reverse" : "flex-row",
+					)}
+				>
+					{timeLabel && (
+						<span className="px-0.5 text-[10px] tabular-nums text-zinc-400">
+							{timeLabel}
+						</span>
+					)}
+					{!editing && (
+						<MessageActions
+							isUser={isUser}
+							isStreaming={msg.isStreaming}
+							hasContent={!!msg.content}
+							copied={copied}
+							onCopyClick={handleCopyClick}
+							editing={editing}
+							canEdit={!!onEditUser}
+							onStartEdit={() => {
+								setDraft(msg.content || "");
+								setEditing(true);
+							}}
+						/>
 					)}
 				</div>
 			</div>

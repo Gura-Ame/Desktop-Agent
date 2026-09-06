@@ -2,7 +2,7 @@ import { useCallback, useEffect, type MutableRefObject } from "react";
 import type { ClientMode, ServerStatus } from "../types";
 
 const HEALTH_CHECK_INTERVAL_MS = 15000;
-const HEALTH_CHECK_TIMEOUT_MS = 1500;
+const HEALTH_CHECK_TIMEOUT_MS = 2500;
 
 type UseServerHealthArgs = {
 	clientMode: ClientMode;
@@ -15,13 +15,8 @@ type UseServerHealthArgs = {
 
 /**
  * 檢查 LLM 伺服器狀態，並每 15 秒輪詢一次。
- * local_llama 模式下不走 HTTP，而是透過 callApi("get_llm_status") 檢查本機模型是否已真正載入。
- * 啟動且未載入模型時如實顯示「未載入模型」（紅燈），載入成功後才顯示「已載入 (模型名)」（綠燈）。
- * 嚴禁在 agent / 串流工作中對 server 發請求，否則可能把本地 llama 打掛——
- * 這正是 isBusyRef / isStreamingRef 存在的原因。
- *
- * 從 App.tsx 拆出來：這塊輪詢邏輯不需要知道聊天室其他任何狀態，
- * 只需要 clientMode/baseUrl/callApi 當輸入、setServerStatus 當輸出。
+ * local_llama：callApi("get_llm_status")
+ * remote_api：優先走後端 check_remote_api（避開 webview CORS），再 fallback fetch
  */
 export function useServerHealth({
 	clientMode,
@@ -53,17 +48,36 @@ export function useServerHealth({
 						return;
 					}
 				} catch {
-					// fallback to offline/unloaded
+					// fallback
 				}
 			}
 			setServerStatus({ running: false, msg: "未載入模型" });
 			return;
 		}
 
+		// remote_api：先走 Python 後端，避免前端 fetch 被 CORS / 私有網路限制擋掉
+		if (callApi) {
+			try {
+				const res = (await callApi("check_remote_api", baseUrl)) as
+					| { status: string; running?: boolean; msg?: string }
+					| undefined;
+				if (res && typeof res.running === "boolean") {
+					setServerStatus({
+						running: res.running,
+						msg: res.msg || (res.running ? "在線" : "離線"),
+					});
+					return;
+				}
+			} catch {
+				// fallback to browser fetch
+			}
+		}
+
 		try {
 			const ctrl = new AbortController();
 			const timer = setTimeout(() => ctrl.abort(), HEALTH_CHECK_TIMEOUT_MS);
-			const res = await fetch(`${baseUrl.replace(/\/$/, "")}/models`, {
+			const root = baseUrl.replace(/\/$/, "");
+			const res = await fetch(`${root}/models`, {
 				method: "GET",
 				signal: ctrl.signal,
 			});

@@ -267,6 +267,30 @@ class JsApi:
             "model_name": model_name,
         }
 
+    def check_remote_api(self, base_url: str = ""):
+        """從 Python 端探測 Remote API 是否在線（避開前端 CORS）。
+
+        對 OpenAI 相容端點打 GET {base}/models。
+        """
+        import urllib.error
+        import urllib.request
+
+        root = (base_url or "").strip().rstrip("/")
+        if not root:
+            return {"status": "ok", "running": False, "msg": "未設定 Base URL"}
+        url = f"{root}/models"
+        try:
+            req = urllib.request.Request(url, method="GET")
+            with urllib.request.urlopen(req, timeout=2.5) as resp:
+                code = getattr(resp, "status", None) or resp.getcode()
+                if 200 <= int(code) < 300:
+                    return {"status": "ok", "running": True, "msg": "在線"}
+                return {"status": "ok", "running": False, "msg": f"異常 ({code})"}
+        except urllib.error.HTTPError as e:
+            return {"status": "ok", "running": False, "msg": f"異常 ({e.code})"}
+        except Exception as e:
+            return {"status": "ok", "running": False, "msg": f"離線 ({type(e).__name__})"}
+
     def load_llama_model(self, model_path: str, n_ctx: int = 8192, n_gpu_layers: int = -1):
         if not model_path or not os.path.exists(model_path):
             msg = f"模型檔案不存在: {model_path}"
@@ -353,8 +377,11 @@ class JsApi:
         try:
             from PyQt6.QtWidgets import QApplication
 
+            # instance() 的 stub 回傳 QCoreApplication | None，
+            # clipboard() 只在 QGuiApplication / QApplication 上，
+            # 用 isinstance 收窄型別，避免 Pylance reportAttributeAccessIssue。
             app = QApplication.instance()
-            if app is not None:
+            if isinstance(app, QApplication):
                 cb = app.clipboard()
                 if cb is not None:
                     cb.setText(str(text))

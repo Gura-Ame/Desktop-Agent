@@ -21,18 +21,21 @@ export default function ToggleFeatureCard({
 	disabledDescription,
 }: ToggleFeatureCardProps) {
 	return (
-		<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 space-y-2 shadow-sm">
+		<div className="bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-3.5 space-y-2 shadow-sm shadow-zinc-900/5 dark:shadow-zinc-950/40 ring-1 ring-black/[0.02] dark:ring-white/[0.03]">
 			<div className="flex items-center justify-between">
-				<span className="flex items-center gap-1.5 text-xs font-medium text-zinc-400">
+				<span className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 dark:text-zinc-400">
 					{icon} {label}
 				</span>
 				<button
+					type="button"
 					onClick={() => onToggle(!enabled)}
 					role="switch"
 					aria-checked={enabled}
 					title={enabled ? "點擊關閉" : "點擊開啟"}
 					className={`relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0 ${
-						enabled ? "bg-emerald-500" : "bg-zinc-700"
+						enabled
+							? "bg-emerald-500"
+							: "bg-zinc-300 dark:bg-zinc-700"
 					}`}
 				>
 					<span
@@ -42,7 +45,7 @@ export default function ToggleFeatureCard({
 					/>
 				</button>
 			</div>
-			<p className="text-[11px] text-zinc-500 leading-relaxed">
+			<p className="text-[11px] text-zinc-500 dark:text-zinc-500 leading-relaxed">
 				{enabled ? enabledDescription : disabledDescription}
 			</p>
 		</div>

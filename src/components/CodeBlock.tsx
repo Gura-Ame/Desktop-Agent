@@ -113,7 +113,7 @@ export default function CodeBlock({ code, language }: CodeBlockProps) {
 	};
 
 	return (
-		<div className="group/code my-2 overflow-hidden rounded-md border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
+		<div className="group/code my-2 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
 			<div className="flex items-center justify-between border-b border-zinc-200 px-3 py-1 dark:border-zinc-800">
 				<span className="font-mono text-[10px] uppercase tracking-wide text-zinc-400">
 					{lang}

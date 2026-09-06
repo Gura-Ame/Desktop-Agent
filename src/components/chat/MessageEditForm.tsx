@@ -1,6 +1,5 @@
-import { X } from "lucide-react";
+import { RotateCcw, Save, X } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { Button } from "../ui/Button";
 import MarkdownBody from "./MarkdownBody";
 
 type MessageEditFormProps = {
@@ -19,10 +18,7 @@ function looksLikeCodeOrMath(text: string): boolean {
 	);
 }
 
-/** 使用者訊息的編輯狀態：文字框 + 有需要才顯示的即時預覽 + 儲存/取消按鈕。
- * 從 ChatMessage.tsx 拆出來單獨管理，是那個檔案裡邏輯最集中的一塊 UI，
- * 獨立出來後 ChatMessage 本身只需要知道「編不編輯中」跟「草稿內容」。
- */
+/** 使用者訊息編輯：獨立卡片，不嵌在原本的深色泡泡裡 */
 export default function MessageEditForm({
 	draft,
 	onDraftChange,
@@ -30,37 +26,80 @@ export default function MessageEditForm({
 	onCancel,
 }: MessageEditFormProps) {
 	return (
-		<div className="space-y-2">
+		<div
+			className={cn(
+				"w-full min-w-[min(100%,20rem)] space-y-2.5 rounded-2xl border p-3 shadow-md",
+				"border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900",
+				"animate-[msg-in_0.22s_ease-out]",
+			)}
+		>
 			<textarea
 				value={draft}
 				onChange={(e) => onDraftChange(e.target.value)}
-				rows={4}
+				rows={Math.min(10, Math.max(3, draft.split("\n").length + 1))}
+				autoFocus
 				className={cn(
-					"w-full resize-y rounded-md border px-2 py-1.5 text-sm outline-none",
-					"border-zinc-600 bg-zinc-950 text-zinc-100",
-					"dark:border-zinc-300 dark:bg-white dark:text-zinc-900",
+					"w-full resize-y rounded-xl border px-3 py-2.5 text-sm leading-relaxed outline-none transition-shadow duration-200",
+					"border-zinc-200 bg-zinc-50 text-zinc-900 placeholder:text-zinc-400",
+					"focus:border-emerald-500/60 focus:bg-white focus:ring-2 focus:ring-emerald-500/20",
+					"dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500",
+					"dark:focus:border-emerald-400/50 dark:focus:bg-zinc-950 dark:focus:ring-emerald-400/15",
 				)}
 			/>
 			{looksLikeCodeOrMath(draft) && (
-				<div className="rounded-md border border-zinc-700/50 bg-zinc-950/50 p-2 dark:border-zinc-300 dark:bg-white/80">
+				<div
+					className={cn(
+						"rounded-xl border p-2.5 animate-[fade-in_0.2s_ease-out]",
+						"border-zinc-100 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950/80",
+					)}
+				>
 					<div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-zinc-400">
 						Preview
 					</div>
-					<div className="text-zinc-200 dark:text-zinc-800">
+					<div className="text-zinc-800 dark:text-zinc-200">
 						<MarkdownBody content={draft} />
 					</div>
 				</div>
 			)}
-			<div className="flex flex-wrap gap-1.5">
-				<Button size="sm" variant="primary" onClick={() => onSave(false)}>
-					儲存
-				</Button>
-				<Button size="sm" variant="default" onClick={() => onSave(true)}>
+			<div className="flex flex-wrap items-center gap-1.5">
+				<button
+					type="button"
+					onClick={() => onSave(true)}
+					title="修改內容並建立分枝，重新向模型產生回覆"
+					className={cn(
+						"inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-medium transition-all duration-150 active:scale-[0.97]",
+						"bg-emerald-600 text-white shadow-sm shadow-emerald-600/20 hover:bg-emerald-500",
+						"dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400",
+					)}
+				>
+					<RotateCcw size={13} />
 					儲存並重送
-				</Button>
-				<Button size="sm" variant="ghost" onClick={onCancel}>
-					<X size={14} /> 取消
-				</Button>
+				</button>
+				<button
+					type="button"
+					onClick={() => onSave(false)}
+					title="只改畫面上的這則文字，不呼叫模型、不重產回覆（適合改錯字）"
+					className={cn(
+						"inline-flex h-8 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium transition-all duration-150 active:scale-[0.97]",
+						"border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50",
+						"dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700",
+					)}
+				>
+					<Save size={13} />
+					僅儲存
+				</button>
+				<button
+					type="button"
+					onClick={onCancel}
+					className={cn(
+						"inline-flex h-8 items-center gap-1 rounded-xl px-2.5 text-xs font-medium transition-all duration-150 active:scale-[0.97]",
+						"text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800",
+						"dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100",
+					)}
+				>
+					<X size={14} />
+					取消
+				</button>
 			</div>
 		</div>
 	);
