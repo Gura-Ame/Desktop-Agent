@@ -21,18 +21,20 @@ class ScreenCache:
         """將全量畫面資料存入 Disk/RAM 快取，回傳 snapshot_id"""
         snap_id = f"snap_{int(time.time())}_{uuid.uuid4().hex[:4]}"
 
+        # 只保留互動性較高的元件做為 Context 摘要 (按鈕、輸入框、選單)
         interactive_summary = []
         for idx, elem in enumerate(full_elements):
-            elem["id"] = idx
+            elem["id"] = idx  # 賦予內部索引
             elem_type = elem.get("type", "").lower()
             text = elem.get("text", "")
             accessible_name = elem.get("accessible_name", "")
 
+            # 簡化摘要標記
             if any(k in elem_type for k in ["button", "edit", "menu", "check", "combo"]) or text or accessible_name:
                 interactive_summary.append({
                     "id": idx,
                     "type": elem["type"],
-                    "text": text[:20],
+                    "text": text[:20],  # 截斷過長文字
                     "accessible_name": accessible_name[:50],
                     "state": elem.get("state", {}),
                     "window": elem["window"]
@@ -42,7 +44,7 @@ class ScreenCache:
             "timestamp": time.time(),
             "full_elements": full_elements,
             "screenshot_path": screenshot_path,
-            "summary": interactive_summary[:20]
+            "summary": interactive_summary[:20]  # LLM 只看前 20 個重要元件
         }
         return snap_id
 
@@ -114,8 +116,10 @@ def read_screen(max_elements: int = 60, save_screenshot_path: str = "temp_screen
     """
     elements_info = []
 
+    # 1. 嘗試走 UI Automation Tree
     try:
         desktop = Desktop(backend="uia")
+        # 抓取目前桌面上可見的頂層視窗
         windows = desktop.windows(visible_only=True)
 
         for win in windows:
@@ -129,6 +133,7 @@ def read_screen(max_elements: int = 60, save_screenshot_path: str = "temp_screen
 
                 win_title = win.window_text().strip()
 
+                # 遍歷視窗內部的 descendant 元件
                 for elem in win.descendants():
                     if len(elements_info) >= max_elements:
                         break
@@ -141,6 +146,7 @@ def read_screen(max_elements: int = 60, save_screenshot_path: str = "temp_screen
                         elem_type = elem.friendly_class_name()
                         rect = elem.rectangle()
 
+                        # 只留下有文字且佔據合理尺寸的有效元件
                         if _should_report_element(text, accessible_name, elem_type, rect):
                             elements_info.append({
                                 "window": win_title if win_title else "Unknown Window",
@@ -156,6 +162,7 @@ def read_screen(max_elements: int = 60, save_screenshot_path: str = "temp_screen
             except Exception:
                 continue
 
+        # 只要有抓到 UIA 元素就直接回傳結果
         if elements_info:
             return {
                 "mode": "uia",
@@ -165,6 +172,7 @@ def read_screen(max_elements: int = 60, save_screenshot_path: str = "temp_screen
     except Exception as e:
         log(f"UIA 樹抓取異常: {e}", level="warning", channel="tool")
 
+    # 2. Fallback: 拍攝螢幕截圖供 OCR 或 Vision 模型讀取
     try:
         pyautogui.screenshot(save_screenshot_path)
 
