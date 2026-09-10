@@ -1,6 +1,8 @@
 import os
 from typing import Optional, List, Dict, Any, Generator
 
+from logging_setup import log
+
 
 class _ChunkDelta:
     def __init__(self, content: str = ""):
@@ -146,20 +148,24 @@ class LlamaClient:
 
     def _load_model(self):
         if not self.model_path or not os.path.exists(self.model_path):
-            print(f"[提示] Llama 模型路徑目前不可用: {self.model_path}")
+            log(f"Llama 模型路徑目前不可用: {self.model_path}", level="warning", channel="llama")
             return
 
         try:
             from llama_cpp import Llama
 
-            print(f"\n[系統] 正在使用 Llama (llama-cpp-python) 載入本地 GGUF: {self.model_path}")
+            log(
+                f"正在使用 Llama (llama-cpp-python) 載入本地 GGUF: {self.model_path}",
+                level="info",
+                channel="llama",
+            )
             self.llama = Llama(
                 model_path=self.model_path,
                 n_ctx=self.n_ctx,
                 n_gpu_layers=self.n_gpu_layers,
                 verbose=self.verbose,
             )
-            print("[系統] Llama 本地模型載入成功！\n")
+            log("Llama 本地模型載入成功！", level="info", channel="llama")
         except Exception as e:
-            print(f"[錯誤] 載入 Llama 模型失敗: {e}")
+            log(f"載入 Llama 模型失敗: {e}", level="error", channel="llama")
             self.llama = None

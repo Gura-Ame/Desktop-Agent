@@ -47,6 +47,7 @@ TOOL_RISK_LEVELS: Dict[str, ToolRisk] = {
     "query_screen_element": ToolRisk.SAFE,
     "search_files_by_content": ToolRisk.SAFE,
     "find_files_by_name": ToolRisk.SAFE,
+    "get_file_info": ToolRisk.SAFE,
     "read_tool_doc": ToolRisk.SAFE,
     "ask_user": ToolRisk.SAFE,
     "recall": ToolRisk.SAFE,

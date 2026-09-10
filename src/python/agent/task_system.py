@@ -1,6 +1,7 @@
 import re
 from enum import Enum
 from typing import List, Optional, Tuple
+from logging_setup import log
 
 
 class TaskStatus(str, Enum):
@@ -158,7 +159,7 @@ class TaskEngine:
             return new_tasks
         except Exception as e:
             self.last_parse_error = f"解析時發生例外: {e}"
-            print(f"[TaskEngine DSL 解析失敗]: {e}")
+            log(f"[TaskEngine DSL 解析失敗]: {e}", level="error")
             return None
 
     def load_initial_plan(self, text: str) -> bool:

@@ -23,6 +23,7 @@ from overlay import ScreenOverlay, OverlayManager
 from agent.agent_core import AgentWorker, AgentState
 from agent.task_system import ExecutionMode
 from agent.tool_permissions import PermissionMode
+from logging_setup import log
 
 pyautogui.FAILSAFE = True
 pyautogui.PAUSE = 0.5
@@ -72,6 +73,7 @@ class JsApi:
             "query_screen_element": tools.query_screen_element,
             "search_files_by_content": tools.search_files_by_content,
             "find_files_by_name": tools.find_files_by_name,
+            "get_file_info": tools.get_file_info,
             "run_powershell": tools.run_powershell,
             "run_cmd": tools.run_cmd,
             "wait": tools.wait,
@@ -189,7 +191,7 @@ class JsApi:
             result = window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True)
             return list(result) if result else []
         except Exception as e:
-            print(f"[JsApi] pick_files 失敗: {e}", flush=True)
+            log(f"[JsApi] pick_files 失敗: {e}", level="error", channel="webview")
             return []
 
     def log_from_frontend(self, level: str, message: str):
@@ -199,7 +201,7 @@ class JsApi:
         前端只有在開發模式（import.meta.env.DEV）才會呼叫這個方法，見
         src/lib/devConsoleBridge.ts。
         """
-        print(f"[frontend:{level}] {message}", flush=True)
+        log(message, level=level if level in {"debug", "info", "warning", "error", "critical"} else "info", channel="frontend")
 
     def respond_permission(self, decision: str):
         """前端的授權對話框呼叫：decision 必須是 'allow' | 'allow_session' | 'deny'。"""
@@ -255,7 +257,7 @@ class JsApi:
                 return result[0]
             return ""
         except Exception as e:
-            print(f"[JsApi] pick_model_file 失敗: {e}", flush=True)
+            log(f"[JsApi] pick_model_file 失敗: {e}", level="error", channel="webview")
             return ""
 
     def get_llm_status(self):
