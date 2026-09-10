@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import QApplication
 import webview
 
 from overlay import ScreenOverlay
+from logging_setup import log
 
 
 def _init_dpi_awareness():
@@ -56,7 +57,7 @@ def _init_winforms_text_rendering():
         WinForms.Application.SetCompatibleTextRenderingDefault(False)
         return WinForms
     except Exception as e:
-        print(f"[系統] 預先初始化 WinForms 文字渲染失敗: {e}")
+        log(f"[系統] 預先初始化 WinForms 文字渲染失敗: {e}", level="error")
         return None
 
 
@@ -92,9 +93,9 @@ def _make_expose_fn(window, api):
 
         try:
             window.expose(*[_wrap(n) for n in _EXPOSED_METHOD_NAMES if callable(getattr(api, n, None))])
-            print("[JsApi] expose 完成")
+            log("[JsApi] expose 完成")
         except Exception as e:
-            print(f"[JsApi] expose 失敗: {e}")
+            log(f"[JsApi] expose 失敗: {e}", level="error")
             return
 
         try:
@@ -102,9 +103,9 @@ def _make_expose_fn(window, api):
                 "window.pywebview && window.pywebview.api "
                 "? typeof window.pywebview.api.poll_events : 'n/a'"
             )
-            print(f"[JsApi] after expose poll_events typeof = {t_poll}")
+            log(f"[JsApi] after expose poll_events typeof = {t_poll}")
         except Exception as e:
-            print(f"[JsApi] evaluate_js 失敗: {e}")
+            log(f"[JsApi] evaluate_js 失敗: {e}", level="error")
 
     return _expose_api
 
@@ -132,7 +133,7 @@ def _start_qt_pump_timer(WinForms):
             clr.AddReference("System.Windows.Forms")
             import System.Windows.Forms as WinForms
         except Exception as e:
-            print(f"[系統] 啟動 Qt 事件循環定時器失敗（無法載入 WinForms）: {e}")
+            log(f"[系統] 啟動 Qt 事件循環定時器失敗（無法載入 WinForms）: {e}", level="error")
             return None
 
     try:
@@ -146,7 +147,7 @@ def _start_qt_pump_timer(WinForms):
         qt_pump_timer.Start()
         return qt_pump_timer
     except Exception as e:
-        print(f"[系統] 啟動 Qt 事件循環定時器失敗: {e}")
+        log(f"[系統] 啟動 Qt 事件循環定時器失敗: {e}", level="error")
         return None
 
 
@@ -201,7 +202,7 @@ def run_app(js_api_cls):
                 overlay.show()
                 QApplication.processEvents()
         except Exception as e:
-            print(f"[系統] 顯示 ScreenOverlay 失敗: {e}")
+            log(f"[系統] 顯示 ScreenOverlay 失敗: {e}", level="error")
         if _qt_pump_timer_ref["timer"] is None:
             _qt_pump_timer_ref["timer"] = _start_qt_pump_timer(WinForms)
 
