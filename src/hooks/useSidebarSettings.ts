@@ -18,6 +18,8 @@ export function useSidebarSettings() {
 	const [forgettingEnabled, setForgettingEnabled] = useState(false);
 	const [activationEnabled, setActivationEnabled] = useState(false);
 	const [permissionMode, setPermissionMode] = useState<PermissionMode>("ask");
+	const [thinkingEnabled, setThinkingEnabled] = useState(false);
+	const [instantInputEnabled, setInstantInputEnabled] = useState(false);
 	const [clientMode, setClientMode] = useState<ClientMode>("local_llama");
 	const [baseUrl, setBaseUrl] = useState("http://localhost:12356/v1");
 	const [apiKey, setApiKey] = useState("lm-studio");
@@ -83,6 +85,10 @@ export function useSidebarSettings() {
 		setActivationEnabled,
 		permissionMode,
 		setPermissionMode,
+		thinkingEnabled,
+		setThinkingEnabled,
+		instantInputEnabled,
+		setInstantInputEnabled,
 		clientMode,
 		setClientMode,
 		baseUrl,

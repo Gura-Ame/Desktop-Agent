@@ -9,6 +9,7 @@ import ast
 import re
 from typing import TYPE_CHECKING
 from agent.tool_docs import TOOL_DOCS, get_tool_doc
+from agent.agent_physical_input_preview import PHYSICAL_INPUT_TOOLS
 
 try:
     from pyautogui import FailSafeException
@@ -53,7 +54,20 @@ class AgentToolExecutionMixin(_Base):
 
             if func_name in self.available_functions:
                 try:
-                    allowed = self.request_tool_permission(func_name, args_str)
+                    args, kwargs = self._parse_tool_arguments(func_name, args_str)
+                except Exception:
+                    args, kwargs = [], {}
+
+                try:
+                    if func_name in PHYSICAL_INPUT_TOOLS:
+                        # 滑鼠/鍵盤這幾個工具走專屬的預覽+延遲執行流程
+                        # （agent_physical_input_preview.py），不是一般的
+                        # request_tool_permission——差異只在「瞬間輸入」
+                        # 關閉、且策略是 ASK_DANGEROUS_ONLY/AUTO 時的行為，
+                        # ASK 策略下兩條路徑最終效果一樣（都會問）。
+                        allowed = self._gate_physical_input(func_name, args, kwargs, args_str)
+                    else:
+                        allowed = self.request_tool_permission(func_name, args_str)
                 except InterruptedError:
                     raise
                 if not allowed:
@@ -62,7 +76,6 @@ class AgentToolExecutionMixin(_Base):
                     combined_parts.append(f"{doc_prefix}{disp_text}")
                     return disp_text, tag
                 try:
-                    args, kwargs = self._parse_tool_arguments(func_name, args_str)
                     self.emit("log", f"[工具呼叫] 開始執行: {func_name}")
                     res = self.available_functions[func_name](*args, **kwargs)
                     disp_text = f"[{func_name}]: {res}"

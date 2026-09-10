@@ -362,6 +362,23 @@ class AgentTaskProcessorMixin(_Base):
             f"- 條件: {task.condition}\n"
             f"- 注意: {task.note}\n"
         )
+        # Task Tree 的步驟執行走的是純文字 prompt（_call_and_execute），跟 Direct
+        # Mode 不一樣，本身沒有機會看到這輪真正有沒有附圖——如果使用者是先傳圖片、
+        # 這個請求才被判定需要完整規劃，圖片本身在升級的當下就已經跟這個純文字
+        # 流程斷開了。這裡比照 agent_routing.py／agent_direct_mode.py 已經在用的
+        # 做法：把暫存圖片路徑寫進 prompt 裡提醒模型，不然步驟只會一直宣稱「沒有
+        # 圖片」、驗證一直失敗、越拆越多層卻永遠解決不了根本問題——這正是使用者
+        # 回報「任務樹一直拆」那個案例的真正原因：不是拆解邏輯本身有問題，是拆解
+        # 出來的每個子任務一樣拿不到圖片，怎麼拆都沒用。
+        if getattr(self, "last_image_paths", []):
+            existing = self.last_image_paths
+            step_prompt += (
+                f"\n[系統：先前對話有 {len(existing)} 張圖片，暫存路徑如下：\n"
+                + "\n".join(f"- {p}" for p in existing)
+                + "\n如果這個步驟跟圖片內容有關，請直接呼叫 analyze_image_visuals 或"
+                  " analyze_image_ocr 並傳入上面的路徑，不要以「沒有收到圖片」為由"
+                  "卡住或要求使用者重新提供。]\n"
+            )
         try:
             result_text = self._call_and_execute(step_prompt)
         except Exception as e:

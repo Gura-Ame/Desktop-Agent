@@ -54,6 +54,8 @@ class MemoryStore:
         # 用純字串存（而不是 import PermissionMode），避免 memory 這一層
         # 反過來依賴 agent 那一層，維持原本的分層方向。
         self.permission_mode: str = "ask"
+        self.thinking_enabled: bool = False
+        self.instant_input_enabled: bool = False
         self._load()
 
     def set_activation_enabled(self, enabled: bool):
@@ -68,6 +70,14 @@ class MemoryStore:
         self.permission_mode = mode
         self.save()
 
+    def set_thinking_enabled(self, enabled: bool):
+        self.thinking_enabled = enabled
+        self.save()
+
+    def set_instant_input_enabled(self, enabled: bool):
+        self.instant_input_enabled = enabled
+        self.save()
+
     def _load(self):
         if os.path.exists(self.path):
             with open(self.path, "r", encoding="utf-8") as f:
@@ -78,6 +88,8 @@ class MemoryStore:
             self.activation_enabled = bool(settings.get("activation_enabled", False))
             self.forgetting_enabled = bool(settings.get("forgetting_enabled", False))
             self.permission_mode = str(settings.get("permission_mode", "ask"))
+            self.thinking_enabled = bool(settings.get("thinking_enabled", False))
+            self.instant_input_enabled = bool(settings.get("instant_input_enabled", False))
             self.nodes = {nid: MemoryNode.from_dict(nd) for nid, nd in raw.items()}
         self._rebuild_reverse_index()
 
@@ -98,6 +110,8 @@ class MemoryStore:
             "activation_enabled": self.activation_enabled,
             "forgetting_enabled": self.forgetting_enabled,
             "permission_mode": self.permission_mode,
+            "thinking_enabled": self.thinking_enabled,
+            "instant_input_enabled": self.instant_input_enabled,
         }
         with open(self.path, "w", encoding="utf-8") as f:
             json.dump(raw, f, ensure_ascii=False, indent=2)

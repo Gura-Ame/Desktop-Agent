@@ -1,8 +1,10 @@
 import {
+	BrainCircuit,
 	BrainCog,
 	Bot,
 	ListTree,
 	Moon,
+	MousePointerClick,
 	PanelLeftClose,
 	PanelLeftOpen,
 	Sun,
@@ -47,6 +49,10 @@ type SidebarProps = {
 	handleForgettingToggle: (enabled: boolean) => void;
 	activationEnabled: boolean;
 	handleActivationToggle: (enabled: boolean) => void;
+	thinkingEnabled: boolean;
+	handleThinkingToggle: (enabled: boolean) => void;
+	instantInputEnabled: boolean;
+	handleInstantInputToggle: (enabled: boolean) => void;
 	permissionMode: PermissionMode;
 	handlePermissionModeChange: (mode: PermissionMode) => void;
 	theme?: Theme;
@@ -86,6 +92,10 @@ export default function Sidebar({
 	handleForgettingToggle,
 	activationEnabled,
 	handleActivationToggle,
+	thinkingEnabled,
+	handleThinkingToggle,
+	instantInputEnabled,
+	handleInstantInputToggle,
 	permissionMode,
 	handlePermissionModeChange,
 	theme,
@@ -187,6 +197,24 @@ export default function Sidebar({
 						onToggle={handleActivationToggle}
 						enabledDescription="開啟中：記憶被想起（recall / search）的次數與新鮮度會跨對話累積成分數，之後排序時常被想起的東西會更優先被看到（會隨時間慢慢衰減，不是永久加分）。"
 						disabledDescription="關閉中：所有記憶單純依照關聯度與最近使用時間排序，不會有額外的「常被想起」加權。"
+					/>
+
+					<ToggleFeatureCard
+						icon={<BrainCircuit size={14} />}
+						label="輕量思考（Direct Mode / Planner）"
+						enabled={thinkingEnabled}
+						onToggle={handleThinkingToggle}
+						enabledDescription="開啟中：Direct Mode 生成回覆前、Planner 規劃 Task Tree 前，都會先讓模型簡短想一次再動作——有機會改善「明明附過圖片卻說沒收到」「簡單任務也硬要拆解」這類問題，但每次都多一次完整的 LLM 呼叫，會增加延遲與 token 成本。"
+						disabledDescription="關閉中：Direct Mode 跟 Planner 都直接生成，不會多一次思考呼叫。"
+					/>
+
+					<ToggleFeatureCard
+						icon={<MousePointerClick size={14} />}
+						label="瞬間輸入（滑鼠瞬移 / 文字瞬間輸入）"
+						enabled={instantInputEnabled}
+						onToggle={handleInstantInputToggle}
+						enabledDescription="開啟中：滑鼠移動/點擊、打字都會直接執行，不會先顯示軌跡或打字預覽，也不會有任何停留。"
+						disabledDescription="關閉中（預設）：agent 移動滑鼠/打字前，會先在畫面上顯示軌跡路徑/打字預覽，再依照上面的「工具授權策略」決定何時真正動手——一律詢問會跳出確認卡片、只問高風險會停留 1 秒後自動繼續、全部信任則預覽完立刻繼續。"
 					/>
 				</div>
 			) : (

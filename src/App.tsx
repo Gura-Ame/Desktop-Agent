@@ -217,44 +217,23 @@ export default function App() {
 					settings.setPermissionMode(mode);
 					callApi("set_permission_mode", mode);
 				}}
+				thinkingEnabled={settings.thinkingEnabled}
+				handleThinkingToggle={(enabled) => {
+					settings.setThinkingEnabled(enabled);
+					callApi("set_thinking_enabled", enabled);
+				}}
+				instantInputEnabled={settings.instantInputEnabled}
+				handleInstantInputToggle={(enabled) => {
+					settings.setInstantInputEnabled(enabled);
+					callApi("set_instant_input_enabled", enabled);
+				}}
 				clearDrawings={() => callApi("clear_drawings")}
 				clearHistory={() => {
 					clearMessages();
 					callApi("clear_history");
 				}}
-				preloadVisionModels={async () => {
-					pushToast("info", "正在背景預載視覺模型…");
-					try {
-						const res = (await callApi("preload_vision_models")) as
-							| { status?: string; msg?: string }
-							| undefined;
-						pushToast(
-							"success",
-							res?.msg || "已開始預載，完成後可即時分析圖片",
-						);
-					} catch (e) {
-						pushToast(
-							"error",
-							`預載失敗：${e instanceof Error ? e.message : String(e)}`,
-						);
-						throw e;
-					}
-				}}
-				unloadVisionModels={async () => {
-					pushToast("info", "正在釋放視覺模型顯存…");
-					try {
-						const res = (await callApi("unload_vision_models")) as
-							| { status?: string; msg?: string }
-							| undefined;
-						pushToast("success", res?.msg || "視覺模型顯存已釋放");
-					} catch (e) {
-						pushToast(
-							"error",
-							`釋放失敗：${e instanceof Error ? e.message : String(e)}`,
-						);
-						throw e;
-					}
-				}}
+				preloadVisionModels={() => { callApi("preload_vision_models"); }}
+				unloadVisionModels={() => callApi("unload_vision_models") as Promise<unknown>}
 				showLogWindow={showLog}
 				setShowLogWindow={setShowLog}
 				theme={theme}

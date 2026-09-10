@@ -62,6 +62,11 @@ class JsApi:
             "draw_line": self.overlay_manager.draw_line,
             "draw_stroke": self.overlay_manager.draw_stroke,
             "clear_drawings": self.overlay_manager.clear_drawings,
+            # 這兩個不寫進 SYSTEM_PROMPT 給模型當一般繪圖工具呼叫，是
+            # agent_tool_execution.py 的物理輸入預覽邏輯內部用查表方式呼叫的
+            # （鍵是固定的內部名稱，不是給模型看的工具名稱）。
+            "_show_mouse_trajectory": self.overlay_manager.show_mouse_trajectory,
+            "_show_typing_preview": self.overlay_manager.show_typing_preview,
             "execute_python": tools.execute_python,
             "read_screen_api": tools.read_screen_api,
             "query_screen_element": tools.query_screen_element,
@@ -208,6 +213,12 @@ class JsApi:
             return {"status": "ok", "mode": mode.value}
         except ValueError:
             return {"status": "error", "msg": f"未知的權限模式: {mode_str}"}
+
+    def set_thinking_enabled(self, enabled: bool):
+        self.agent.set_thinking_enabled(enabled)
+
+    def set_instant_input_enabled(self, enabled: bool):
+        self.agent.set_instant_input_enabled(enabled)
 
     def set_execution_mode(self, mode_str: str):
         try:

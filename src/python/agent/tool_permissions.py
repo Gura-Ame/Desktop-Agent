@@ -65,6 +65,8 @@ TOOL_RISK_LEVELS: Dict[str, ToolRisk] = {
     "wait": ToolRisk.SAFE,
     "wait_for_screen_stable": ToolRisk.SAFE,
     "release_all_held_inputs": ToolRisk.SAFE,   # 純粹釋放按鍵，不會按下任何新東西，永遠是安全的
+    "_show_mouse_trajectory": ToolRisk.SAFE,    # 純視覺預覽，不會真的移動滑鼠
+    "_show_typing_preview": ToolRisk.SAFE,      # 純視覺預覽，不會真的打字
 
     # --- MODERATE：有副作用，但範圍有限、大致可回復 ---
     "remember": ToolRisk.MODERATE,

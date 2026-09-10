@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QApplication, QWidget
-from PyQt6.QtCore import Qt, QObject, pyqtSignal
+from PyQt6.QtCore import Qt, QObject, QTimer, pyqtSignal
 from PyQt6.QtGui import QPainter, QPen, QBrush, QColor, QFont, QPainterPath
 
 def parse_hex_color(hex_str: str, alpha: int = 220) -> QColor:
@@ -50,6 +50,76 @@ class ScreenOverlay(QWidget):
         self.shapes.append({'type': shape_type, 'data': data})
         self.update()
         QApplication.processEvents()  # 強制單執行緒立刻渲染畫面
+
+    def add_mouse_trajectory(self, from_xy, to_xy, duration_ms=400, color="#00BFFF"):
+        """畫一條從 from_xy 到 to_xy 的軌跡線，並用計時器讓一個圓點沿著這條線
+        移動，模擬滑鼠實際會怎麼移過去，而不是憑空瞬移——這是「瞬間輸入」
+        開關關閉時，agent 真的移動滑鼠之前用來讓使用者先看到「將會移到哪」
+        的預覽，不是最終真正的滑鼠移動本身（那還是由 pyautogui 執行）。
+
+        線本身立刻整條畫出來（讓使用者馬上看到終點在哪），圓點才是真正
+        沿著時間軸移動的部分，兩者疊在一起看起來就像「一個游標沿著這條線
+        滑過去」。
+        """
+        line_shape = {'type': 'line', 'data': {
+            'x1': from_xy[0], 'y1': from_xy[1],
+            'x2': to_xy[0], 'y2': to_xy[1], 'color': color,
+        }}
+        dot_shape = {'type': 'stroke', 'data': {
+            'points': [[from_xy[0], from_xy[1]]], 'color': color, 'width': 10,
+        }}
+        self.shapes.append(line_shape)
+        self.shapes.append(dot_shape)
+        self.update()
+        QApplication.processEvents()
+
+        steps = max(1, duration_ms // 16)  # 大約 60fps
+        state = {"i": 0}
+        timer = QTimer(self)
+
+        def _advance():
+            state["i"] += 1
+            t = min(1.0, state["i"] / steps)
+            x = from_xy[0] + (to_xy[0] - from_xy[0]) * t
+            y = from_xy[1] + (to_xy[1] - from_xy[1]) * t
+            dot_shape['data']['points'] = [[x, y]]
+            self.update()
+            QApplication.processEvents()
+            if t >= 1.0:
+                timer.stop()
+
+        timer.timeout.connect(_advance)
+        timer.start(16)
+
+    def add_typing_preview(self, x, y, text, char_interval_ms=30):
+        """在 (x, y) 上方顯示一個文字泡泡，用計時器逐字顯示 text，製造打字
+        動畫的效果——這是「瞬間輸入」開關關閉時，agent 真的打字之前用來
+        讓使用者先看到「將會打什麼字」的預覽，不是最終真正的鍵盤輸入本身
+        （那還是由 pyautogui 執行）。
+
+        char_interval_ms 是每個字元之間的間隔，跟 type_text() 本身的
+        interval 參數是兩回事——這裡純粹是視覺呈現的節奏，不影響真正打字
+        的速度。字數多的時候會自動全部播完才停止計時器，不會卡在中間。
+        """
+        shape = {'type': 'typing_preview', 'data': {
+            'x': x, 'y': y, 'full_text': text, 'revealed': 0,
+        }}
+        self.shapes.append(shape)
+        self.update()
+        QApplication.processEvents()
+
+        timer = QTimer(self)
+
+        def _reveal_next():
+            if shape['data']['revealed'] < len(text):
+                shape['data']['revealed'] += 1
+                self.update()
+                QApplication.processEvents()
+            else:
+                timer.stop()
+
+        timer.timeout.connect(_reveal_next)
+        timer.start(max(10, char_interval_ms))
 
     def clear(self):
         self.shapes.clear()
@@ -161,10 +231,36 @@ class ScreenOverlay(QWidget):
                         path.lineTo(int(pt[0] / dpr), int(pt[1] / dpr))
                     painter.drawPath(path)
 
+            elif stype == 'typing_preview':
+                # 顯示「即將輸入的文字」的預覽泡泡：revealed 由計時器逐次遞增，
+                # 只畫出 full_text 裡前 revealed 個字元，製造打字動畫的效果。
+                x = int(data['x'] / dpr)
+                y = int(data['y'] / dpr)
+                full_text = data.get('full_text', '')
+                revealed = data.get('revealed', len(full_text))
+                shown = full_text[:revealed]
+                cursor = "▏" if revealed < len(full_text) else ""
+
+                painter.setFont(QFont("Consolas", 11))
+                metrics = painter.fontMetrics()
+                # 寬度用完整文字量測，不要隨著 revealed 增加而讓泡泡一直變寬跳動
+                text_w = metrics.horizontalAdvance(full_text) + 16
+                text_h = metrics.height() + 12
+
+                bubble_y = y - text_h - 10
+                painter.setPen(QPen(main_color, 2))
+                painter.setBrush(QBrush(QColor(20, 20, 20, 235)))
+                painter.drawRoundedRect(x, bubble_y, text_w, text_h, 6, 6)
+
+                painter.setPen(QPen(QColor(255, 255, 255)))
+                painter.drawText(x + 8, bubble_y + text_h - 10, shown + cursor)
+
 class OverlayBridge(QObject):
     add_shape_signal = pyqtSignal(str, dict)
     clear_signal = pyqtSignal()
     erase_signal = pyqtSignal(int, int, int)
+    trajectory_signal = pyqtSignal(list, list, int, str)
+    typing_preview_signal = pyqtSignal(int, int, str, int)
 
 class OverlayManager:
     def __init__(self, overlay: ScreenOverlay):
@@ -173,6 +269,8 @@ class OverlayManager:
         self.bridge.add_shape_signal.connect(self.overlay.add_shape)
         self.bridge.clear_signal.connect(self.overlay.clear)
         self.bridge.erase_signal.connect(self.overlay.erase_near)
+        self.bridge.trajectory_signal.connect(self.overlay.add_mouse_trajectory)
+        self.bridge.typing_preview_signal.connect(self.overlay.add_typing_preview)
 
     def draw_box(self, x: int, y: int, width: int, height: int, label: str = "", color: str = "#FF0000") -> str:
         self.bridge.add_shape_signal.emit('box', {'x': x, 'y': y, 'w': width, 'h': height, 'label': label, 'color': color})
@@ -195,3 +293,16 @@ class OverlayManager:
     def clear_drawings(self) -> str:
         self.bridge.clear_signal.emit()
         return "Cleared all screen drawings"
+
+    def show_mouse_trajectory(self, from_xy, to_xy, duration_ms: int = 400, color: str = "#00BFFF") -> str:
+        """給「瞬間輸入」關閉時的滑鼠預覽用，不是給 LLM 當一般繪圖工具呼叫——
+        沒有寫進 SYSTEM_PROMPT 的工具清單，是 agent_tool_execution.py 的
+        物理輸入預覽邏輯內部呼叫的。
+        """
+        self.bridge.trajectory_signal.emit(list(from_xy), list(to_xy), duration_ms, color)
+        return f"Showing mouse trajectory from {tuple(from_xy)} to {tuple(to_xy)}"
+
+    def show_typing_preview(self, x: int, y: int, text: str, char_interval_ms: int = 30) -> str:
+        """同上，給打字預覽用，不是一般繪圖工具。"""
+        self.bridge.typing_preview_signal.emit(x, y, text, char_interval_ms)
+        return f"Showing typing preview for {len(text)} characters at ({x}, {y})"

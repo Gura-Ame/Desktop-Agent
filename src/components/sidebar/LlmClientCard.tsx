@@ -362,6 +362,20 @@ export default function LlmClientCard({
 						: "套用連線設定"}
 			</button>
 
+			{loadMessage && (
+				<p
+					className={`text-[11px] leading-relaxed ${
+						loadMessage.type === "error"
+							? "text-rose-500"
+							: loadMessage.type === "success"
+								? "text-emerald-600 dark:text-emerald-400"
+								: "text-zinc-500 dark:text-zinc-400"
+					}`}
+				>
+					{loadMessage.text}
+				</p>
+			)}
+
 			<div className="flex items-center justify-between text-xs pt-2 border-t border-zinc-200/80 dark:border-zinc-800/80 min-w-0 gap-2">
 				<span className="text-zinc-500 dark:text-zinc-400 shrink-0">狀態</span>
 				<span className="flex items-center gap-1.5 font-medium min-w-0">

@@ -6,7 +6,7 @@ import { useServerHealth } from "./useServerHealth";
 function setup(args: {
 	clientMode: "local_llama" | "remote_api";
 	baseUrl: string;
-	callApi?: (method: string, ...args: unknown[]) => Promise<any>;
+	callApi?: (method: string, ...args: unknown[]) => Promise<unknown>;
 }) {
 	const setServerStatus = vi.fn();
 	const hook = renderHook(() => {

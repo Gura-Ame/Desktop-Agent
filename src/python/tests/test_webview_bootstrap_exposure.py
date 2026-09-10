@@ -71,6 +71,8 @@ def test_known_frontend_facing_methods_are_exposed():
         "clear_drawings", "clear_history", "copy_to_clipboard",
         "respond_permission", "set_permission_mode",
         "pick_files", "pick_model_file", "log_from_frontend",
+        "set_thinking_enabled",
+        "set_instant_input_enabled",
     }
     exposed = _get_exposed_method_names()
     missing = known_frontend_facing_methods - exposed
@@ -93,6 +95,8 @@ def test_all_known_frontend_facing_methods_actually_exist_on_jsapi():
         "clear_drawings", "clear_history", "copy_to_clipboard",
         "respond_permission", "set_permission_mode",
         "pick_files", "pick_model_file", "log_from_frontend",
+        "set_thinking_enabled",
+        "set_instant_input_enabled",
     }
     public_methods = _get_jsapi_public_methods()
     missing = known_frontend_facing_methods - public_methods

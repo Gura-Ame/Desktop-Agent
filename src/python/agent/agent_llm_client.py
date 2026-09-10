@@ -111,6 +111,12 @@ class AgentLLMClientMixin(_Base):
     def _call_and_execute(self, prompt: str) -> str:
         messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}]
         content = self._call_llm_stream(messages)
+        # Task Tree 每個步驟執行都會走這裡，跟 agent_routing.py/agent_direct_mode.py
+        # 一樣需要把 <|direct|>/<|plan|> 這種內部路由標記從畫面上拿掉——這裡原本
+        # 漏掉這一步，是使用者截圖回報「同一個泡泡裡出現一堆 <|direct|>」的直接
+        # 原因：Task Tree 重試同一個步驟時，每次呼叫都會再吐一次帶標記的內容，
+        # 沒有任何一個路徑幫忙濾掉。
+        self._strip_routing_tag_for_display(content)
         try:
             is_tool, combined_result, interleaved_content = self._execute_tools(content)
         except Exception as e:

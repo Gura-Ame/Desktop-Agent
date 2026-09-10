@@ -16,6 +16,7 @@ CATEGORY_MARKERS = {
     "planner": "你是一個 AI 任務規劃器",
     "decompose": "你是任務拆解器",
     "thinking": "高階思考 (Deep Thinking)",
+    "prethink": "為接下來的回覆先做一次簡短的內部思考",
     "verify": "你是任務驗證器",
     "reflect": "你是一個任務狀態檢查器",
     "compress": "你是一個上下文壓縮器",

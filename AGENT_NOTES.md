@@ -6,6 +6,190 @@
 
 ---
 
+## 交接筆記（讀這份文件的當下最優先看這裡）
+
+這是一個橫跨非常多輪對話的巨大 session 留下的交接紀錄，上一個我（也就是
+你）因為 context 太長被使用者主動截斷，很多東西做到一半。**先看這一段，
+再看下面完整的文件內容**——下面的內容有些已經涵蓋這裡提到的東西，這裡
+只是把「現在具體卡在哪」講清楚，避免你重新探索一次已經探索過的地方。
+
+### 已經完成、測試全綠的功能（這些不用重做，但可以繼續往上疊）
+- Agent 安全/權限系統（`agent/tool_permissions.py`，SAFE/MODERATE/DANGEROUS
+  三級 + `PermissionManager`，`ask`/`ask_dangerous_only`/`auto` 三種策略）
+- 等待工具（`tools/wait_tools.py`：`wait`、`wait_for_screen_stable`）
+- 即時滑鼠鍵盤控制（`tools/input_tools.py`：`mouse_down`/`mouse_up`/
+  `drag_mouse`/`scroll_mouse`/`press_key`/`key_down`/`key_up`/
+  `release_all_held_inputs`）
+- 全域緊急停止（`agent/emergency_stop.py`，快捷鍵預設 `ctrl+alt+shift+q`）
+  ＋ `pyautogui.FailSafeException`（滑鼠甩到螢幕角落）也會真的中斷 agent
+  （`agent/agent_tool_execution.py`），不會被通用例外處理吞掉
+- 檔案搜尋（`tools/file_search.py`：`search_files_by_content` 內容搜尋、
+  `find_files_by_name` 檔名搜尋，兩者都支援純關鍵字自動當子字串比對，
+  預設 root_dir 是使用者家目錄不是 cwd）
+- PowerShell/cmd 執行（`tools/shell_exec.py`，DANGEROUS 等級）
+- 路徑導向的檔案上傳（`main.py` 的 `pick_files()`，跳原生檔案對話框，
+  只傳路徑字串，不搬運內容、沒有大小限制——**不是** base64 上傳，那個
+  設計已經被否決並移除了，如果你在舊 commit 歷史看到
+  `tools/file_upload.py`/`save_uploaded_file` 相關的東西，那是被取代
+  掉的舊設計，不要復原）
+- 前端：VS Code console 合併（`src/lib/devConsoleBridge.ts`，只在
+  `import.meta.env.DEV` 生效，前端 console 轉送到 `main.py` 的
+  `log_from_frontend`）、剪貼簿修復（`::selection` CSS、Qt clipboard
+  優先於 win32clipboard）、`ChatInput.tsx` 附加檔案按鈕
+- 輕量思考步驟（`agent/agent_thinking.py`，`thinking_enabled`，預設
+  **關閉**，Direct Mode 回覆前/Planner 規劃前先讓模型簡短想一次）
+- 滑鼠鍵盤動作預覽 + 三段式閘門（`agent/agent_physical_input_preview.py`，
+  `instant_input_enabled`，預設**關閉**＝預設會顯示預覽；`overlay.py` 新增
+  `add_mouse_trajectory`/`add_typing_preview` 兩個真的用 QTimer 做動畫的
+  方法——**這部分我沒辦法在沙盒裡實際看到畫面渲染結果，只驗證了邏輯層
+  （閘門怎麼判斷、多久觸發），使用者說「我有空會測」，如果使用者回報
+  預覽畫面有問題，從 `overlay.py` 的 `add_mouse_trajectory`/
+  `add_typing_preview`/`paintEvent` 裡 `typing_preview` 分支開始查**）
+- Task Tree 兩個真的很重要的 bug 修好了（截圖回報過的「任務樹一直拆」）：
+  1. `agent_llm_client.py` 的 `_call_and_execute`（Task Tree 每個步驟
+     執行都會走這裡）漏了 `_strip_routing_tag_for_display`，導致
+     `<|direct|>` 標記外露成一堆重複文字。
+  2. `agent_task_processor.py` 的 `_run_execute_and_verify_step` 組
+     `step_prompt` 時完全沒有提到 `self.last_image_paths`，導致使用者
+     先傳圖片、請求被升級成 Task Tree 之後，每個步驟都拿不到圖片，
+     驗證一直失敗、越拆越多層卻怎麼拆都沒用。這是任務樹一直拆的**根因**，
+     不是拆解邏輯本身有問題。
+  詳見下面「踩過的坑」第 13 條。
+- `webview_bootstrap.py` 的 `_EXPOSED_METHOD_NAMES` 這個坑踩了不只一次
+  （見「踩過的坑」第 10、14 條）——**任何時候你在 `main.py` 加新的 JsApi
+  方法，寫完方法本體的同一個改動裡，立刻去 `webview_bootstrap.py` 把
+  名字加進 `_EXPOSED_METHOD_NAMES`，不要等全部做完再回頭補，非常容易忘記**。
+- 統一的彩色/格式化 log 模組：新檔案 `logging_setup.py`（純 Python
+  內建 `logging` + 自己手刻 ANSI color code，沒有引入 colorama/rich 這類
+  新依賴），提供一個 `log(message, level="info", channel=None)` 函式。
+  **已經**把 `agent/agent_core.py` 的 `AgentWorker.emit()` 接上：現在每次
+  `emit("log", ...)` 送一則訊息給前端 LogPanel 顯示的同時，也會呼叫
+  `logging_setup.log(...)` 印到 stdout（channel="agent"），這就是「把
+  面板 log 併到 VS Code console」這個需求**已經完成的部分**。
+
+後端目前 51 個測試檔（`ls tests/test_*.py | wc -l`）、400+ 案例；前端
+50 個。全部綠燈，收尾前務必自己重新跑一次確認（見下面「開工前一定要做
+的事」的指令）。
+
+### 沒做完、明確是 backlog 的東西（照優先度／使用者原話列出）
+
+1. **`logging_setup.py` 還沒掃過全專案**——目前只有 `AgentWorker.emit()`
+   接上了，下面這些檔案裡的裸 `print()` 呼叫**還沒換成 `log(...)`**，
+   使用者原話是「把專案log全部都用能格式化並且有顏色的輸出moduale格式化」，
+   這件事只完成了一小部分：
+   ```
+   main.py:192, 202, 258
+   webview_bootstrap.py:59, 95, 97, 105, 107, 135, 149, 204
+   agent/task_system.py:161
+   agent/llama_client.py:149, 155, 162, 164
+   tools/screen_tools.py:122
+   ```
+   換法很單純：`from logging_setup import log`（注意這些檔案有的在
+   `agent/`/`tools/` 子目錄下，import 路徑寫法比照這些檔案裡已經有的
+   `from config import ...`），把 `print(f"...")` 換成
+   `log(f"...", level=?, channel=?)`——level 用 `error`/`warning`/`info`
+   依原本訊息語氣判斷（有 `[錯誤]`/`失敗` 字樣的通常是 error 或
+   warning），channel 可以留空或用 `"webview"`（webview_bootstrap.py）。
+   `agent/tool_docs.py` 裡有幾個 `print(` 是**文件字串裡的範例文字**，
+   不是真的 print() 呼叫，不要誤改。`run_all_tests.py` 的 print() 是
+   這支腳本本身的正式輸出（給人類直接看跑測試結果的），**故意**保持
+   原樣，不要動。
+
+2. **檔案屬性讀取工具**（使用者原話「增加讓agent可以讀file屬性」）——
+   完全沒開始。合理設計：在 `tools/file_search.py` 或新開一個
+   `tools/file_info.py`，加一個 `get_file_info(path)` 之類的函式，回傳
+   檔案大小、建立/修改時間、是不是目錄、副檔名、可讀/可寫/可執行權限。
+   應該分類成 SAFE（純讀取）。記得同步 `main.py` 的 `available_functions`、
+   `config.py` 的工具清單（目前編到 56 號）、如果邏輯夠複雜要在
+   `agent/tool_docs.py` 加 📖 文件、`agent/tool_permissions.py` 的
+   `TOOL_RISK_LEVELS`。可以參考 `find_files_by_name`（同一個檔案裡）的
+   現有風格：純函式、找不到/參數錯一律回傳說明性字串而不是拋例外。
+
+3. **「細分權限系統」**——使用者原話很模糊，我沒有進一步追問就先擱置了。
+   目前的權限系統只依「工具名稱」分 SAFE/MODERATE/DANGEROUS 三級，不看
+   參數內容（`tool_permissions.py` 開頭有寫為什麼刻意不做參數層級的
+   黑名單分析）。如果使用者接下來提到這個，**先問清楚**他想要的是：
+   (a) 更多分級（例如四級、五級），還是
+   (b) 某些工具現在的分類不合理想調整，還是
+   (c) 想要參數層級的細分（前面已經有架構理由說明為什麼目前刻意不做），
+   還是
+   (d) 其他完全不同的意思（例如想要每個工具個別開關，而不是三個統一
+   等級共用一套策略）。
+   不要自己腦補方向直接開工，這個詞太模糊，之前已經因為誤解需求類似的
+   模糊指示（權限系統剛推出時）炸過一次測試套件（見「踩過的坑」第 9 條），
+   這次應該先問。
+
+4. **TASKLIST / "plan for user"**——使用者原話：「還有agent的TASKLIST跟
+   plan for user」，同樣沒有進一步展開，我也還沒動手，甚至還沒想清楚
+   使用者具體想要什麼。我的猜測（**沒有跟使用者確認過，不要直接當成
+   需求開工**）：
+   - 可能是想要一個獨立於現有 Task Tree DSL（`agent/task_system.py`，
+     那套是拿來給 agent 自己執行任務用的，有 need_confirm/信心值/驗證
+     這些執行引擎才需要的欄位，UI 也是設計成「執行進度追蹤」）之外、
+     更輕量的「待辦清單」，類似其他 coding agent（例如 Claude Code 的
+     TodoWrite）那種：agent 開始做一件多步驟的事之前，先列一個純文字的
+     checklist 給使用者看「我打算做這些事」，做完一項打勾一項，讓使用者
+     有進度感、不用理解 Task Tree 那套比較複雜的 DSL 格式。
+   - 也可能是「plan for user」單獨指：在 Task Tree 真的開始執行前，
+     現有的 `ask_confirm` 事件（`agent_routing.py` 裡 `self.emit(
+     "ask_confirm", self.engine.render_tree_markdown())`）已經會把整棵
+     Task Tree 的 Markdown 呈現給使用者確認——如果使用者不滿意的是這個
+     呈現方式（例如覺得太技術性、想要更口語化的「一句話講清楚等一下要
+     做什麼」摘要），那是另一個方向：在 `ask_confirm` 之前，多呼叫一次
+     LLM（可能可以重用 `agent_thinking.py` 那套 `generate_prethink`
+     的呼叫模式）產生一段人話摘要，跟著 Task Tree Markdown 一起顯示。
+   兩種猜測都要動到前端（新的訊息類型、新的 UI 元件，比照
+   `PermissionRequestMessage.tsx`/`TaskTreeMessage.tsx` 的模式）+ 後端
+   （新的 event 類型、可能新的 available_functions 工具）。**強烈建議
+   下一輪先跟使用者確認到底是哪一種、或完全不同的第三種，再動工**，
+   這個功能牽涉的改動面很廣，猜錯方向會浪費很多輪。
+
+5. **`screen_tools.py` 的無障礙 API 強化**（"盲人用的 API" 那個需求）——
+   這個很特別：**它其實已經被實作過一次，但因為某次 session 中斷，
+   那份改動沒有真的被保留下來**（我在這個 session 中途發現
+   `tools/screen_tools.py` 沒有 `_accessible_name`/`_describe_state`
+   這兩個函式，代表那次的成果遺失了，git clone 下來的最新版本也沒有）。
+   如果使用者又提到「螢幕讀取抓不到圖示按鈕」「read_screen_api 漏掉
+   東西」這類問題，設計方向是：
+   - `_accessible_name(elem, fallback_text)`：優先讀 UIA 的
+     `elem.element_info.name`（螢幕報讀器唸的那個名字），抓不到才退回
+     `elem.window_text()`——解決「圖示按鈕只有 icon、沒有可見文字，
+     window_text() 是空字串」導致整個元件被漏掉的問題。
+   - `_describe_state(elem)`：盡量抓 `is_enabled()`/`get_toggle_state()`
+     （勾選狀態）/`is_selected()`/`has_keyboard_focus()`，每個都要
+     個別包 try/except（不是每種控制項都支援每種查詢），抓不到就跳過
+     那個欄位而不是整個元件都不回報。
+   - `_should_report_element(text, accessible_name, state, elem_type)`：
+     決定要不要把這個元件放進結果——原本的邏輯只看「window_text 是不是
+     非空」，會漏掉圖示按鈕；改成「有文字/名稱，或有抓到任何狀態，或
+     類型本身是常見互動控制項（button/checkbox/...）」三者任一成立
+     就收。
+   測試策略：這個沙盒沒有 pywinauto、沒有真的 Windows UI，測試要用
+   duck-typing 的假 element 物件（不需要真的 pywinauto），並且要先
+   `sys.modules` 塞假的 `pywinauto`/`pyautogui` 模組才能 import
+   `tools/screen_tools.py`（因為它頂層 `from pywinauto import Desktop`）。
+   如果你要重做這個，之前已經寫過的假模組安裝工具可以重用：
+   `tests/_fake_pyautogui.py` 已經存在，你可能需要另外建一個
+   `tests/_fake_pywinauto.py`（如果 git 版本裡沒有的話，用同樣的模式：
+   一個 `ensure_fake_pywinauto()` 函式，塞一個有 `Desktop` 屬性的空殼
+   模組進 `sys.modules`）。
+
+### 這個 session 犯過、值得提醒下一個你的錯誤（不是程式碼坑，是流程坑）
+- 曾經誤以為 `ask_user` 沒有被註冊成可呼叫的工具，因為沒有看完
+  `agent_core.py` 的 `__init__` 全文就下結論——後來發現其實已經註冊了，
+  白白修了一個不存在的 bug。**診斷任何「這個功能好像沒接上」之前，先用
+  `grep`/`view` 把相關檔案完整看過一遍，不要看了一半就下定論**。
+- 曾經一次把 46 個工具（尤其是測試裡常用的 `run_action`）都判成
+  DANGEROUS，直接讓十幾個既有測試卡死（不是失敗，是真的 hang 住）——
+  因為新加的權限系統預設策略是 ASK，而測試沒有人會去回應那個等待。
+  **任何會改變「工具呼叫預設行為」的新機制，上線前一定要想清楚會不會讓
+  現有測試 hang 住，不是只看會不會「失敗」**（hang 住比失敗更難排查，
+  會一路卡到 pytest 逾時或你自己手動中斷）。這個專案已經裝了
+  `pytest-timeout`，`pytest tests/ --timeout=250` 可以避免意外 hang 住
+  拖垮整個 debug 過程。
+
+---
+
 ## 專案一句話說明
 
 桌面自動化 Agent，核心賣點是「Context-centric Cognitive Memory」：
@@ -30,7 +214,7 @@ Attention Manager（打分+預算）→ Context。細節看 `README.md`，這裡
    cd src/python
    PYTHONPATH=".:tests" python -m pytest tests/ -q
    ```
-   目前應該是全綠（43 個檔案、320+ 案例）。如果 pull 下來就有紅的，
+   目前應該是全綠（51 個檔案、400+ 案例）。如果 pull 下來就有紅的，
    先搞清楚是不是新 commit 帶來的既有問題，不要急著算在自己頭上。
 3. **改完之後一定要重跑全部測試**，不是只跑你新寫的那幾個檔案的測試——
    這個專案好幾次「修 A 壞了 B」都是全套測試才抓到的（見下方「踩過的坑」）。
@@ -72,12 +256,29 @@ class AgentWorker(
 | `agent_tool_execution.py` | 解析 `<\|tool_call\|>`、執行、文件懶加載 |
 | `agent_memory_extraction.py` | 自動記憶萃取（價值判斷、Reflect 的 `===MEMORY===` 區塊） |
 | `agent_memory_mixin.py` | `remember`/`recall`/`relate`/`record_observation`、影響預掃 |
+| `agent_thinking.py` (`AgentThinkingMixin`) | 可開關的輕量思考步驟（`generate_prethink`），預設關閉 |
+| `agent_physical_input_preview.py` (`AgentPhysicalInputPreviewMixin`) | 滑鼠/鍵盤動作預覽 + 三段式閘門（`_gate_physical_input`），預設顯示預覽 |
 
 `agent/tool_permissions.py` 不是 Mixin，是獨立模組（風險分級表 +
 `PermissionManager`），被 `agent_core.py` 組合進 `AgentWorker` 當一個
 屬性（`self.permission_manager`），不是繼承進去的——它管的是「單一工具
 呼叫」層級的安全邊界，跟上面那些管「對話/任務流程」的 Mixin 是不同性質
 的關注點，混進 Mixin 繼承鏈裡反而會讓人搞混兩者的差異。
+
+`agent/emergency_stop.py` 也不是 Mixin，是純函式模組（全域快捷鍵的
+註冊/取消，`start_emergency_stop_listener`/`stop_emergency_stop_listener`），
+`AgentWorker._init_emergency_stop()` 呼叫一次，把 callback 綁定成
+`self.request_stop`。刻意設計成「怎麼觸發」（全域快捷鍵）完全不知道
+「觸發了要做什麼」，方便獨立測試（`tests/test_emergency_stop.py` 用假的
+`keyboard` 模組）。
+
+`logging_setup.py`（跟 `config.py` 同一層，不在 `agent/` 底下）是整個
+專案共用的彩色/格式化 log 模組，提供一個 `log(message, level="info",
+channel=None)` 函式。`AgentWorker.emit()`（`agent_core.py`）對 "log"
+事件類型會額外呼叫這裡的 `log()`，讓面板 log 也印到 stdout（VS Code
+Debug Console 看得到）。**這個模組本身已經完成，但目前只有 `emit()`
+接上了，專案裡其餘的裸 `print()` 呼叫還沒換過去**——完整清單見最上面
+「交接筆記」的 backlog 第 1 項。
 
 `agent/agent_protocol.py` 是給 pyright 用的型別 stub（`AgentWorkerBase`，
 方法本體全是 `...`），**改了哪個 Mixin 的方法簽名，記得同步更新這裡**，
@@ -87,9 +288,13 @@ class AgentWorker(
 `AgentRoutingMixin` + `AgentTaskProcessorMixin` + `AgentReflectionMixin`），
 新程式碼不需要再 import 它。
 
-**`AgentWorker.__init__` 本身拆成 4 個私有方法**（`_init_memory_subsystem`
-/ `_register_available_functions` / `_init_llm_client` / `_init_session_state`），
-純粹是把「建構順序」變成「有名字的步驟」，不影響任何屬性名稱或外部行為。
+**`AgentWorker.__init__` 本身拆成好幾個私有階段方法**（
+`_init_memory_subsystem` / `_register_available_functions` /
+`_init_llm_client` / `_init_session_state` / `_init_permission_manager` /
+`_init_emergency_stop` / `_init_thinking` / `_init_instant_input`——
+這份清單會隨新功能持續變長，上面列的是這份文件寫的時候的完整清單，
+如果你又加了新的 `_init_*` 方法，記得也回來更新這裡的清單），純粹是把
+「建構順序」變成「有名字的步驟」，不影響任何屬性名稱或外部行為。
 加新的記憶子系統物件放 `_init_memory_subsystem`；新增 agent 自己擁有、
 要登記進 `available_functions` 的方法（不是 main.py 那種桌面自動化工具）
 放 `_register_available_functions`；只在一次 process 生命週期內有意義的
@@ -238,6 +443,48 @@ while self.is_paused_for_xxx:
   `agent.permission_manager.set_mode(PermissionMode.AUTO)`——原因見
   上面「踩過的坑」第 9 條，不然多半會直接 hang 住而不是測試失敗。
 
+### 13. Task Tree 步驟執行（`_call_and_execute`）漏掉兩件事：標記濾除、附圖上下文
+使用者拿截圖回報過一個案例：上傳圖片問「這個圖片的 OCR」，結果任務樹
+一直拆解（1 個子任務拆成 4 個又拆成 8 個），而且同一則聊天泡泡裡出現
+一堆 `<|direct|>` 字樣。追下去是兩個各自獨立、但表現出來很像同一個問題
+的漏洞：
+
+1. **標記沒被濾掉**：`agent_routing.py` 的 `_run_idle_routing` 跟
+   `agent_direct_mode.py` 的工具迴圈，呼叫 `_call_llm_stream` 之後都會
+   接著呼叫 `self._strip_routing_tag_for_display(content)` 把
+   `<|direct|>`/`<|plan|>` 從畫面上濾掉——但 Task Tree 每個步驟執行走的
+   `_call_and_execute`（`agent_llm_client.py`）漏了這一步。Task Tree
+   重試同一個步驟時，每次呼叫都會再吐一次帶標記的內容，沒有任何一個
+   路徑幫忙濾掉，疊在同一個泡泡裡看起來就是一堆標記字樣。
+2. **附圖路徑沒有傳進去**：`self.last_image_paths`（暫存圖片路徑）已經
+   在 `agent_routing.py`/`agent_direct_mode.py` 里被拿來提醒模型「上一輪
+   有附圖，路徑在這裡，不要說沒收到」，但 Task Tree 的步驟執行完全是
+   純文字 prompt（`_run_execute_and_verify_step` 組出來的 `step_prompt`），
+   從來沒有提到過 `last_image_paths`。如果使用者先傳圖片、這個請求才被
+   判定需要完整規劃，圖片本身在升級的那一刻就跟這個純文字流程斷開了，
+   之後每個步驟都只能回答「沒有收到圖片」，驗證當然一直失敗——**這才是
+   任務樹一直拆解的根本原因，不是拆解邏輯本身有問題，是拆出來的每個
+   子任務一樣拿不到圖片，怎麼拆都沒用**。
+
+兩個都已修好：`_call_and_execute` 補上 `_strip_routing_tag_for_display`；
+`_run_execute_and_verify_step` 組 `step_prompt` 時，比照 agent_routing.py
+的做法把 `last_image_paths` 寫進去。**這提醒一個更通用的原則**：任何新增
+的「會呼叫 `_call_llm_stream`/`_call_llm` 產生要顯示給使用者看的內容」的
+路徑，都要記得檢查是不是也需要標記濾除跟附圖上下文提醒——這兩件事目前
+是分散在各自呼叫點手動加的，沒有一個統一的入口保證新路徑不會漏掉。
+
+### 14. `webview_bootstrap.py` 的 `_EXPOSED_METHOD_NAMES` 是持續性的坑，不是一次性修好就沒事
+第 10 條記錄過這個 allowlist 第一次讓我踩雷（`respond_permission`/
+`set_permission_mode`/`pick_files`/`log_from_frontend` 全部忘記加）。
+這次加 `set_thinking_enabled`/`set_instant_input_enabled` 時，即使已經
+「知道」這個坑，還是得每一次都刻意檢查、手動加——這不是那種修一次就
+永久解決的 bug，是**新增任何 JsApi 方法都會重新面臨一次的固定步驟**。
+`tests/test_webview_bootstrap_exposure.py` 能防止「忘記加」被合併進去
+都測試沒過，但沒辦法讓人「想起來要做這件事」——加新 JsApi 方法前，
+先把這條筆記讀一遍可能比較有用：**寫 `main.py` 新方法的同一個改動裡，
+就順手把名字加進 `webview_bootstrap.py` 的 `_EXPOSED_METHOD_NAMES`，
+而不是寫完方法本體再回頭補**，順序反過來很容易忘記後半段。
+
 ---
 
 ## SYSTEM_PROMPT 目前的狀態（截至這份文件寫的時候）
@@ -270,7 +517,7 @@ while self.is_paused_for_xxx:
 如果之後真的又開始變長，值得考慮的方向（還沒做，只是筆記）：
 - 把工具清單本身也分類/分層，只在真的可能用到某類工具時才展開該類的
   一行摘要清單（例如「畫面操作類」「記憶類」「瀏覽器類」），而不是
-  一次列出所有 46 個工具的一行摘要。
+  一次列出所有 56 個工具的一行摘要。
 - 評估是否要把 `PLANNER_SYSTEM_PROMPT` / `THINKING_SYSTEM_PROMPT` /
   `VERIFY_SYSTEM_PROMPT` 等其他階段的 prompt 也做類似的懶加載——目前
   只有主要的工具清單做了，其他階段的 prompt 本來就比較短，還沒有急迫性。

@@ -58,7 +58,7 @@ SYSTEM_PROMPT 只列一行摘要，規則較多的工具在模型第一次呼叫
 
 ### 7. Agent 安全 / 權限系統
 跟 Task Tree 既有的「需要確認」（模型自己對任務的判斷）是不同層級的獨立防線：
-`agent/tool_permissions.py` 依照工具本身的風險把 43 個工具分成 SAFE
+`agent/tool_permissions.py` 依照工具本身的風險把 56 個工具分成 SAFE
 （唯讀查詢，永不詢問）/ MODERATE（有副作用但範圍有限，如記憶寫入、網頁互動）/
 DANGEROUS（難以復原或範圍幾乎沒有邊界，如執行程式碼、真實滑鼠鍵盤、
 執行系統指令）三級，不管模型自己怎麼判斷、也不管呼叫發生在 Task Tree 還是
@@ -91,6 +91,35 @@ React + TypeScript + Vite 前端（對話分枝樹、即時串流、工具調用
 `python main.py` 偵錯時，Debug Console 會同時看到前端跟後端發生的事，
 不用另外開瀏覽器 DevTools 對照兩份 log。正式打包後不會啟用（只在
 `import.meta.env.DEV` 為真時安裝）。
+
+### 11. 輕量思考步驟（可開關，預設關閉）
+Direct Mode 生成回覆前、Planner 規劃 Task Tree 前，可以先讓模型簡短想
+一次再動作——目標是改善「明明上一輪附過圖片，卻回覆說沒收到圖片」
+「簡單任務也被判斷成需要拆解成 Task Tree」這類問題。預設關閉：這是額外
+一次完整的 LLM 呼叫，會增加延遲跟 token 成本，開關本身持久化（跟
+forgetting/activation/permission_mode 同一套機制），見
+`agent/agent_thinking.py`。
+
+### 12. 滑鼠/鍵盤動作預覽（可開關，預設顯示預覽）
+「瞬間輸入」關閉時（預設），agent 真的移動滑鼠/打字之前，會先在螢幕
+Overlay 上畫出軌跡路徑/打字內容預覽，再依照目前的「工具授權策略」決定
+何時真正動手：一律詢問（ASK）會照舊跳出完整的授權確認卡片；只問高風險
+（ASK_DANGEROUS_ONLY）改成顯示預覽、停留 1 秒讓使用者來得及反應或按下
+緊急停止，沒有動作就自動繼續，不需要額外點擊；全部信任（AUTO）預覽畫完
+立刻繼續。開啟「瞬間輸入」後這一切都會跳過，行為等同這個功能加入之前。
+見 `agent/agent_physical_input_preview.py`、`overlay.py` 的
+`add_mouse_trajectory`/`add_typing_preview`。
+
+### 13. 統一彩色/格式化 log 模組（部分完成）
+`logging_setup.py`（純 Python 內建 `logging` + 手刻 ANSI 顏色，沒有引入
+colorama/rich 之類新依賴）提供整個專案共用的 `log(message, level="info",
+channel=None)` 入口。`AgentWorker.emit()`（`agent/agent_core.py`）已經
+接上：每次送一則 "log" 事件給前端 LogPanel 顯示的同時，也會印到 stdout，
+用 VS Code 的 debugpy 掛 `python main.py` 偵錯時，Debug Console 能看到
+跟面板一樣的內容。**目前只有這個整合點完成**，`main.py`/
+`webview_bootstrap.py`/`agent/task_system.py`/`agent/llama_client.py`/
+`tools/screen_tools.py` 裡原本的裸 `print()` 呼叫還沒換成這個模組，
+詳見 `AGENT_NOTES.md` 最上面的交接筆記。
 
 ---
 
@@ -159,15 +188,20 @@ PYTHONPATH=".:tests" python -m pytest tests/ -q
 npm run test
 ```
 
-目前後端共 43 個測試檔、320+ 個測試案例；前端 43 個測試案例，涵蓋 `parseTaskTree` 解析、`TaskTreeCard` 徽章規則、`useAgentEventHandler` 的串流標記處理與授權請求事件、`ChatMessage` 整體組裝、`PermissionRequestMessage` 授權卡片，以及從 `App.tsx` 拆出來的 `useSidebarAutoCollapse` / `useServerHealth` / `useMessageComposer` 三個 hook。
+目前後端共 51 個測試檔、400+ 個測試案例；前端 50 個測試案例，涵蓋 `parseTaskTree` 解析、`TaskTreeCard` 徽章規則、`useAgentEventHandler` 的串流標記處理與授權請求事件、`ChatMessage` 整體組裝、`PermissionRequestMessage` 授權卡片，以及從 `App.tsx` 拆出來的 `useSidebarAutoCollapse` / `useServerHealth` / `useMessageComposer` 三個 hook。
 
 ---
 
 ## 已知限制 / 尚在規劃
 
-- `web_automation.py`、`llama_client.py`、`vision_tools.py` 目前只有 mock 測試，尚未接過真實模型/瀏覽器驗證——這幾個模組依賴真的 Chrome、真的 GGUF 模型檔、真的 GPU/PaddleOCR 環境，沒辦法在一般 CI/沙箱環境裡跑，需要開發者自己在有這些條件的機器上手動驗證一輪。
-- 前端元件目前沒有測試覆蓋。→ **已補上一部分**：`vitest` + `@testing-library/react` 基礎設施（`npm run test`），並針對這次修復直接相關、風險最高的邏輯寫了測試——`parseTaskTree.ts` 的 DSL 解析、`TaskTreeCard.tsx` 的「需確認」徽章顯示規則（不該在任務已完成/已拆解時還顯示）、`useAgentEventHandler.ts` 的 `chunk`/`chunk_patch`/`reset_message` 事件處理（內部路由標記 `<|direct|>`/`<|plan|>` 就是靠這條路徑從畫面上被拿掉的）。其餘元件（Sidebar 系列、ChatMessage 渲染、Markdown/KaTeX 顯示等）仍待補。
-- ~~`forgetting_enabled` / `activation_enabled` 開關重啟後會回到關閉，尚未持久化。~~ **已修復**：兩個開關現在會跟著 `MemoryStore` 的 JSON 檔案一起存進 `"__settings__"` 區塊（`memory_store.py`），重開程式會恢復成上次關掉之前的狀態。真正的分數（`activation` 欄位、`resolution_level`）本來就一直是隨 `MemoryNode` 存進磁碟的，這次補的只是「開關本身要不要打開」這個布林值。
-- Retriever 的關鍵字比對偏簡單（n-gram + 字串比對），沒有語意 embedding——這次沒有動這一項：要做真的語意檢索需要額外引入一個 embedding 模型（例如 sentence-transformers 或重用 `transformers`），對一般使用者的機器來說會明顯增加安裝體積、記憶體用量與啟動時間，這是一個需要開發者自己權衡取捨的架構決策，不適合在沒有共識的情況下直接加進去。
+- `web_automation.py`（CDP 瀏覽器自動化）、`llama_client.py`（llama.cpp 直接載入）、`vision_tools.py`（Florence-2/PaddleOCR）、`shell_exec.py`（PowerShell/cmd）、`input_tools.py`（滑鼠鍵盤即時控制）、`wait_tools.py`（螢幕安靜偵測）、`emergency_stop.py`（全域快捷鍵）、`agent_physical_input_preview.py`/`overlay.py` 的軌跡/打字動畫（`add_mouse_trajectory`/`add_typing_preview`）目前都只有 mock/邏輯層測試過，尚未在真實 Windows 桌面環境驗證——這個開發環境是 Linux 沙箱，沒有真的 Chrome/GPU/模型權重/顯示環境/系統管理員權限，測試全部用 `unittest.mock` 或在 `sys.modules` 塞假模組（見 `tests/_fake_pyautogui.py`）換掉底層套件，驗證的是這些 wrapper 自己的邏輯，不是 pyautogui/keyboard/PowerShell/PyQt6 動畫渲染本身。滑鼠軌跡/打字預覽動畫尤其需要真人在真實環境裡確認畫面渲染是否符合預期。
+- `screen_tools.py` 的無障礙 API（UI Automation）強化——優先用「跟螢幕報讀器同一套」的 API 取得畫面元件文字/狀態，而不是截圖配合視覺模型——這個功能**曾經被實作過**，但因為開發過程中的一次 session 中斷，那份改動沒有真的保留到目前的程式碼裡。如果需要重做，`AGENT_NOTES.md` 最上面的交接筆記裡有完整的設計方向（`_accessible_name`/`_describe_state`/`_should_report_element` 三個函式的職責跟簽名）。
+- 統一彩色/格式化 log 模組（`logging_setup.py`）只完成了 `AgentWorker.emit()` 這一個整合點；`main.py`/`webview_bootstrap.py`/`agent/task_system.py`/`agent/llama_client.py`/`tools/screen_tools.py` 裡還有十幾處裸 `print()` 呼叫沒有換過去，精確清單見 `AGENT_NOTES.md` 交接筆記。
+- 檔案屬性讀取工具（大小、建立/修改時間、權限）尚未實作。
+- 「細分權限系統」——使用者提過這個需求，但描述模糊，還沒確認具體方向就先擱置，避免猜錯方向白做工。
+- Agent 的 TASKLIST / 給使用者看的計畫摘要（"plan for user"）——使用者提過這個需求，具體想要什麼還沒確認（可能是類似其他 coding agent 的輕量待辦清單，也可能是希望 Task Tree 確認畫面有更口語化的摘要），詳見 `AGENT_NOTES.md` 交接筆記裡的兩種猜測方向。
+- 前端元件測試仍不完整：`SideBar` 其餘子元件（除了 `PermissionModeCard` 沒有獨立測試）、`ChatInput`（含附加檔案按鈕）、Markdown/KaTeX 顯示都還沒覆蓋。
+- Retriever 的關鍵字比對偏簡單（n-gram + 字串比對），沒有語意 embedding——要做真的語意檢索需要額外引入 embedding 模型，對一般使用者機器的安裝體積/記憶體/啟動時間都會有明顯影響，這是需要跟使用者討論過才能動的架構決策，不要自己單方面加進去。
+- 權限系統（`tool_permissions.py`）目前只有「工具名稱」這個維度的分級，沒有依「參數內容」再細分風險，這是刻意的取捨（維護黑名單注定有漏洞），見該檔案開頭的說明。
 
-深入開發前建議先讀 `AGENT_NOTES.md`——那是專門寫給 AI 協作者的專案導覽。
+深入開發前**一定要先讀 `AGENT_NOTES.md` 最上面的「交接筆記」區塊**——那裡有目前最新的進度、backlog 跟已知的模糊需求，比這裡的條列更即時。

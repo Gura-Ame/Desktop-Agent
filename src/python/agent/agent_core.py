@@ -4,6 +4,7 @@ from typing import Any
 from openai import OpenAI
 
 from config import API_BASE_URL, API_KEY, MODEL_NAME
+from logging_setup import log
 from agent.task_system import TaskEngine, ExecutionMode
 from memory.memory_store import MemoryStore
 from agent.working_memory import WorkingMemory
@@ -28,13 +29,15 @@ from agent.attention_manager import AttentionManager
 from agent.forgetting import ForgettingManager
 from agent.tool_permissions import PermissionManager, PermissionMode, risk_of
 from agent.emergency_stop import start_emergency_stop_listener, DEFAULT_HOTKEY
+from agent.agent_thinking import AgentThinkingMixin
+from agent.agent_physical_input_preview import AgentPhysicalInputPreviewMixin
 
 
 class AgentWorker(
     AgentMemoryMixin, AgentLLMClientMixin,
     AgentHistoryMixin, AgentToolExecutionMixin, AgentMemoryExtractionMixin,
     AgentRoutingMixin, AgentTaskProcessorMixin, AgentReflectionMixin,
-    AgentDirectModeMixin,
+    AgentDirectModeMixin, AgentThinkingMixin, AgentPhysicalInputPreviewMixin,
 ):
     """Agent 執行核心。這個類別本身透過上面一長串 mixin 組合出完整行為
     （記憶、LLM 呼叫、history、工具執行、路由、任務處理、反思、Direct Mode），
@@ -62,6 +65,8 @@ class AgentWorker(
         self._init_session_state(default_mode)
         self._init_permission_manager()
         self._init_emergency_stop()
+        self._init_thinking()
+        self._init_instant_input()
 
     def _init_memory_subsystem(self, memory_path: str, memory_max_nodes: int):
         """建構「Context-centric Cognitive Memory」那一整套彼此相依的物件：
@@ -173,7 +178,35 @@ class AgentWorker(
                 "權限不足），仍可使用視窗裡的「停止」按鈕。",
             )
 
+    def _init_thinking(self):
+        """輕量思考步驟的開關——預設關閉，從 MemoryStore 讀回上次存的偏好。
+        見 agent/agent_thinking.py 開頭的完整說明。
+        """
+        self.thinking_enabled = getattr(self.memory_store, "thinking_enabled", False)
+
+    def _init_instant_input(self):
+        """「瞬間輸入」開關——預設關閉（也就是預設會顯示滑鼠軌跡/打字預覽），
+        從 MemoryStore 讀回上次存的偏好。見
+        agent/agent_physical_input_preview.py 開頭的完整說明。
+        """
+        self.instant_input_enabled = getattr(self.memory_store, "instant_input_enabled", False)
+
     def emit(self, event_type: str, payload: Any):
+        # "log" 事件除了照原本的路徑送給前端 LogPanel 顯示，也順手印到
+        # stdout——這樣不管是看 App 裡的面板、還是用 VS Code 的 debugpy
+        # 掛這個 process 偵錯時看 Debug Console，看到的都是同一份內容，
+        # 不用切來切去對照兩邊。用統一的彩色 log 模組（logging_setup.py），
+        # 不是裸 print()，其他 log 等級（warning/error）用字首關鍵字粗略
+        # 判斷，抓不準就一律當 info，寧可分類不夠精準也不要因為判斷邏輯
+        # 本身出錯而漏印。
+        if event_type == "log":
+            level = "info"
+            text = str(payload)
+            if text.startswith(("[錯誤]", "[Error]", "🚫")):
+                level = "error"
+            elif text.startswith(("[警告]", "[Warning]", "⚠️")):
+                level = "warning"
+            log(text, level=level, channel="agent")
         if self.event_callback:
             self.event_callback(event_type, payload)
 

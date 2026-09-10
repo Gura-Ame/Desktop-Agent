@@ -73,6 +73,8 @@ _EXPOSED_METHOD_NAMES = [
     "preload_vision_models", "unload_vision_models", "copy_to_clipboard",
     "respond_permission", "set_permission_mode",
     "pick_files", "pick_model_file", "log_from_frontend",
+    "set_thinking_enabled",
+    "set_instant_input_enabled",
 ]
 
 

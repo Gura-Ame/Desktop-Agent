@@ -102,6 +102,27 @@ class AgentRoutingMixin(_Base):
 
         messages += self.history + [{"role": "user", "content": attempt_user_content}]
 
+        # 輕量思考步驟（預設關閉，見 agent/agent_thinking.py）：開啟時，先讓
+        # 模型針對這輪內容簡短想一次，再把想法接進 system message 裡，
+        # 目標是讓接下來的正式生成不要漏看上下文裡已經有的關鍵資訊
+        # （附圖路徑、檔案路徑），也不要動不動就把簡單任務判斷成需要拆解成
+        # Task Tree。關閉時 generate_prethink 直接回傳 None，這段完全不會
+        # 執行，不影響任何行為或延遲。
+        image_note = (
+            f"（上一輪對話留有 {len(self.last_image_paths)} 張圖片的暫存路徑可用）"
+            if not self.current_images and getattr(self, "last_image_paths", [])
+            else ""
+        )
+        prethink = self.generate_prethink(
+            f"使用者這一輪的內容：\n{attempt_user_content}\n{image_note}"
+        )
+        if prethink:
+            messages.append({
+                "role": "system",
+                "content": f"[內部思考，不是要給使用者看的內容]\n{prethink}",
+            })
+            self.emit("log", f"🧠 內部思考: {prethink}")
+
         # 不管接下來這輪會走 Direct Mode 還是升級成完整規劃，這輪使用者真正說了什麼
         # 都要先進 self.history——這是給「一般對話」用的記憶（跟 Task Tree/WorkingMemory
         # 是兩回事），之前只有走到後面第 126 行「沒有升級」那條路才會補這一筆，
@@ -134,6 +155,17 @@ class AgentRoutingMixin(_Base):
                 f"{self.current_user_prompt}\n\n"
                 f"（先前已經嘗試過，判斷這個任務需要完整規劃，原因: {reason}）"
             )
+            # 同樣是輕量思考步驟：Planner 常常沒想清楚使用者真正要什麼就直接
+            # 硬套拆解格式，容易拆出一堆治標不治本的子任務（見 AGENT_NOTES.md
+            # 「任務樹一直拆」案例的根因分析）。開啟時讓它先想一次再規劃。
+            planner_prethink = self.generate_prethink(
+                f"接下來要幫這個需求規劃 Task Tree：\n{planner_user_prompt}\n"
+                f"想清楚使用者真正要達成的目標是什麼、有沒有更簡單的做法，"
+                f"不要為了拆解而拆解。"
+            )
+            if planner_prethink:
+                planner_user_prompt += f"\n\n（規劃前的思考：{planner_prethink}）"
+                self.emit("log", f"🧠 規劃前的思考: {planner_prethink}")
             dsl_plan = self._call_planner_with_repair(planner_user_prompt)
 
             if dsl_plan is not None and self.engine.load_initial_plan(dsl_plan):
