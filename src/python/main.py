@@ -8,10 +8,6 @@ import threading
 import pyautogui
 import webview
 
-# 必須在 QApplication 初始化前導入（實際的 QApplication/視窗建立已經搬到
-# webview_bootstrap.py 的 run_app 裡，這裡 import 只是為了保留這個初始化順序
-# 的前置要求：PyQt6.QtWebEngineWidgets 一定要在任何 QApplication 產生之前
-# import 過一次，不然某些 WebEngine 功能會出問題）。
 import PyQt6.QtWebEngineWidgets
 
 os.environ['WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS'] = '--remote-debugging-port=9222'
@@ -23,6 +19,7 @@ from overlay import ScreenOverlay, OverlayManager
 from agent.agent_core import AgentWorker, AgentState
 from agent.task_system import ExecutionMode
 from agent.tool_permissions import PermissionMode
+from logging_setup import log
 
 pyautogui.FAILSAFE = True
 pyautogui.PAUSE = 0.5
@@ -33,9 +30,6 @@ class JsApi:
         self._window = None
         self.overlay = overlay
         self.overlay_manager = OverlayManager(self.overlay)
-
-        # 執行緒安全：背景只 append，前端用 poll_events 拉取
-        # 完全不呼叫 evaluate_js，也不依賴 QTimer（避免 PyQt5/PyQt6 混用）
         self._events = []
         self._events_lock = threading.Lock()
 
@@ -62,9 +56,6 @@ class JsApi:
             "draw_line": self.overlay_manager.draw_line,
             "draw_stroke": self.overlay_manager.draw_stroke,
             "clear_drawings": self.overlay_manager.clear_drawings,
-            # 這兩個不寫進 SYSTEM_PROMPT 給模型當一般繪圖工具呼叫，是
-            # agent_tool_execution.py 的物理輸入預覽邏輯內部用查表方式呼叫的
-            # （鍵是固定的內部名稱，不是給模型看的工具名稱）。
             "_show_mouse_trajectory": self.overlay_manager.show_mouse_trajectory,
             "_show_typing_preview": self.overlay_manager.show_typing_preview,
             "execute_python": tools.execute_python,
@@ -72,6 +63,7 @@ class JsApi:
             "query_screen_element": tools.query_screen_element,
             "search_files_by_content": tools.search_files_by_content,
             "find_files_by_name": tools.find_files_by_name,
+            "get_file_info": tools.get_file_info,
             "run_powershell": tools.run_powershell,
             "run_cmd": tools.run_cmd,
             "wait": tools.wait,
@@ -89,38 +81,26 @@ class JsApi:
         }
 
         tools.set_vision_log_callback(self.dispatch_event)
-
-        self.agent = AgentWorker(
-            self.available_functions,
-            event_callback=self.dispatch_event,
-        )
+        self.agent = AgentWorker(self.available_functions, event_callback=self.dispatch_event)
 
     def set_window(self, window):
         self._window = window
 
     def dispatch_event(self, event_type: str, data):
-        """可從任意執行緒安全呼叫。"""
-        # 確保 data 可被 JSON 序列化（poll 時回傳給 JS）
         try:
             json.dumps(data, ensure_ascii=False, default=str)
             safe_data = data
         except Exception:
             safe_data = str(data)
-
         with self._events_lock:
             self._events.append({"type": event_type, "data": safe_data})
 
     def poll_events(self):
-        """前端定時呼叫。在 pywebview 的 JS bridge 執行緒執行，安全。
-        回傳事件列表；chunk 會在同一次 poll 內合併成一筆，減少前端 setState 次數。
-        """
         with self._events_lock:
             if not self._events:
                 return []
             batch = self._events[:]
             self._events.clear()
-
-        # 合併連續的 chunk
         merged = []
         chunk_buf = []
         for ev in batch:
@@ -135,17 +115,9 @@ class JsApi:
             merged.append({"type": "chunk", "data": "".join(chunk_buf)})
         return merged
 
-    # ------------------------------------------------------------------
-    # 前端可呼叫的 API
-    # ------------------------------------------------------------------
     def send_prompt(self, prompt: str, images=None):
-        """
-        prompt: 文字
-        images: 可選，data URL 字串陣列（data:image/png;base64,...）
-        """
         if self.agent.is_running():
             return {"status": "busy", "msg": "Agent 正忙碌中"}
-        # pywebview 有時把 list 傳成 tuple / 單一 JSON 字串
         if images is None:
             img_list = []
         elif isinstance(images, str):
@@ -158,7 +130,6 @@ class JsApi:
         return {"status": "ok"}
 
     def stop_agent(self):
-        """前端「停止」按鈕：中止目前 Agent 執行。"""
         if not self.agent.is_running():
             return {"status": "ok", "msg": "Agent 未在執行"}
         self.agent.request_stop()
@@ -171,17 +142,6 @@ class JsApi:
         self.agent.resume_with_user_input(text)
 
     def pick_files(self):
-        """跳出原生的作業系統檔案選擇對話框，回傳使用者選的檔案路徑清單。
-
-        這是「本機 agent」該有的做法：使用者選的檔案本來就已經在這台機器
-        的磁碟上，不需要像網頁應用程式那樣把整個檔案內容讀進瀏覽器記憶體、
-        編碼成 base64、再傳一份過來——那樣不但要另外處理大小上限（本機
-        場景其實不需要這個限制，檔案本來就在硬碟上，agent 隨時可以自己
-        用 execute_python/search_files_by_content 之類的工具直接開檔），
-        還會把同一份內容在記憶體裡複製好幾次。這裡直接回傳路徑字串，
-        agent 之後用自己既有的工具集依路徑存取即可，完全不經過這層 bridge
-        搬運任何檔案內容。取消選擇或沒有視窗可用時回傳空陣列，不拋例外。
-        """
         window = getattr(self, "_window", None)
         if window is None:
             return []
@@ -189,20 +149,16 @@ class JsApi:
             result = window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True)
             return list(result) if result else []
         except Exception as e:
-            print(f"[JsApi] pick_files 失敗: {e}", flush=True)
+            log(f"[JsApi] pick_files 失敗: {e}", level="error", channel="webview")
             return []
 
     def log_from_frontend(self, level: str, message: str):
-        """開發時把前端 webview 的 console 輸出轉印到這個 process 的 stdout，
-        讓用 VS Code debugpy 掛 python main.py 偵錯時，Debug Console 能同時
-        看到 Python 這邊跟前端那邊發生的事，不用另外開瀏覽器 DevTools 對照。
-        前端只有在開發模式（import.meta.env.DEV）才會呼叫這個方法，見
-        src/lib/devConsoleBridge.ts。
-        """
-        print(f"[frontend:{level}] {message}", flush=True)
+        normalized_level = level.lower() if isinstance(level, str) else "info"
+        if normalized_level not in {"debug", "info", "warning", "error", "critical"}:
+            normalized_level = "info"
+        log(message, level=normalized_level, channel="frontend")
 
     def respond_permission(self, decision: str):
-        """前端的授權對話框呼叫：decision 必須是 'allow' | 'allow_session' | 'deny'。"""
         self.agent.resume_with_permission_decision(decision)
         return {"status": "ok"}
 
@@ -241,7 +197,6 @@ class JsApi:
         return {"status": "ok"}
 
     def pick_model_file(self):
-        """跳出原生的檔案選擇對話框，專門選取單一 .gguf 模型檔案。"""
         window = getattr(self, "_window", None)
         if window is None:
             return ""
@@ -255,11 +210,10 @@ class JsApi:
                 return result[0]
             return ""
         except Exception as e:
-            print(f"[JsApi] pick_model_file 失敗: {e}", flush=True)
+            log(f"[JsApi] pick_model_file 失敗: {e}", level="error", channel="webview")
             return ""
 
     def get_llm_status(self):
-        """回傳目前 LLM client 的載入狀態與模型名稱。"""
         is_llama = False
         model_loaded = False
         model_name = getattr(self.agent, "model_name", "")
@@ -279,13 +233,8 @@ class JsApi:
         }
 
     def check_remote_api(self, base_url: str = ""):
-        """從 Python 端探測 Remote API 是否在線（避開前端 CORS）。
-
-        對 OpenAI 相容端點打 GET {base}/models。
-        """
         import urllib.error
         import urllib.request
-
         root = (base_url or "").strip().rstrip("/")
         if not root:
             return {"status": "ok", "running": False, "msg": "未設定 Base URL"}
@@ -307,7 +256,6 @@ class JsApi:
             msg = f"模型檔案不存在: {model_path}"
             self.dispatch_event("log", f"[錯誤] {msg}")
             return {"status": "error", "msg": msg}
-
         model_filename = os.path.basename(model_path)
         self.dispatch_event("log", f"[系統] 正在載入本地模型: {model_filename} ... 請稍候")
         try:
@@ -324,9 +272,6 @@ class JsApi:
             return {"status": "error", "msg": err_msg}
 
     def open_chrome_incognito(self, query: str = ""):
-        """Open Chrome in incognito mode and perform a Google search.
-        If `query` is empty, just opens the Google homepage.
-        """
         try:
             base_url = "https://www.google.com"
             if query:
@@ -347,7 +292,6 @@ class JsApi:
         return {"status": "ok"}
 
     def preload_vision_models(self):
-        """在背景執行緒預先載入視覺與 OCR 模型，避免在對話中分析圖片時等待卡頓"""
         def _bg_preload():
             try:
                 self.dispatch_event("log", "[系統] 開始背景預先載入視覺模型 (Florence-2 / PaddleOCR)...")
@@ -356,7 +300,6 @@ class JsApi:
                 self.dispatch_event("log", "[系統] 視覺模型預載完成！後續圖片分析即可即時回應。")
             except Exception as e:
                 self.dispatch_event("log", f"[系統] 預載視覺模型失敗: {e}")
-
         threading.Thread(target=_bg_preload, daemon=True).start()
         return {"status": "ok", "msg": "已開始背景預載"}
 
@@ -366,31 +309,11 @@ class JsApi:
         return {"status": "ok", "msg": result}
 
     def ping(self):
-        """前端用來確認 bridge 是否真的掛上（console 裡 api 常看起來是空物件）。"""
         return {"status": "ok", "msg": "pong"}
 
     def copy_to_clipboard(self, text: str):
-        """寫入系統剪貼簿。
-
-        優先用 Qt 的剪貼簿（QApplication.clipboard()）而不是直接呼叫
-        win32clipboard——這個應用程式本身就是跑在 PyQt6 上，一直有一個
-        真實視窗與訊息迴圈在跑，Qt 的剪貼簿是透過那個真實視窗去持有的；
-        Windows 的「剪貼簿記錄」（Win+V）跟雲端剪貼簿同步，依賴的正是
-        由一個有訊息迴圈在跑的真實視窗觸發的剪貼簿變更通知。先前這裡
-        優先呼叫 win32clipboard.OpenClipboard()（沒有傳入視窗代碼，等同
-        OpenClipboard(NULL)），一般的複製貼上都正常（貼上不需要透過
-        通知鏈），但因為不是由一個真的視窗持有剪貼簿，Windows 的剪貼簿
-        記錄有時候抓不到這次變更——這就是「貼上/複製本身正常，但 Win+V
-        歷史記錄裡找不到」這個落差的來源。只有 Qt 這條路徑不可用時
-        （理論上不太會發生）才退回 win32clipboard，而且退回時盡量傳入
-        前景視窗代碼，而不是完全不傳，至少比原本更接近文件建議的用法。
-        """
         try:
             from PyQt6.QtWidgets import QApplication
-
-            # instance() 的 stub 回傳 QCoreApplication | None，
-            # clipboard() 只在 QGuiApplication / QApplication 上，
-            # 用 isinstance 收窄型別，避免 Pylance reportAttributeAccessIssue。
             app = QApplication.instance()
             if isinstance(app, QApplication):
                 cb = app.clipboard()
@@ -399,12 +322,10 @@ class JsApi:
                     return {"status": "ok", "via": "qt"}
         except Exception:
             pass
-
         try:
             import win32clipboard
             import win32con
             import win32gui
-
             hwnd = win32gui.GetForegroundWindow() or None
             win32clipboard.OpenClipboard(hwnd)
             try:
