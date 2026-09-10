@@ -18,6 +18,7 @@ from tools.input_tools import (
 from tools.python_runner import execute_python
 from tools.screen_tools import ScreenCache, screen_cache, read_screen, read_screen_api, query_screen_element
 from tools.file_search import search_files_by_content, find_files_by_name
+from tools.file_info import get_file_info
 from tools.shell_exec import run_powershell, run_cmd
 from tools.wait_tools import wait, wait_for_screen_stable
 from tools.vision_tools import (
@@ -64,6 +65,7 @@ __all__ = [
     "query_screen_element",
     "search_files_by_content",
     "find_files_by_name",
+    "get_file_info",
     "run_powershell",
     "run_cmd",
     "wait",
